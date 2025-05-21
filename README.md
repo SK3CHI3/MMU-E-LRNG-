@@ -1,73 +1,144 @@
-# Welcome to your Lovable project
+# MMU Learning Management System (LMS)
 
-## Project info
+<div align="center">
+  <img src="public/favicon.svg" alt="MMU LMS Logo" width="120" height="120">
+  <h3 align="center">Multimedia University of Kenya's Digital Learning Platform</h3>
+  <p align="center">Elevating Learning, Empowering Futures</p>
+</div>
 
-**URL**: https://lovable.dev/projects/b883d8b2-e982-4212-b5d6-a982095ad267
+## 📋 Overview
 
-## How can I edit this code?
+The MMU Learning Management System (LMS) is a comprehensive digital platform designed to enhance the educational experience at Multimedia University of Kenya. This modern web application provides students, lecturers, and administrators with a centralized hub for managing academic activities, accessing learning resources, and facilitating communication within the university community.
 
-There are several ways of editing your application.
+## ✨ Features
 
-**Use Lovable**
+### For Students
+- **Dashboard**: Personalized overview of courses, upcoming assignments, and important announcements
+- **Course Management**: Access to enrolled courses, learning materials, and lecture notes
+- **Assignment Submission**: Digital submission and tracking of assignments
+- **Grade Tracking**: Real-time access to grades and academic progress
+- **Class Sessions**: Schedule and information about upcoming and past classes
+- **Notifications**: Important alerts about deadlines, grades, and university announcements
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/b883d8b2-e982-4212-b5d6-a982095ad267) and start prompting.
+### For Lecturers
+- **Course Administration**: Tools to manage course content, materials, and student enrollment
+- **Assignment Creation**: Create, distribute, and grade assignments
+- **Student Progress Tracking**: Monitor student performance and engagement
+- **Attendance Management**: Track and record student attendance
+- **Communication Tools**: Direct messaging and announcement capabilities
 
-Changes made via Lovable will be committed automatically to this repo.
+### For Administrators
+- **User Management**: Comprehensive tools for managing student and staff accounts
+- **System Configuration**: Customization options for the LMS platform
+- **Analytics Dashboard**: Insights into system usage and academic metrics
+- **Department Management**: Tools for organizing courses by department and faculty
 
-**Use your preferred IDE**
+## 🛠️ Technology Stack
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Frontend
+- **React**: JavaScript library for building the user interface
+- **TypeScript**: For type-safe code and enhanced developer experience
+- **Tailwind CSS**: Utility-first CSS framework for styling
+- **shadcn/ui**: High-quality UI components built with Radix UI and Tailwind
+- **React Router**: For navigation and routing
+- **React Query**: For efficient data fetching and state management
+- **Recharts**: For data visualization and analytics
+- **React Hook Form**: For form validation and handling
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Backend
+- **Supabase**: Backend-as-a-Service platform providing:
+  - **Authentication**: Secure user authentication and authorization
+  - **PostgreSQL Database**: Robust relational database for data storage
+  - **Row Level Security (RLS)**: For data protection and access control
+  - **Storage**: For file uploads and management
+  - **Realtime Subscriptions**: For live updates and notifications
 
-Follow these steps:
+### Development Tools
+- **Vite**: Next-generation frontend tooling for fast development
+- **ESLint**: For code linting and maintaining code quality
+- **Git**: For version control and collaboration
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 🚀 Getting Started
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Prerequisites
+- Node.js (v16 or higher)
+- npm or yarn package manager
+- Git
 
-# Step 3: Install the necessary dependencies.
-npm i
+### Installation
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/SK3CHI3/MMU-E-LRNG-.git
+   cd MMU-E-LRNG-
+   ```
 
-**Edit a file directly in GitHub**
+2. **Install dependencies**
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+3. **Set up environment variables**
+   - Create a `.env.local` file in the root directory
+   - Add the following variables:
+     ```
+     VITE_SUPABASE_URL=your_supabase_url
+     VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+     ```
 
-**Use GitHub Codespaces**
+4. **Start the development server**
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+5. **Open your browser**
+   - Navigate to `http://localhost:8080` to see the application
 
-## What technologies are used for this project?
+## 📱 Responsive Design
 
-This project is built with:
+The MMU LMS is designed to be fully responsive, providing an optimal experience across a wide range of devices:
+- Desktop computers
+- Laptops
+- Tablets
+- Mobile phones
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🔒 Security Features
 
-## How can I deploy this project?
+- **Authentication**: Secure email/password authentication
+- **Authorization**: Role-based access control (student, lecturer, admin)
+- **Data Protection**: Row Level Security (RLS) policies in Supabase
+- **Secure API**: Protected API endpoints
+- **Input Validation**: Comprehensive form validation to prevent security vulnerabilities
 
-Simply open [Lovable](https://lovable.dev/projects/b883d8b2-e982-4212-b5d6-a982095ad267) and click on Share -> Publish.
+## 🌙 Dark Mode
 
-## Can I connect a custom domain to my Lovable project?
+The application includes a built-in dark mode toggle, allowing users to choose their preferred theme:
+- Light mode for daytime use
+- Dark mode for reduced eye strain in low-light environments
 
-Yes, you can!
+## 🔄 Continuous Development
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+This project is under active development with planned enhancements including:
+- Real-time chat functionality
+- Advanced analytics dashboard
+- Integration with video conferencing tools
+- Mobile application versions
+- AI-powered learning recommendations
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## 👥 Contributors
+
+- [SKECHIE](https://github.com/SK3CHI3) - Lead Developer
+
+## 📄 License
+
+This project is proprietary software developed for Multimedia University of Kenya.
+
+---
+
+<div align="center">
+  <p>© 2024 Multimedia University of Kenya. All Rights Reserved.</p>
+</div>
