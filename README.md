@@ -1,7 +1,7 @@
 # MMU Learning Management System (LMS)
 
 <div align="center">
-  <img src="public/favicon.svg" alt="MMU LMS Logo" width="120" height="120">
+  <img src="public/favicon.svg" alt="MMU LMS Logo" width="120" height="120" style="border-radius: 16px;">
   <h3 align="center">Multimedia University of Kenya's Digital Learning Platform</h3>
   <p align="center">Elevating Learning, Empowering Futures</p>
 </div>
