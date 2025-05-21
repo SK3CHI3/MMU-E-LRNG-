@@ -3,13 +3,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CalendarDays, Clock, FileText, AlertTriangle, ArrowRight } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Dashboard = () => {
-  // This would come from context/API in a real application
+  const { dbUser } = useAuth();
+
+  // Use real user data from context and add some sample data
   const studentInfo = {
-    name: "John Doe",
-    admissionNumber: "MCS123456",
-    faculty: "Faculty of Computing & IT",
+    name: dbUser?.full_name || "Student",
+    admissionNumber: dbUser?.student_id || "MCS-234-178/2024",
+    faculty: dbUser?.department || "Faculty of Computing & IT",
+    role: dbUser?.role || "student",
     semester: "2.1",
     gpa: 3.7,
     feeBalance: 15000,
@@ -61,7 +65,7 @@ const Dashboard = () => {
           </p>
         </div>
       </div>
-      
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -75,7 +79,7 @@ const Dashboard = () => {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Current GPA</CardTitle>
@@ -88,7 +92,7 @@ const Dashboard = () => {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Assignments</CardTitle>
@@ -101,7 +105,7 @@ const Dashboard = () => {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Fee Balance</CardTitle>
@@ -116,7 +120,66 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
-      
+
+      {/* User Information Card */}
+      <Card className="col-span-full">
+        <CardHeader>
+          <CardTitle>User Information</CardTitle>
+          <CardDescription>Your account details</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Name:</span>
+                <span className="font-medium">{studentInfo.name}</span>
+              </div>
+              {studentInfo.role === 'student' && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Admission Number:</span>
+                  <span className="font-medium">{studentInfo.admissionNumber}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Department:</span>
+                <span className="font-medium">{studentInfo.faculty}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Role:</span>
+                <span className="font-medium capitalize">{studentInfo.role}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {studentInfo.role === 'student' && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Semester:</span>
+                    <span className="font-medium">{studentInfo.semester}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">GPA:</span>
+                    <span className="font-medium">{studentInfo.gpa}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Fee Balance:</span>
+                    <span className="font-medium">KSh {studentInfo.feeBalance.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Fee Paid:</span>
+                    <span className="font-medium">{feePercentage}%</span>
+                  </div>
+                </>
+              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Email:</span>
+                <span className="font-medium">{dbUser?.email || 'Not available'}</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="col-span-1">
           <CardHeader>
@@ -168,7 +231,7 @@ const Dashboard = () => {
             </Button>
           </CardContent>
         </Card>
-        
+
         <Card className="col-span-1">
           <CardHeader>
             <CardTitle>Pending Assignments</CardTitle>
