@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, Lock, Globe, Shield, Upload, Trash, User, Phone, Mail, FileText } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Bell, Lock, Globe, Shield, Upload, Trash, User, Phone, Mail, FileText, Clock, DollarSign } from "lucide-react";
 
 const Settings = () => {
   return (
@@ -404,3 +405,4 @@ const Settings = () => {
 };
 
 export default Settings;
+
