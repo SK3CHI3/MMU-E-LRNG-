@@ -7,7 +7,8 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom
 import MainLayout from "./components/layouts/MainLayout";
 import { lazy, Suspense } from "react";
 
-// Auth Pages
+// Public Pages
+import Index from "./pages/Index";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 
@@ -51,15 +52,11 @@ const App = () => {
         <BrowserRouter>
           <Routes>
             {/* Public routes */}
+            <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             
             {/* Protected routes */}
-            <Route 
-              path="/" 
-              element={isLoggedIn ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} 
-            />
-            
             {/* Apply MainLayout to all protected routes */}
             <Route element={
               isLoggedIn ? (
