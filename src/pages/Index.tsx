@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { mmuFaculties, mmuStats, mmuContact, sampleNotifications, PublicNotification } from "@/data/mmuData";
 import {
   GraduationCap,
   Book,
@@ -19,7 +20,15 @@ import {
   Clock as Clock24,
   Smartphone,
   Moon,
-  Sun
+  Sun,
+  TrendingUp,
+  Computer,
+  Cog,
+  Video,
+  Atom,
+  ExternalLink,
+  Calendar,
+  AlertCircle
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { initScrollAnimations } from "@/utils/scrollAnimations";
@@ -31,12 +40,67 @@ const Index = () => {
     return cleanup;
   }, []);
 
+  // Helper function to get faculty icon
+  const getFacultyIcon = (iconName: string) => {
+    const iconMap = {
+      TrendingUp,
+      Computer,
+      Cog,
+      Video,
+      Atom,
+      Users
+    };
+    return iconMap[iconName as keyof typeof iconMap] || GraduationCap;
+  };
+
+  // Helper function to format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 1) return '1 day ago';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 14) return '1 week ago';
+    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
+    return date.toLocaleDateString();
+  };
+
+  // Helper function to get priority color
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return 'bg-red-500';
+      case 'high': return 'bg-orange-500';
+      case 'medium': return 'bg-yellow-500';
+      default: return 'bg-accent';
+    }
+  };
+
+  // Helper function to handle notification click
+  const handleNotificationClick = (notification: PublicNotification) => {
+    if (!notification.clickable) return;
+
+    if (notification.externalLink) {
+      window.open(notification.externalLink, '_blank', 'noopener,noreferrer');
+    } else {
+      // In a real app, this would navigate to a detailed notification page
+      alert(`Notification Details:\n\n${notification.title}\n\n${notification.content}`);
+    }
+  };
+
+  // Get active notifications (in a real app, this would be fetched from API)
+  const activeNotifications = sampleNotifications
+    .filter(notification => notification.isActive)
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+    .slice(0, 3);
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Glass Metamorphic Header */}
       <div className="fixed top-0 left-0 w-full z-50">
-        <div className="container mx-auto px-4 py-4">
-          <header className="backdrop-blur-md bg-white/70 dark:bg-gray-900/70 border border-gray-200/50 dark:border-gray-700/50 rounded-xl shadow-lg py-4 px-6 mx-auto max-w-4xl">
+        <div className="container mx-auto px-4 py-2">
+          <header className="backdrop-blur-md bg-white/70 dark:bg-gray-900/70 border border-gray-200/50 dark:border-gray-700/50 rounded-xl shadow-lg py-2 px-4 mx-auto max-w-4xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary">
@@ -44,7 +108,7 @@ const Index = () => {
                 </div>
                 <div>
                   <h1 className="font-bold text-xl text-primary dark:text-white">MMU Digital Campus</h1>
-                  <p className="text-xs text-muted-foreground dark:text-gray-400">Multimedia University</p>
+                  <p className="text-xs text-muted-foreground dark:text-gray-400">Multimedia University of Kenya</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -68,11 +132,8 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Spacer for fixed header */}
-      <div className="h-24"></div>
-
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-primary via-primary/90 to-primary/80 text-white relative overflow-hidden">
+      <section className="bg-gradient-to-br from-primary via-primary/90 to-accent/20 text-white relative overflow-hidden min-h-screen flex items-center">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMwLTkuOTQtOC4wNi0xOC0xOC0xOFYwYzkuOTQgMCAxOCA4LjA2IDE4IDE4aDEyYzAgOS45NCA4LjA2IDE4IDE4IDE4djEyYy05Ljk0IDAtMTgtOC4wNi0xOC0xOEgzNnoiIGZpbGw9ImN1cnJlbnRDb2xvciIvPjwvZz48L3N2Zz4=')]"></div>
@@ -80,17 +141,17 @@ const Index = () => {
 
         <div className="container mx-auto px-4 py-20 md:py-32 relative z-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
-            <div className="md:w-1/2 space-y-6">
-              <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-sm font-medium animate-fadeInDown">
-                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-accent text-primary mr-2 animate-subtlePulse">✓</span>
-                <span>MMU Digital Campus Experience</span>
+            <div className="md:w-1/2 space-y-6 md:space-y-8">
+              <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-sm md:text-base font-medium animate-fadeInDown border border-white/20">
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-accent text-primary mr-2 animate-subtlePulse text-xs font-bold">✓</span>
+                <span className="text-white">MMU Digital Campus Experience</span>
               </div>
-              <h1 className="text-4xl md:text-6xl font-bold leading-tight animate-fadeInUp">
-                Elevating Learning,<br /> <span className="text-accent">Empowering Futures</span>
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight animate-fadeInUp text-white">
+                <span className="block mb-2">Elevating Learning,</span>
+                <span className="text-accent block">Empowering Futures</span>
               </h1>
-              <p className="text-lg md:text-xl text-gray-100 animate-fadeInUp animation-delay-200">
-                Experience modern education redefined with AI-powered learning, real-time progress,
-                and effortless collaboration.
+              <p className="text-lg md:text-xl text-gray-100 leading-relaxed animate-fadeInUp animation-delay-200 max-w-2xl">
+                Experience modern education redefined with AI-powered learning, real-time progress, and effortless collaboration.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 pt-4 animate-fadeInUp animation-delay-400">
                 <Button asChild size="lg" className="bg-white text-primary hover:bg-gray-100 transition-all duration-300 hover:shadow-md hover-lift w-full sm:w-auto">
@@ -111,68 +172,121 @@ const Index = () => {
               </div>
             </div>
             <div className="md:w-1/2 flex justify-center">
-              <div className="relative">
+              <div className="relative w-full max-w-lg">
                 <div className="w-[300px] h-[300px] md:w-[400px] md:h-[400px] bg-gradient-to-tr from-accent/30 to-white/20 rounded-full opacity-20 blur-3xl absolute -z-10"></div>
-                <div className="bg-white/10 backdrop-blur border border-white/20 rounded-xl shadow-xl overflow-hidden">
-                  {/* Public Notifications Section */}
-                  <div className="bg-accent/20 backdrop-blur p-3 border-b border-white/10">
-                    <h4 className="font-medium text-white flex items-center">
-                      <span className="inline-block w-2 h-2 rounded-full bg-accent animate-subtlePulse mr-2"></span>
-                      Public Notifications
-                    </h4>
-                    <div className="mt-2 max-h-[100px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-                      <div className="py-2 border-b border-white/10 animate-fadeIn">
-                        <p className="text-sm text-white/90">Registration for Fall 2023 semester is now open</p>
-                        <p className="text-xs text-white/70 mt-1">Posted 2 days ago</p>
+
+                {/* Enhanced Public Notifications Card */}
+                <div className="bg-white/10 backdrop-blur border border-white/20 rounded-xl shadow-xl overflow-hidden hover-lift">
+                  {/* Header */}
+                  <div className="bg-accent/20 backdrop-blur p-4 border-b border-white/10">
+                    <div className="flex items-center mb-3">
+                      <div className="w-10 h-10 rounded-lg bg-accent/30 flex items-center justify-center mr-3">
+                        <MessageSquare className="h-5 w-5 text-white" />
                       </div>
-                      <div className="py-2 border-b border-white/10 animate-fadeIn animation-delay-200">
-                        <p className="text-sm text-white/90">New AI Learning Assistant features available</p>
-                        <p className="text-xs text-white/70 mt-1">Posted 5 days ago</p>
-                      </div>
-                      <div className="py-2 animate-fadeIn animation-delay-400">
-                        <p className="text-sm text-white/90">Campus maintenance scheduled for next weekend</p>
-                        <p className="text-xs text-white/70 mt-1">Posted 1 week ago</p>
+                      <div>
+                        <h3 className="font-bold text-lg text-white">Public Notifications</h3>
+                        <p className="text-xs text-white/70">Latest updates from MMU</p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Stats Grid */}
-                  <div className="grid grid-cols-2 gap-6 p-6">
-                    <div className="bg-white/10 backdrop-blur p-4 rounded-lg flex items-center gap-4 transition-all duration-300 hover:bg-white/15 hover-bright">
-                      <div className="bg-white/20 p-2 rounded-lg">
-                        <Book className="h-6 w-6 text-white" />
+                  {/* Notifications List */}
+                  <div className="p-4">
+                    <h4 className="text-xs font-medium text-white/80 mb-2">
+                      Recent Announcements ({activeNotifications.length}):
+                    </h4>
+                    <div className="space-y-3">
+                      {activeNotifications.map((notification, index) => (
+                        <div
+                          key={notification.id}
+                          className={`flex items-start group ${notification.clickable ? 'cursor-pointer hover:bg-white/5 rounded-md p-1 -m-1 transition-colors' : ''}`}
+                          onClick={() => handleNotificationClick(notification)}
+                        >
+                          <span className={`w-1 h-1 rounded-full ${getPriorityColor(notification.priority)} mt-2 mr-2 flex-shrink-0`}></span>
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between">
+                              <p className="text-sm text-white/90 line-clamp-2 group-hover:text-white transition-colors">
+                                {notification.excerpt}
+                              </p>
+                              {notification.clickable && (
+                                <div className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {notification.externalLink ? (
+                                    <ExternalLink className="h-3 w-3 text-white/60" />
+                                  ) : (
+                                    <AlertCircle className="h-3 w-3 text-white/60" />
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between mt-1">
+                              <p className="text-xs text-white/60">{formatDate(notification.publishedAt)}</p>
+                              <span className="text-xs text-white/50 capitalize">{notification.category}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {activeNotifications.length === 0 && (
+                        <div className="text-center py-4">
+                          <p className="text-sm text-white/60">No active notifications</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Stats Section */}
+                  <div className="border-t border-white/10 p-4">
+                    <h4 className="text-xs font-medium text-white/80 mb-3">
+                      MMU Statistics:
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-white/10 backdrop-blur p-3 rounded-lg flex items-center gap-3 transition-all duration-300 hover:bg-white/15">
+                        <div className="bg-white/20 p-2 rounded-lg">
+                          <Book className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-white/70">Programmes</p>
+                          <p className="text-sm font-semibold text-white">{mmuStats.totalProgrammes}+</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm opacity-70">Courses</p>
-                        <p className="font-semibold animate-countUp">50+</p>
+                      <div className="bg-white/10 backdrop-blur p-3 rounded-lg flex items-center gap-3 transition-all duration-300 hover:bg-white/15">
+                        <div className="bg-white/20 p-2 rounded-lg">
+                          <Users className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-white/70">Students</p>
+                          <p className="text-sm font-semibold text-white">8,000+</p>
+                        </div>
+                      </div>
+                      <div className="bg-white/10 backdrop-blur p-3 rounded-lg flex items-center gap-3 transition-all duration-300 hover:bg-white/15">
+                        <div className="bg-white/20 p-2 rounded-lg">
+                          <GraduationCap className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-white/70">Faculties</p>
+                          <p className="text-sm font-semibold text-white">{mmuStats.faculties}</p>
+                        </div>
+                      </div>
+                      <div className="bg-white/10 backdrop-blur p-3 rounded-lg flex items-center gap-3 transition-all duration-300 hover:bg-white/15">
+                        <div className="bg-white/20 p-2 rounded-lg">
+                          <Globe className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-white/70">Network</p>
+                          <p className="text-sm font-semibold text-white">Global</p>
+                        </div>
                       </div>
                     </div>
-                    <div className="bg-white/10 backdrop-blur p-4 rounded-lg flex items-center gap-4 transition-all duration-300 hover:bg-white/15 hover-bright">
-                      <div className="bg-white/20 p-2 rounded-lg">
-                        <Users className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm opacity-70">Students</p>
-                        <p className="font-semibold animate-countUp">8,000+</p>
-                      </div>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur p-4 rounded-lg flex items-center gap-4 transition-all duration-300 hover:bg-white/15 hover-bright">
-                      <div className="bg-white/20 p-2 rounded-lg">
-                        <Award className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm opacity-70">Programs</p>
-                        <p className="font-semibold animate-countUp">25+</p>
-                      </div>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur p-4 rounded-lg flex items-center gap-4 transition-all duration-300 hover:bg-white/15 hover-bright">
-                      <div className="bg-white/20 p-2 rounded-lg">
-                        <Globe className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm opacity-70">Network</p>
-                        <p className="font-semibold">Global</p>
-                      </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="bg-white/5 p-3 text-center border-t border-white/10">
+                    <div className="space-y-1">
+                      <p className="text-xs text-white/60">
+                        <span className="font-medium">Vice Chancellor:</span> Prof. Rosebella O. Maranga, PhD, MBS
+                      </p>
+                      <p className="text-xs text-white/60">
+                        <span className="font-medium">Council Chairperson:</span> Dr. Albert Kochei
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -257,8 +371,101 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Testimonials Section */}
+      {/* MMU Faculties & Programmes Section */}
       <section className="py-20 bg-white dark:bg-gray-800">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-primary dark:text-primary mb-4">
+              Our Faculties & Academic Programmes
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+              MMU currently has {mmuStats.faculties} faculties offering {mmuStats.totalProgrammes} academic programmes including {mmuStats.mastersProgrammes} Masters, {mmuStats.bachelorsProgrammes} Bachelors, {mmuStats.diplomaProgrammes} Diploma and {mmuStats.certificateProgrammes} Certificate programmes.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            {mmuFaculties.map((faculty, index) => {
+              const IconComponent = getFacultyIcon(faculty.icon);
+              return (
+                <div key={faculty.id} className={`bg-gray-50 dark:bg-gray-700 p-6 rounded-xl border border-gray-100 dark:border-gray-600 hover-lift reveal reveal-delay-${index * 100}`}>
+                  <div className="flex items-center mb-4">
+                    <div className={`w-12 h-12 rounded-lg bg-${faculty.color}-100 dark:bg-${faculty.color}-900/30 flex items-center justify-center mr-4`}>
+                      <IconComponent className={`h-6 w-6 text-${faculty.color}-600 dark:text-${faculty.color}-400`} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg text-gray-900 dark:text-white">{faculty.shortName}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{faculty.name}</p>
+                    </div>
+                  </div>
+
+                  <p className="text-gray-700 dark:text-gray-200 text-sm mb-4 line-clamp-3">
+                    {faculty.description}
+                  </p>
+
+                  <div className="space-y-3">
+                    {/* Departments */}
+                    <div>
+                      <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        Departments ({faculty.departments.length}):
+                      </h4>
+                      <ul className="text-xs text-gray-700 dark:text-gray-300 space-y-1">
+                        {faculty.departments.map((dept, index) => (
+                          <li key={index} className="flex items-start">
+                            <span className="w-1 h-1 rounded-full bg-primary mt-1.5 mr-2 flex-shrink-0"></span>
+                            <span className="line-clamp-2">{dept.name}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Programmes */}
+                    <div>
+                      <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        Programmes ({faculty.programmes.length}):
+                      </h4>
+                      <div>
+                        <ul className="text-xs text-gray-700 dark:text-gray-300 space-y-1">
+                          {faculty.programmes.slice(0, 4).map((programme, index) => (
+                            <li key={index} className="flex items-start">
+                              <span className="w-1 h-1 rounded-full bg-accent mt-1.5 mr-2 flex-shrink-0"></span>
+                              <span className="line-clamp-1">{programme.name}</span>
+                            </li>
+                          ))}
+                          {faculty.programmes.length > 4 && (
+                            <li className="text-xs text-primary dark:text-primary font-medium italic">
+                              +{faculty.programmes.length - 4} more programmes...
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    </div>
+
+                    {faculty.dean && (
+                      <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <span className="font-medium">Dean:</span> {faculty.dean}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="text-center">
+            <Button asChild variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white">
+              <a href="https://www.mmu.ac.ke/faculties-and-academic-programmes/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2">
+                <span>View All Programmes</span>
+                <ArrowRight className="h-4 w-4" />
+              </a>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-20 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-primary dark:text-primary mb-4">
@@ -421,7 +628,7 @@ const Index = () => {
               <div className="mb-6 md:mb-0">
                 <h4 className="text-white font-medium mb-4 text-base md:text-lg">Quick Links</h4>
                 <ul className="space-y-2 md:space-y-3">
-                  <li><a href="https://www.mmu.ac.ke" target="_blank" rel="noopener noreferrer" className="text-sm md:text-base opacity-75 hover:opacity-100 hover:text-accent transition">Main Website</a></li>
+                  <li><a href={mmuContact.website} target="_blank" rel="noopener noreferrer" className="text-sm md:text-base opacity-75 hover:opacity-100 hover:text-accent transition">Main Website</a></li>
                   <li><a href="#" className="text-sm md:text-base opacity-75 hover:opacity-100 hover:text-accent transition">Library</a></li>
                   <li><a href="#" className="text-sm md:text-base opacity-75 hover:opacity-100 hover:text-accent transition">Academic Calendar</a></li>
                   <li><a href="#" className="text-sm md:text-base opacity-75 hover:opacity-100 hover:text-accent transition">Campus Map</a></li>
@@ -440,9 +647,9 @@ const Index = () => {
               <div className="mb-6 md:mb-0">
                 <h4 className="text-white font-medium mb-4 text-base md:text-lg">Contact</h4>
                 <ul className="space-y-2 md:space-y-3">
-                  <li><a href="mailto:support@mmu.ac.ke" className="text-sm md:text-base opacity-75 hover:opacity-100 hover:text-accent transition">support@mmu.ac.ke</a></li>
-                  <li><a href="tel:+254722000000" className="text-sm md:text-base opacity-75 hover:opacity-100 hover:text-accent transition">+254 722 000 000</a></li>
-                  <li className="text-sm md:text-base opacity-75">P.O. Box 15653 - 00503, Nairobi, Kenya</li>
+                  <li><a href={`mailto:${mmuContact.email}`} className="text-sm md:text-base opacity-75 hover:opacity-100 hover:text-accent transition">{mmuContact.email}</a></li>
+                  <li><a href={`tel:${mmuContact.phone.replace(/\s/g, '')}`} className="text-sm md:text-base opacity-75 hover:opacity-100 hover:text-accent transition">{mmuContact.phone}</a></li>
+                  <li className="text-sm md:text-base opacity-75">{mmuContact.address}</li>
                 </ul>
               </div>
             </div>

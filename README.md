@@ -13,11 +13,12 @@ The MMU Learning Management System (LMS) is a comprehensive digital platform des
 ## ✨ Features
 
 ### For Students
-- **Dashboard**: Personalized overview of courses, upcoming assignments, and important announcements
+- **Dashboard**: Personalized overview with MMU-themed blue interface and subtle video background
 - **Course Management**: Access to enrolled courses, learning materials, and lecture notes
 - **Assignment Submission**: Digital submission and tracking of assignments
-- **Grade Tracking**: Real-time access to grades and academic progress
+- **Grade Tracking**: Real-time access to grades and academic progress with visual analytics
 - **Class Sessions**: Schedule and information about upcoming and past classes
+- **AI Learning Assistant**: 24/7 "Comrade AI" tutor for academic support
 - **Notifications**: Important alerts about deadlines, grades, and university announcements
 
 ### For Lecturers
@@ -114,11 +115,19 @@ The MMU LMS is designed to be fully responsive, providing an optimal experience 
 - **Secure API**: Protected API endpoints
 - **Input Validation**: Comprehensive form validation to prevent security vulnerabilities
 
-## 🌙 Dark Mode
+## 🎨 Design & Theming
 
+### MMU Kenya Official Theme
+- **Primary Colors**: Official MMU blue (#0066CC) with red accents (#DC2626)
+- **Glass Morphism**: Modern glassmorphic header design with backdrop blur effects
+- **Clean Interface**: Professional, clean design focused on usability
+- **Responsive Cards**: Well-designed cards with proper spacing and typography
+
+### Dark Mode Support
 The application includes a built-in dark mode toggle, allowing users to choose their preferred theme:
-- Light mode for daytime use
+- Light mode for daytime use with MMU blue theme
 - Dark mode for reduced eye strain in low-light environments
+- Automatic theme persistence across sessions
 
 ## 🔄 Continuous Development
 

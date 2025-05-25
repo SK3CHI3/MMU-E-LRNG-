@@ -40,17 +40,30 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // If no database user yet, we'll use a minimal user object
-  // This allows navigation to proceed without waiting for the full user data
-  if (!dbUser) {
-    console.log('ProtectedRoute: Auth user exists but no DB user yet, proceeding with minimal data');
-    // We'll continue with the route - the AuthContext will load the full user data in the background
+  // If roles are specified but no database user yet, wait for user data to load
+  // Give it a bit more time to load the user data before showing unauthorized
+  if (allowedRoles && !dbUser) {
+    console.log('ProtectedRoute: Roles required but DB user not loaded yet, showing loading...');
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading user data...</p>
+          <p className="text-xs text-muted-foreground">Please wait while we verify your permissions</p>
+        </div>
+      </div>
+    );
   }
 
   // If roles are specified and user doesn't have the required role, redirect to unauthorized
   if (allowedRoles && dbUser && !allowedRoles.includes(dbUser.role)) {
-    console.log('ProtectedRoute: User does not have required role, redirecting to unauthorized');
+    console.log(`ProtectedRoute: User role '${dbUser.role}' not in allowed roles [${allowedRoles.join(', ')}], redirecting to unauthorized`);
     return <Navigate to="/unauthorized" replace />;
+  }
+
+  // If no database user yet but no specific roles required, proceed
+  if (!dbUser) {
+    console.log('ProtectedRoute: Auth user exists but no DB user yet, proceeding with minimal data (no roles required)');
   }
 
   console.log('ProtectedRoute: User is authenticated and authorized, rendering content');

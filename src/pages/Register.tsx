@@ -19,7 +19,8 @@ const Register = () => {
     fullName: '',
     studentId: '',
     department: '',
-    role: 'student' as 'student' | 'lecturer' | 'admin',
+    role: 'student' as 'student' | 'lecturer' | 'dean' | 'admin',
+    faculty: '', // For dean role
   });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,8 +33,12 @@ const Register = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleRoleChange = (value: 'student' | 'lecturer' | 'admin') => {
+  const handleRoleChange = (value: 'student' | 'lecturer' | 'dean' | 'admin') => {
     setFormData((prev) => ({ ...prev, role: value }));
+  };
+
+  const handleFacultyChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, faculty: value }));
   };
 
   const handleDepartmentChange = (value: string) => {
@@ -75,8 +80,15 @@ const Register = () => {
       }
     }
 
-    // Department validation
-    if (!formData.department) {
+    // Faculty validation (only for deans)
+    if (formData.role === 'dean') {
+      if (!formData.faculty) {
+        throw new Error('Faculty is required for deans');
+      }
+    }
+
+    // Department validation (required for students, lecturers, and deans)
+    if (formData.role !== 'admin' && !formData.department) {
       throw new Error('Department is required');
     }
   };
@@ -96,7 +108,8 @@ const Register = () => {
         full_name: formData.fullName,
         role: formData.role,
         student_id: formData.role === 'student' ? formData.studentId : null,
-        department: formData.department,
+        department: formData.role !== 'admin' ? formData.department : null,
+        faculty: formData.role === 'dean' ? formData.faculty : null,
       };
 
       console.log('Submitting registration with data:', {
@@ -155,6 +168,17 @@ const Register = () => {
     'Science',
     'Agriculture',
     'Other'
+  ];
+
+  const faculties = [
+    'Faculty of Computing and Information Technology',
+    'Faculty of Business and Economics',
+    'Faculty of Engineering and Technology',
+    'Faculty of Health Sciences',
+    'Faculty of Education and Social Sciences',
+    'Faculty of Law',
+    'Faculty of Science',
+    'Faculty of Agriculture and Natural Resources'
   ];
 
   return (
@@ -261,6 +285,8 @@ const Register = () => {
                 <SelectContent>
                   <SelectItem value="student">Student</SelectItem>
                   <SelectItem value="lecturer">Lecturer</SelectItem>
+                  <SelectItem value="dean">Dean</SelectItem>
+                  <SelectItem value="admin">Administrator</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -283,25 +309,51 @@ const Register = () => {
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="department">Department</Label>
-              <Select
-                value={formData.department}
-                onValueChange={handleDepartmentChange}
-                disabled={isLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select your department" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {formData.role === 'dean' && (
+              <div className="space-y-2">
+                <Label htmlFor="faculty">Faculty</Label>
+                <Select
+                  value={formData.faculty}
+                  onValueChange={handleFacultyChange}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your faculty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {faculties.map((faculty) => (
+                      <SelectItem key={faculty} value={faculty}>
+                        {faculty}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {formData.role !== 'admin' && (
+              <div className="space-y-2">
+                <Label htmlFor="department">
+                  {formData.role === 'dean' ? 'Primary Department' : 'Department'}
+                </Label>
+                <Select
+                  value={formData.department}
+                  onValueChange={handleDepartmentChange}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <Button
               type="submit"

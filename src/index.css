@@ -14,14 +14,14 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    /* MMU Kenya Green */
-    --primary: 152 100% 29%;
+    /* MMU Kenya Blue */
+    --primary: 214 100% 35%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 96.1%;
+    --secondary: 214 20% 96%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 210 40% 96.1%;
+    --muted: 214 15% 96%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
     --accent: 0 72% 51%; /* MMU Kenya Red accent */
@@ -32,46 +32,46 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 152 100% 29%;
+    --ring: 214 100% 35%;
 
     --radius: 0.5rem;
 
     /* MMU Kenya Sidebar Theme */
-    --sidebar-background: 152 100% 29%;
+    --sidebar-background: 214 100% 35%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 152 100% 29%;
-    --sidebar-accent: 152 100% 20%;
+    --sidebar-primary-foreground: 214 100% 35%;
+    --sidebar-accent: 214 100% 25%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 152 100% 25%;
+    --sidebar-border: 214 100% 30%;
     --sidebar-ring: 0 72% 51%;
 
     /* MMU Kenya Theme Colors */
-    --mmu-green: 152 100% 29%;
+    --mmu-blue: 214 100% 35%;
     --mmu-red: 0 72% 51%;
-    --mmu-dark-green: 152 100% 20%;
-    --mmu-light-green: 152 80% 85%;
+    --mmu-dark-blue: 214 100% 25%;
+    --mmu-light-blue: 214 80% 85%;
   }
 
   .dark {
     /* MMU Kenya Dark Theme */
-    --background: 152 50% 10%;
+    --background: 214 50% 10%;
     --foreground: 0 0% 98%;
 
-    --card: 152 50% 12%;
+    --card: 214 50% 12%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 152 50% 10%;
+    --popover: 214 50% 10%;
     --popover-foreground: 0 0% 98%;
 
-    /* MMU Kenya Green - Lighter in dark mode */
-    --primary: 152 80% 40%;
+    /* MMU Kenya Blue - Lighter in dark mode */
+    --primary: 214 80% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 152 50% 15%;
+    --secondary: 214 30% 15%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 152 50% 15%;
+    --muted: 214 30% 15%;
     --muted-foreground: 0 0% 75%;
 
     /* MMU Kenya Red in dark mode */
@@ -81,18 +81,18 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 152 50% 20%;
-    --input: 152 50% 20%;
-    --ring: 152 80% 40%;
+    --border: 214 30% 20%;
+    --input: 214 30% 20%;
+    --ring: 214 80% 50%;
 
     /* MMU Kenya Sidebar Dark Theme */
-    --sidebar-background: 152 50% 15%;
+    --sidebar-background: 214 50% 15%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 152 80% 40%;
+    --sidebar-primary: 214 80% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 152 50% 20%;
+    --sidebar-accent: 214 30% 20%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 152 50% 25%;
+    --sidebar-border: 214 30% 25%;
     --sidebar-ring: 0 80% 60%;
   }
 }
@@ -272,3 +272,82 @@
 .transition-transform {
   transition: transform 0.3s ease;
 }
+
+/* Dashboard Background - Light Mode */
+.dashboard-background {
+  background: linear-gradient(
+    135deg,
+    rgb(214, 240, 255) 0%,
+    rgb(240, 248, 255) 25%,
+    rgb(255, 250, 250) 50%,
+    rgb(254, 242, 242) 75%,
+    rgb(255, 245, 245) 100%
+  );
+  min-height: 100vh;
+}
+
+/* Dashboard Background - Dark Mode */
+.dark .dashboard-background {
+  background: linear-gradient(
+    135deg,
+    rgb(15, 23, 42) 0%,
+    rgb(30, 41, 59) 25%,
+    rgb(51, 65, 85) 50%,
+    rgb(30, 41, 59) 75%,
+    rgb(15, 23, 42) 100%
+  );
+}
+
+/* Faculty Card Colors */
+.bg-blue-100 { background-color: rgb(219 234 254); }
+.bg-green-100 { background-color: rgb(220 252 231); }
+.bg-orange-100 { background-color: rgb(254 215 170); }
+.bg-purple-100 { background-color: rgb(243 232 255); }
+.bg-indigo-100 { background-color: rgb(224 231 255); }
+.bg-pink-100 { background-color: rgb(252 231 243); }
+
+.dark .bg-blue-900\/30 { background-color: rgb(30 58 138 / 0.3); }
+.dark .bg-green-900\/30 { background-color: rgb(20 83 45 / 0.3); }
+.dark .bg-orange-900\/30 { background-color: rgb(124 45 18 / 0.3); }
+.dark .bg-purple-900\/30 { background-color: rgb(88 28 135 / 0.3); }
+.dark .bg-indigo-900\/30 { background-color: rgb(49 46 129 / 0.3); }
+.dark .bg-pink-900\/30 { background-color: rgb(131 24 67 / 0.3); }
+
+.text-blue-600 { color: rgb(37 99 235); }
+.text-green-600 { color: rgb(22 163 74); }
+.text-orange-600 { color: rgb(234 88 12); }
+.text-purple-600 { color: rgb(147 51 234); }
+.text-indigo-600 { color: rgb(79 70 229); }
+.text-pink-600 { color: rgb(219 39 119); }
+
+.dark .text-blue-400 { color: rgb(96 165 250); }
+.dark .text-green-400 { color: rgb(74 222 128); }
+.dark .text-orange-400 { color: rgb(251 146 60); }
+.dark .text-purple-400 { color: rgb(196 181 253); }
+.dark .text-indigo-400 { color: rgb(129 140 248); }
+.dark .text-pink-400 { color: rgb(244 114 182); }
+
+/* Line clamp utilities */
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+
+

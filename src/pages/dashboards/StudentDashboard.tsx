@@ -1,23 +1,24 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { CalendarDays, Clock, FileText, AlertTriangle, ArrowRight } from "lucide-react";
+import { CalendarDays, Clock, FileText, ArrowRight, BookOpen, GraduationCap } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-const Dashboard = () => {
+const StudentDashboard = () => {
   const { dbUser } = useAuth();
 
-  // Use real user data from context and add some sample data
+  // Student-specific data
   const studentInfo = {
     name: dbUser?.full_name || "Student",
     admissionNumber: dbUser?.student_id || "MCS-234-178/2024",
     faculty: dbUser?.department || "Faculty of Computing & IT",
-    role: dbUser?.role || "student",
     semester: "2.1",
     gpa: 3.7,
     feeBalance: 15000,
     feeRequired: 45000,
+    enrolledCourses: 6,
+    completedCredits: 45,
+    requiredCredits: 120,
     upcomingClasses: [
       {
         id: 1,
@@ -52,20 +53,27 @@ const Dashboard = () => {
     ],
   };
 
-  // Calculate fee percentage
+  // Calculate percentages
   const feePercentage = Math.round((1 - studentInfo.feeBalance / studentInfo.feeRequired) * 100);
+  const creditPercentage = Math.round((studentInfo.completedCredits / studentInfo.requiredCredits) * 100);
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-primary">Student Dashboard</h1>
           <p className="text-muted-foreground">
-            Welcome back, {studentInfo.name}
+            Welcome back, {studentInfo.name} • {studentInfo.admissionNumber}
           </p>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+          <GraduationCap className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Student</span>
         </div>
       </div>
 
+      {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -95,93 +103,88 @@ const Dashboard = () => {
 
         <Card className="bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Assignments</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Enrolled Courses</CardTitle>
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{studentInfo.pendingAssignments.length}</div>
+            <div className="text-2xl font-bold">{studentInfo.enrolledCourses}</div>
             <p className="text-xs text-muted-foreground">
-              Next due in {Math.min(...studentInfo.pendingAssignments.map(a => a.daysRemaining))} days
+              This semester
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Fee Balance</CardTitle>
-            <AlertTriangle className={`h-4 w-4 ${feePercentage < 70 ? "text-destructive" : "text-muted-foreground"}`} />
+            <CardTitle className="text-sm font-medium">Credit Progress</CardTitle>
+            <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">KSh {studentInfo.feeBalance.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{studentInfo.completedCredits}/{studentInfo.requiredCredits}</div>
             <p className="text-xs text-muted-foreground">
-              {feePercentage}% paid of KSh {studentInfo.feeRequired.toLocaleString()}
+              {creditPercentage}% completed
             </p>
-            <Progress value={feePercentage} className="h-2 mt-2" />
+            <Progress value={creditPercentage} className="h-2 mt-2" />
           </CardContent>
         </Card>
       </div>
 
-      {/* User Information Card */}
-      <Card className="col-span-full bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300">
+      {/* Academic Progress Card */}
+      <Card className="bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300">
         <CardHeader>
-          <CardTitle>User Information</CardTitle>
-          <CardDescription>Your account details</CardDescription>
+          <CardTitle>Academic Progress</CardTitle>
+          <CardDescription>Your academic journey overview</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Name:</span>
-                <span className="font-medium">{studentInfo.name}</span>
-              </div>
-              {studentInfo.role === 'student' && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Admission Number:</span>
-                  <span className="font-medium">{studentInfo.admissionNumber}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Department:</span>
+                <span className="text-muted-foreground">Faculty:</span>
                 <span className="font-medium">{studentInfo.faculty}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Role:</span>
-                <span className="font-medium capitalize">{studentInfo.role}</span>
+                <span className="text-muted-foreground">Current Semester:</span>
+                <span className="font-medium">{studentInfo.semester}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">GPA:</span>
+                <span className="font-medium">{studentInfo.gpa}</span>
               </div>
             </div>
 
             <div className="space-y-2">
-              {studentInfo.role === 'student' && (
-                <>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Semester:</span>
-                    <span className="font-medium">{studentInfo.semester}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">GPA:</span>
-                    <span className="font-medium">{studentInfo.gpa}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Fee Balance:</span>
-                    <span className="font-medium">KSh {studentInfo.feeBalance.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Fee Paid:</span>
-                    <span className="font-medium">{feePercentage}%</span>
-                  </div>
-                </>
-              )}
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Email:</span>
-                <span className="font-medium">{dbUser?.email || 'Not available'}</span>
+                <span className="text-muted-foreground">Completed Credits:</span>
+                <span className="font-medium">{studentInfo.completedCredits}</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Required Credits:</span>
+                <span className="font-medium">{studentInfo.requiredCredits}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Progress:</span>
+                <span className="font-medium">{creditPercentage}%</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Fee Balance:</span>
+                <span className="font-medium">KSh {studentInfo.feeBalance.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Fee Paid:</span>
+                <span className="font-medium">{feePercentage}%</span>
+              </div>
+              <Progress value={feePercentage} className="h-2 mt-2" />
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Main Content Grid */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="col-span-1 bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300">
+        <Card className="bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader>
             <CardTitle>Upcoming Classes</CardTitle>
             <CardDescription>Your scheduled classes for the next 24 hours</CardDescription>
@@ -232,7 +235,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="col-span-1 bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300">
+        <Card className="bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader>
             <CardTitle>Pending Assignments</CardTitle>
             <CardDescription>Assignments due in the next 7 days</CardDescription>
@@ -267,4 +270,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default StudentDashboard;

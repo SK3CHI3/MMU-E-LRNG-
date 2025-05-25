@@ -1,13 +1,9 @@
 
-import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
   SidebarInset,
@@ -18,17 +14,7 @@ import { Notifications } from "@/components/navigation/Notifications";
 import { Logo } from "@/components/brand/Logo";
 import { SidebarNav } from "@/components/navigation/SidebarNav";
 import { Search } from "@/components/ui/search";
-import {
-  BookOpen,
-  Calendar,
-  GraduationCap,
-  Home,
-  BarChart4,
-  MessageSquare,
-  FileText,
-  CreditCard,
-  Brain
-} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
@@ -42,7 +28,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       <div className="flex min-h-screen w-full">
         <MMUSidebar />
         <SidebarInset className="p-0">
-          <div className="flex flex-col min-h-screen">
+          <div className="flex flex-col min-h-screen dashboard-background">
             <TopBar />
             <main className="flex-1 p-6">{children}</main>
           </div>
@@ -79,7 +65,7 @@ const MMUSidebar = () => {
 
 const TopBar = () => {
   return (
-    <div className="border-b h-16 px-6 flex items-center justify-between">
+    <div className="border-b h-16 px-6 flex items-center justify-between bg-white/70 dark:bg-background/95 backdrop-blur-md border-white/40 dark:border-border shadow-sm">
       <div className="flex items-center gap-4">
         <SidebarTrigger />
         <div className="hidden md:block w-64">

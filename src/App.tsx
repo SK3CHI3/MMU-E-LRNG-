@@ -3,9 +3,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import MainLayout from "./components/layouts/MainLayout";
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -21,18 +21,51 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Unauthorized from "./pages/Unauthorized";
-// Lazy-loaded pages
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const ClassSessions = lazy(() => import("./pages/ClassSessions"));
-const Assignments = lazy(() => import("./pages/Assignments"));
-const Grades = lazy(() => import("./pages/Grades"));
-const Announcements = lazy(() => import("./pages/Announcements"));
-const ComradeAI = lazy(() => import("./pages/ComradeAI"));
-const Resources = lazy(() => import("./pages/Resources"));
-const Fees = lazy(() => import("./pages/Fees"));
-const Profile = lazy(() => import("./pages/Profile"));
-const Settings = lazy(() => import("./pages/Settings"));
-const Support = lazy(() => import("./pages/Support"));
+// Shared pages
+const Profile = lazy(() => import("./pages/shared/Profile"));
+const Settings = lazy(() => import("./pages/shared/Settings"));
+const Support = lazy(() => import("./pages/shared/Support"));
+
+// Student pages
+const StudentCourses = lazy(() => import("./pages/student/Courses"));
+const StudentAssignments = lazy(() => import("./pages/student/Assignments"));
+const StudentGrades = lazy(() => import("./pages/student/Grades"));
+const StudentSchedule = lazy(() => import("./pages/student/Schedule"));
+
+// Lecturer pages
+const LecturerCourses = lazy(() => import("./pages/lecturer/Courses"));
+const AssignmentManagement = lazy(() => import("./pages/lecturer/AssignmentManagement"));
+const Materials = lazy(() => import("./pages/lecturer/Materials"));
+const Grading = lazy(() => import("./pages/lecturer/Grading"));
+const Messages = lazy(() => import("./pages/lecturer/Messages"));
+const LecturerStudents = lazy(() => import("./pages/lecturer/Students"));
+const LecturerAnalytics = lazy(() => import("./pages/lecturer/Analytics"));
+const TeachingAI = lazy(() => import("./pages/lecturer/TeachingAI"));
+
+// Dean pages
+const DeanFaculty = lazy(() => import("./pages/dean/Faculty"));
+
+// Admin pages
+const AdminUsers = lazy(() => import("./pages/admin/Users"));
+
+// Placeholder pages for routes that don't have specific implementations yet
+const PlaceholderPage = () => (
+  <div className="flex items-center justify-center min-h-[400px]">
+    <div className="text-center">
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Coming Soon</h2>
+      <p className="text-gray-600 dark:text-gray-400">This page is under development.</p>
+    </div>
+  </div>
+);
+
+// Dashboard Router
+import { DashboardRouter } from "./components/dashboard/DashboardRouter";
+
+// Role-specific dashboard imports - direct imports for now
+import StudentDashboard from "./pages/dashboards/StudentDashboard";
+import LecturerDashboard from "./pages/dashboards/LecturerDashboard";
+import DeanDashboard from "./pages/dashboards/DeanDashboard";
+import AdminDashboard from "./pages/dashboards/AdminDashboard";
 
 // 404 Page
 import NotFound from "./pages/NotFound";
@@ -71,7 +104,7 @@ const App = () => {
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
 
-              {/* Protected routes */}
+              {/* Dashboard Router - handles role-based redirection */}
               <Route element={<ProtectedRoute />}>
                 <Route element={
                   <MainLayout>
@@ -80,17 +113,79 @@ const App = () => {
                     </Suspense>
                   </MainLayout>
                 }>
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/class-sessions" element={<ClassSessions />} />
-                  <Route path="/assignments" element={<Assignments />} />
-                  <Route path="/grades" element={<Grades />} />
-                  <Route path="/announcements" element={<Announcements />} />
-                  <Route path="/comrade-ai" element={<ComradeAI />} />
-                  <Route path="/resources" element={<Resources />} />
-                  <Route path="/fees" element={<Fees />} />
+                  <Route path="/dashboard" element={<DashboardRouter />} />
+                </Route>
+              </Route>
+
+              {/* Shared routes - accessible by all authenticated users */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={
+                  <MainLayout>
+                    <Suspense fallback={<PageLoader />}>
+                      <Outlet />
+                    </Suspense>
+                  </MainLayout>
+                }>
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/support" element={<Support />} />
+                  <Route path="/announcements" element={<PlaceholderPage />} />
+                </Route>
+              </Route>
+
+              {/* Student routes */}
+              <Route element={<ProtectedRoute allowedRoles={['student']} />}>
+                <Route element={
+                  <MainLayout>
+                    <Suspense fallback={<PageLoader />}>
+                      <Outlet />
+                    </Suspense>
+                  </MainLayout>
+                }>
+                  <Route path="/dashboard/student" element={<StudentDashboard />} />
+                  <Route path="/courses" element={<StudentCourses />} />
+                  <Route path="/assignments" element={<StudentAssignments />} />
+                  <Route path="/grades" element={<StudentGrades />} />
+                  <Route path="/library" element={<PlaceholderPage />} />
+                  <Route path="/fees" element={<PlaceholderPage />} />
+                  <Route path="/ai-assistant" element={<PlaceholderPage />} />
+                </Route>
+              </Route>
+
+              {/* Lecturer routes */}
+              <Route element={<ProtectedRoute allowedRoles={['lecturer']} />}>
+                <Route element={
+                  <MainLayout>
+                    <Suspense fallback={<PageLoader />}>
+                      <Outlet />
+                    </Suspense>
+                  </MainLayout>
+                }>
+                  <Route path="/dashboard/lecturer" element={<LecturerDashboard />} />
+                  <Route path="/lecturer/courses" element={<LecturerCourses />} />
+                  <Route path="/lecturer/assignments" element={<AssignmentManagement />} />
+                  <Route path="/grading" element={<Grading />} />
+                  <Route path="/materials" element={<Materials />} />
+                  <Route path="/messages" element={<Messages />} />
+                  <Route path="/teaching-ai" element={<TeachingAI />} />
+                </Route>
+              </Route>
+
+              {/* Dean routes */}
+              <Route element={<ProtectedRoute allowedRoles={['dean']} />}>
+                <Route element={
+                  <MainLayout>
+                    <Suspense fallback={<PageLoader />}>
+                      <Outlet />
+                    </Suspense>
+                  </MainLayout>
+                }>
+                  <Route path="/dashboard/dean" element={<DeanDashboard />} />
+                  <Route path="/faculty" element={<DeanFaculty />} />
+                  <Route path="/departments" element={<PlaceholderPage />} />
+                  <Route path="/performance" element={<PlaceholderPage />} />
+                  <Route path="/budget" element={<PlaceholderPage />} />
+                  <Route path="/management-ai" element={<PlaceholderPage />} />
                 </Route>
               </Route>
 
@@ -103,7 +198,63 @@ const App = () => {
                     </Suspense>
                   </MainLayout>
                 }>
-                  {/* Add admin-specific routes here */}
+                  <Route path="/dashboard/admin" element={<AdminDashboard />} />
+                  <Route path="/users" element={<AdminUsers />} />
+                  <Route path="/system" element={<PlaceholderPage />} />
+                  <Route path="/faculties" element={<PlaceholderPage />} />
+                  <Route path="/security" element={<PlaceholderPage />} />
+                  <Route path="/global-settings" element={<PlaceholderPage />} />
+                  <Route path="/admin-ai" element={<PlaceholderPage />} />
+                </Route>
+              </Route>
+
+              {/* Multi-role routes */}
+              <Route element={<ProtectedRoute allowedRoles={['student', 'lecturer']} />}>
+                <Route element={
+                  <MainLayout>
+                    <Suspense fallback={<PageLoader />}>
+                      <Outlet />
+                    </Suspense>
+                  </MainLayout>
+                }>
+                  <Route path="/schedule" element={<StudentSchedule />} />
+                </Route>
+              </Route>
+
+              <Route element={<ProtectedRoute allowedRoles={['lecturer', 'dean']} />}>
+                <Route element={
+                  <MainLayout>
+                    <Suspense fallback={<PageLoader />}>
+                      <Outlet />
+                    </Suspense>
+                  </MainLayout>
+                }>
+                  <Route path="/students" element={<LecturerStudents />} />
+                </Route>
+              </Route>
+
+              <Route element={<ProtectedRoute allowedRoles={['lecturer', 'dean', 'admin']} />}>
+                <Route element={
+                  <MainLayout>
+                    <Suspense fallback={<PageLoader />}>
+                      <Outlet />
+                    </Suspense>
+                  </MainLayout>
+                }>
+                  <Route path="/analytics" element={<LecturerAnalytics />} />
+                  <Route path="/reports" element={<PlaceholderPage />} />
+                </Route>
+              </Route>
+
+              <Route element={<ProtectedRoute allowedRoles={['dean', 'admin']} />}>
+                <Route element={
+                  <MainLayout>
+                    <Suspense fallback={<PageLoader />}>
+                      <Outlet />
+                    </Suspense>
+                  </MainLayout>
+                }>
+                  <Route path="/staff" element={<PlaceholderPage />} />
                 </Route>
               </Route>
 

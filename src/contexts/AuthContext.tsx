@@ -37,11 +37,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        console.log('AuthContext: User found in session, fetching DB user');
-        // Use a small timeout to allow the UI to render first
-        setTimeout(() => {
-          fetchDbUser(session.user.id);
-        }, 100);
+        console.log('AuthContext: User found in session, fetching DB user immediately');
+        // Fetch DB user immediately without timeout for faster loading
+        fetchDbUser(session.user.id);
       } else {
         console.log('AuthContext: No user in session');
         setIsLoading(false);
@@ -62,25 +60,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           console.log('AuthContext: User found in auth change, fetching DB user');
 
-          // For sign-in events, we want to redirect immediately and fetch user data in background
-          if (event === 'SIGNED_IN') {
-            // Set a minimal user object to allow navigation
-            setDbUser({
-              auth_id: session.user.id,
-              email: session.user.email,
-              full_name: session.user.email?.split('@')[0] || 'User',
-              role: 'student',
-              department: 'General',
-            } as DbUser);
-
-            // Then fetch the real user data in the background
-            setTimeout(() => {
-              fetchDbUser(session.user.id);
-            }, 500);
-          } else {
-            // For other events, fetch user data immediately
-            await fetchDbUser(session.user.id);
-          }
+          // For all events with a user, fetch the database user immediately
+          // This ensures we have the correct user data regardless of the event type
+          await fetchDbUser(session.user.id);
         } else {
           console.log('AuthContext: No user in auth change');
           setDbUser(null);
