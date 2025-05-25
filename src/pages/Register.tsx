@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { showErrorToast, showSuccessToast } from '@/utils/toast';
+import { getFacultyNames, getDepartmentsByFaculty } from '@/services/facultyService';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -25,8 +26,64 @@ const Register = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [faculties, setFaculties] = useState<string[]>([]);
+  const [departments, setDepartments] = useState<string[]>([]);
   const { signUp } = useAuth();
   const navigate = useNavigate();
+
+  // Load dynamic faculty data on component mount
+  useEffect(() => {
+    const loadFaculties = () => {
+      try {
+        const facultyNames = getFacultyNames();
+        setFaculties(facultyNames);
+      } catch (error) {
+        console.error('Error loading faculties:', error);
+        // Fallback to hardcoded data
+        setFaculties([
+          'Faculty of Computing and Information Technology',
+          'Faculty of Business and Economics',
+          'Faculty of Engineering and Technology',
+          'Faculty of Media and Communication',
+          'Faculty of Science & Technology',
+          'Faculty of Social Sciences and Technology'
+        ]);
+      }
+    };
+
+    loadFaculties();
+  }, []);
+
+  // Load departments when faculty changes (for dean role)
+  useEffect(() => {
+    if (formData.role === 'dean' && formData.faculty) {
+      try {
+        const facultyDepartments = getDepartmentsByFaculty(formData.faculty);
+        setDepartments(facultyDepartments);
+      } catch (error) {
+        console.error('Error loading departments:', error);
+        // Fallback to generic departments
+        setDepartments([
+          'Computer Science',
+          'Business Administration',
+          'Engineering',
+          'Other'
+        ]);
+      }
+    } else {
+      // For non-dean roles, use generic departments
+      setDepartments([
+        'Computer Science',
+        'Information Technology',
+        'Business Administration',
+        'Engineering',
+        'Media and Communication',
+        'Science',
+        'Social Sciences',
+        'Other'
+      ]);
+    }
+  }, [formData.role, formData.faculty]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -157,29 +214,7 @@ const Register = () => {
     }
   };
 
-  const departments = [
-    'Computer Science',
-    'Business Administration',
-    'Engineering',
-    'Medicine',
-    'Education',
-    'Arts and Social Sciences',
-    'Law',
-    'Science',
-    'Agriculture',
-    'Other'
-  ];
 
-  const faculties = [
-    'Faculty of Computing and Information Technology',
-    'Faculty of Business and Economics',
-    'Faculty of Engineering and Technology',
-    'Faculty of Health Sciences',
-    'Faculty of Education and Social Sciences',
-    'Faculty of Law',
-    'Faculty of Science',
-    'Faculty of Agriculture and Natural Resources'
-  ];
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5 p-4">

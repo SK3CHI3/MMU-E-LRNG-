@@ -3,23 +3,50 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Shield, Users, Database, Settings, Bell, Activity, AlertTriangle, CheckCircle, TrendingUp } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
+import { getSystemStats, getFacultyStats, SystemStats, FacultyStats } from "@/services/facultyService";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const AdminDashboard = () => {
   const { dbUser } = useAuth();
+  const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
+  const [facultyStats, setFacultyStats] = useState<FacultyStats[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Admin-specific data (system-wide)
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      setLoading(true);
+      try {
+        // Fetch dynamic system statistics
+        const sysStats = await getSystemStats();
+        setSystemStats(sysStats);
+
+        // Fetch dynamic faculty statistics
+        const facStats = await getFacultyStats();
+        setFacultyStats(facStats);
+      } catch (error) {
+        console.error('Error fetching admin data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAdminData();
+  }, []);
+
+  // Fallback data if dynamic data is not available
   const adminInfo = {
     name: dbUser?.full_name || "System Administrator",
-    systemStats: {
-      totalUsers: 8547,
-      totalStudents: 7892,
-      totalLecturers: 245,
-      totalDeans: 6,
-      totalAdmins: 12,
-      activeNotifications: 15,
-      systemUptime: 99.8,
-      storageUsed: 67,
-      dailyActiveUsers: 2341
+    systemStats: systemStats || {
+      totalUsers: 0,
+      totalStudents: 0,
+      totalLecturers: 0,
+      totalDeans: 0,
+      totalAdmins: 0,
+      totalCourses: 0,
+      totalFaculties: 0,
+      totalDepartments: 0,
+      activeNotifications: 0
     },
     systemHealth: [
       {
@@ -30,7 +57,7 @@ const AdminDashboard = () => {
       },
       {
         service: "Authentication",
-        status: "healthy", 
+        status: "healthy",
         uptime: 100,
         lastCheck: "1 minute ago"
       },
@@ -77,30 +104,16 @@ const AdminDashboard = () => {
         severity: "success"
       }
     ],
-    facultyOverview: [
+    facultyOverview: facultyStats.length > 0 ? facultyStats : [
       {
-        id: 1,
-        name: "Faculty of Computing & IT",
-        students: 501,
-        lecturers: 25,
-        courses: 40,
-        dean: "Dr. Moses O. Odeo"
-      },
-      {
-        id: 2,
-        name: "Faculty of Business & Economics",
-        students: 1245,
-        lecturers: 45,
-        courses: 65,
-        dean: "Dr. Dorcas Kerre"
-      },
-      {
-        id: 3,
-        name: "Faculty of Engineering & Technology",
-        students: 892,
-        lecturers: 38,
-        courses: 52,
-        dean: "Prof. John Mwangi"
+        id: "focit",
+        name: "Faculty of Computing and Information Technology",
+        shortName: "FoCIT",
+        dean: "Dr. Moses O. Odeo",
+        totalStudents: 0,
+        totalLecturers: 0,
+        totalCourses: 0,
+        totalDepartments: 0
       }
     ],
     pendingApprovals: [
@@ -108,7 +121,7 @@ const AdminDashboard = () => {
         id: 1,
         type: "Course Creation",
         description: "New course: Advanced AI & Machine Learning",
-        faculty: "Computing & IT",
+        faculty: "Faculty of Computing and Information Technology",
         requestedBy: "Dr. Sarah Njeri",
         daysWaiting: 3
       },
@@ -116,7 +129,7 @@ const AdminDashboard = () => {
         id: 2,
         type: "User Role Change",
         description: "Promote lecturer to department head",
-        faculty: "Business & Economics", 
+        faculty: "Faculty of Business and Economics",
         requestedBy: "Dr. Dorcas Kerre",
         daysWaiting: 1
       }
@@ -235,15 +248,15 @@ const AdminDashboard = () => {
                 </div>
                 <div className="flex items-center gap-6 text-sm">
                   <div className="text-center">
-                    <div className="font-semibold">{faculty.students}</div>
+                    <div className="font-semibold">{faculty.totalStudents || faculty.students || 0}</div>
                     <div className="text-muted-foreground">Students</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-semibold">{faculty.lecturers}</div>
+                    <div className="font-semibold">{faculty.totalLecturers || faculty.lecturers || 0}</div>
                     <div className="text-muted-foreground">Lecturers</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-semibold">{faculty.courses}</div>
+                    <div className="font-semibold">{faculty.totalCourses || faculty.courses || 0}</div>
                     <div className="text-muted-foreground">Courses</div>
                   </div>
                   <Button variant="outline" size="sm">

@@ -2,7 +2,8 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
-import { mmuFaculties, mmuStats, mmuContact, sampleNotifications, PublicNotification } from "@/data/mmuData";
+import { mmuFaculties, mmuStats, mmuContact, PublicNotification } from "@/data/mmuData";
+import { getPublicNotifications } from "@/services/notificationService";
 import {
   GraduationCap,
   Book,
@@ -34,10 +35,30 @@ import { useState, useEffect } from "react";
 import { initScrollAnimations } from "@/utils/scrollAnimations";
 
 const Index = () => {
+  const [notifications, setNotifications] = useState<PublicNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+
   // Initialize scroll animations
   useEffect(() => {
     const cleanup = initScrollAnimations();
     return cleanup;
+  }, []);
+
+  // Load dynamic notifications
+  useEffect(() => {
+    const loadNotifications = async () => {
+      setLoading(true);
+      try {
+        const publicNotifications = await getPublicNotifications();
+        setNotifications(publicNotifications);
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadNotifications();
   }, []);
 
   // Helper function to get faculty icon
@@ -89,8 +110,8 @@ const Index = () => {
     }
   };
 
-  // Get active notifications (in a real app, this would be fetched from API)
-  const activeNotifications = sampleNotifications
+  // Get active notifications from dynamic data
+  const activeNotifications = notifications
     .filter(notification => notification.isActive)
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
     .slice(0, 3);

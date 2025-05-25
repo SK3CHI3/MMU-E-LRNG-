@@ -170,13 +170,34 @@ All tables implement comprehensive RLS policies:
 ## Database Statistics
 
 Current sample data includes:
-- **14 Users** (admin, dean, lecturer, student roles)
-- **4 Courses** (CS102, CS205, CS301, CS401)
-- **11 Course Enrollments**
+- **18 Users** (admin, dean, lecturer, student roles across multiple faculties)
+  - 1 Admin
+  - 3 Deans (Computing, Business, Engineering)
+  - 4 Lecturers (across different faculties)
+  - 10 Students (across Computing, Business, and Engineering faculties)
+- **11 Courses** across 3 faculties:
+  - 5 Computing courses (CS102, CS205, CS301, CS350, CS401)
+  - 3 Business courses (BUS201, ACC101, ECO301)
+  - 3 Engineering courses (ENG201, ELE301, MEC201)
+- **19 Course Enrollments** across all faculties
 - **4 Assignments** (homework and project types)
 - **4 Course Materials**
-- **4 Announcements**
+- **10 Announcements** (4 course-specific + 6 public notifications)
+  - Course announcements for academic activities
+  - Public notifications for landing page (registration, events, system notices)
+  - Enhanced with categories, external links, and expiration dates
+- **11 Class Sessions** across multiple courses and session types
+  - Lectures, labs, tutorials with both online and physical locations
+  - Scheduled sessions with proper date/time management
+  - Sample cancelled session with cancellation reason
+  - Support for meeting links, passwords, and session notes
 - **17 Analytics Records**
+
+### Faculty Distribution:
+- **Faculty of Computing and Information Technology (FoCIT)**: 8 users, 5 courses
+- **Faculty of Business and Economics (FoBE)**: 4 users, 3 courses
+- **Faculty of Engineering and Technology (FoET)**: 4 users, 3 courses
+- **Administration**: 1 admin user
 
 ## Maintenance
 
@@ -210,6 +231,6 @@ For database-related issues:
 
 ---
 
-**Last Updated**: May 2024  
-**Version**: 1.0.0  
+**Last Updated**: May 2024
+**Version**: 1.0.0
 **Database**: PostgreSQL with Supabase

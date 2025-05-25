@@ -21,6 +21,24 @@ export interface CourseAnalytics {
   trend_percentage: number;
 }
 
+// Get simple course list for dropdowns (lecturer's courses)
+export const getLecturerCoursesSimple = async (lecturerId: string): Promise<{id: string, title: string, code: string}[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('courses')
+      .select('id, title, code')
+      .eq('instructor_id', lecturerId)
+      .eq('status', 'active')
+      .order('code', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching lecturer courses simple:', error);
+    return [];
+  }
+};
+
 // Get all courses for a lecturer
 export const getLecturerCourses = async (lecturerId: string): Promise<CourseWithStats[]> => {
   try {

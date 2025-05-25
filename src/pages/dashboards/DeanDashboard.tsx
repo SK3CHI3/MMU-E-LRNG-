@@ -10,7 +10,7 @@ const DeanDashboard = () => {
   // Dean-specific data (faculty-scoped)
   const deanInfo = {
     name: dbUser?.full_name || "Prof. Dean",
-    faculty: dbUser?.department || "Faculty of Computing & Information Technology",
+    faculty: dbUser?.department || "Faculty of Computing and Information Technology",
     facultyCode: "FoCIT",
     departments: [
       {
@@ -23,7 +23,7 @@ const DeanDashboard = () => {
       },
       {
         id: 2,
-        name: "Department of Information Technology", 
+        name: "Department of Information Technology",
         head: "Dr. Mary Wanjiku",
         lecturers: 8,
         students: 189,
@@ -60,7 +60,7 @@ const DeanDashboard = () => {
         id: 2,
         type: "achievement",
         message: "Dr. Sarah Njeri published research paper in IEEE",
-        timestamp: "1 day ago", 
+        timestamp: "1 day ago",
         department: "Information Technology"
       },
       {
@@ -242,9 +242,9 @@ const DeanDashboard = () => {
                     )}
                   </div>
                 </div>
-                <Progress 
-                  value={(metric.value / metric.maxValue) * 100} 
-                  className="h-2" 
+                <Progress
+                  value={(metric.value / metric.maxValue) * 100}
+                  className="h-2"
                 />
               </div>
             ))}

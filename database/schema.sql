@@ -163,6 +163,64 @@ CREATE TABLE IF NOT EXISTS course_materials (
 );
 
 -- =============================================
+-- CLASS SCHEDULING AND TIMETABLES
+-- =============================================
+
+-- Class sessions table for scheduling
+CREATE TABLE IF NOT EXISTS class_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    session_date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    location VARCHAR(255),
+    is_online BOOLEAN DEFAULT false,
+    meeting_link TEXT,
+    meeting_password VARCHAR(50),
+    max_attendees INTEGER,
+    session_type VARCHAR(50) DEFAULT 'lecture' CHECK (session_type IN ('lecture', 'lab', 'tutorial', 'seminar', 'exam', 'other')),
+    status VARCHAR(20) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'ongoing', 'completed', 'cancelled', 'postponed')),
+    cancellation_reason TEXT,
+    notes TEXT,
+    created_by UUID NOT NULL REFERENCES users(auth_id),
+    is_recurring BOOLEAN DEFAULT false,
+    recurrence_pattern JSONB, -- For recurring sessions
+    parent_session_id UUID REFERENCES class_sessions(id), -- For recurring sessions
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Class attendance tracking
+CREATE TABLE IF NOT EXISTS class_attendance (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id UUID NOT NULL REFERENCES class_sessions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(auth_id),
+    status VARCHAR(20) DEFAULT 'absent' CHECK (status IN ('present', 'absent', 'late', 'excused')),
+    check_in_time TIMESTAMP WITH TIME ZONE,
+    check_out_time TIMESTAMP WITH TIME ZONE,
+    notes TEXT,
+    marked_by UUID REFERENCES users(auth_id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(session_id, user_id)
+);
+
+-- Session materials and resources
+CREATE TABLE IF NOT EXISTS session_materials (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id UUID NOT NULL REFERENCES class_sessions(id) ON DELETE CASCADE,
+    material_id UUID REFERENCES course_materials(id),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    url TEXT,
+    material_type VARCHAR(50) DEFAULT 'document' CHECK (material_type IN ('document', 'video', 'audio', 'link', 'presentation', 'code')),
+    is_required BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =============================================
 -- MESSAGING AND COMMUNICATION
 -- =============================================
 
@@ -205,12 +263,14 @@ CREATE TABLE IF NOT EXISTS announcements (
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
     course_id UUID REFERENCES courses(id),
-    priority VARCHAR(20) DEFAULT 'normal' CHECK (priority IN ('normal', 'high', 'urgent')),
+    priority VARCHAR(20) DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
     is_public BOOLEAN DEFAULT false, -- Public announcements visible to all
     target_audience VARCHAR(50) DEFAULT 'all' CHECK (target_audience IN ('all', 'students', 'lecturers', 'specific')),
     target_users UUID[], -- Specific users if target_audience is 'specific'
     expires_at TIMESTAMP WITH TIME ZONE,
-    attachments TEXT[], -- Array of file URLs
+    attachments JSONB, -- JSON array of attachment objects
+    external_link TEXT, -- External link for clickable notifications
+    category VARCHAR(50) DEFAULT 'academic', -- Category for filtering
     is_pinned BOOLEAN DEFAULT false,
     view_count INTEGER DEFAULT 0,
     created_by UUID NOT NULL REFERENCES users(auth_id),
@@ -272,6 +332,24 @@ CREATE TABLE IF NOT EXISTS analytics_data (
 -- - announcement-attachments: For announcement files
 
 -- =============================================
+-- SESSION ATTACHMENTS TABLE
+-- =============================================
+
+CREATE TABLE session_attachments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id UUID NOT NULL REFERENCES class_sessions(id) ON DELETE CASCADE,
+    file_name VARCHAR(255) NOT NULL,
+    original_name VARCHAR(255) NOT NULL,
+    file_size BIGINT NOT NULL,
+    file_type VARCHAR(100) NOT NULL,
+    file_path TEXT NOT NULL,
+    uploaded_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
 -- INDEXES FOR PERFORMANCE
 -- =============================================
 
@@ -328,11 +406,31 @@ CREATE INDEX IF NOT EXISTS idx_analytics_course_id ON analytics_data(course_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_activity_type ON analytics_data(activity_type);
 CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics_data(created_at);
 
+-- Session attachments indexes
+CREATE INDEX IF NOT EXISTS idx_session_attachments_session_id ON session_attachments(session_id);
+CREATE INDEX IF NOT EXISTS idx_session_attachments_uploaded_by ON session_attachments(uploaded_by);
+
 -- Announcements indexes
 CREATE INDEX IF NOT EXISTS idx_announcements_course_id ON announcements(course_id);
 CREATE INDEX IF NOT EXISTS idx_announcements_created_by ON announcements(created_by);
 CREATE INDEX IF NOT EXISTS idx_announcements_is_public ON announcements(is_public);
 CREATE INDEX IF NOT EXISTS idx_announcements_created_at ON announcements(created_at);
+
+-- Class sessions indexes
+CREATE INDEX IF NOT EXISTS idx_class_sessions_course_id ON class_sessions(course_id);
+CREATE INDEX IF NOT EXISTS idx_class_sessions_created_by ON class_sessions(created_by);
+CREATE INDEX IF NOT EXISTS idx_class_sessions_date ON class_sessions(session_date);
+CREATE INDEX IF NOT EXISTS idx_class_sessions_status ON class_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_class_sessions_date_time ON class_sessions(session_date, start_time);
+
+-- Class attendance indexes
+CREATE INDEX IF NOT EXISTS idx_class_attendance_session_id ON class_attendance(session_id);
+CREATE INDEX IF NOT EXISTS idx_class_attendance_user_id ON class_attendance(user_id);
+CREATE INDEX IF NOT EXISTS idx_class_attendance_status ON class_attendance(status);
+
+-- Session materials indexes
+CREATE INDEX IF NOT EXISTS idx_session_materials_session_id ON session_materials(session_id);
+CREATE INDEX IF NOT EXISTS idx_session_materials_material_id ON session_materials(material_id);
 
 -- =============================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
@@ -345,6 +443,9 @@ ALTER TABLE course_enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE assignment_submissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE course_materials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE class_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE class_attendance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE session_materials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
@@ -549,6 +650,79 @@ CREATE POLICY "Students can read course announcements" ON announcements
 -- Public announcements can be read by anyone
 CREATE POLICY "Public announcements readable by all" ON announcements
     FOR SELECT USING (is_public = true);
+
+-- =============================================
+-- CLASS SESSIONS POLICIES
+-- =============================================
+
+-- Lecturers can manage sessions for their courses
+CREATE POLICY "Lecturers can manage class sessions" ON class_sessions
+    FOR ALL USING (
+        course_id IN (
+            SELECT id FROM courses WHERE created_by = auth.uid()
+        )
+    );
+
+-- Students can read sessions for enrolled courses
+CREATE POLICY "Students can read class sessions" ON class_sessions
+    FOR SELECT USING (
+        course_id IN (
+            SELECT course_id FROM course_enrollments
+            WHERE user_id = auth.uid() AND status = 'enrolled'
+        )
+    );
+
+-- Admins and deans can read all sessions
+CREATE POLICY "Admins can read all class sessions" ON class_sessions
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE auth_id = auth.uid()
+            AND role IN ('admin', 'dean')
+        )
+    );
+
+-- =============================================
+-- CLASS ATTENDANCE POLICIES
+-- =============================================
+
+-- Users can read their own attendance
+CREATE POLICY "Users can read own attendance" ON class_attendance
+    FOR SELECT USING (user_id = auth.uid());
+
+-- Lecturers can manage attendance for their sessions
+CREATE POLICY "Lecturers can manage attendance" ON class_attendance
+    FOR ALL USING (
+        session_id IN (
+            SELECT cs.id FROM class_sessions cs
+            JOIN courses c ON cs.course_id = c.id
+            WHERE c.created_by = auth.uid()
+        )
+    );
+
+-- =============================================
+-- SESSION MATERIALS POLICIES
+-- =============================================
+
+-- Students can read session materials for enrolled courses
+CREATE POLICY "Students can read session materials" ON session_materials
+    FOR SELECT USING (
+        session_id IN (
+            SELECT cs.id FROM class_sessions cs
+            JOIN course_enrollments ce ON cs.course_id = ce.course_id
+            WHERE ce.user_id = auth.uid() AND ce.status = 'enrolled'
+        )
+    );
+
+-- Lecturers can manage session materials for their courses
+CREATE POLICY "Lecturers can manage session materials" ON session_materials
+    FOR ALL USING (
+        session_id IN (
+            SELECT cs.id FROM class_sessions cs
+            JOIN courses c ON cs.course_id = c.id
+            WHERE c.created_by = auth.uid()
+        )
+    );
 
 -- =============================================
 -- ANALYTICS POLICIES

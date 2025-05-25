@@ -12,34 +12,68 @@
 INSERT INTO users (auth_id, email, full_name, role, department, phone, is_active) VALUES
 ('00000000-0000-0000-0000-000000000001', 'admin@mmu.ac.ke', 'Dr. John Admin', 'admin', 'Administration', '+254700000001', true);
 
--- Sample Dean User
+-- Sample Dean User (Using real MMU faculty name)
 INSERT INTO users (auth_id, email, full_name, role, department, phone, is_active) VALUES
-('00000000-0000-0000-0000-000000000002', 'dean.computing@mmu.ac.ke', 'Prof. Mary Dean', 'dean', 'Faculty of Computing & IT', '+254700000002', true);
+('00000000-0000-0000-0000-000000000002', 'dean.computing@mmu.ac.ke', 'Dr. Moses O. Odeo', 'dean', 'Faculty of Computing and Information Technology', '+254700000002', true);
 
--- Sample Lecturer Users
+-- Sample Lecturer Users (Using real MMU faculty name)
 INSERT INTO users (auth_id, email, full_name, role, department, phone, is_active) VALUES
-('00000000-0000-0000-0000-000000000003', 'lecturer1@mmu.ac.ke', 'Dr. James Lecturer', 'lecturer', 'Faculty of Computing & IT', '+254700000003', true),
-('00000000-0000-0000-0000-000000000004', 'lecturer2@mmu.ac.ke', 'Dr. Sarah Professor', 'lecturer', 'Faculty of Computing & IT', '+254700000004', true),
-('00000000-0000-0000-0000-000000000005', 'lecturer3@mmu.ac.ke', 'Dr. Michael Teacher', 'lecturer', 'Faculty of Computing & IT', '+254700000005', true);
+('00000000-0000-0000-0000-000000000003', 'lecturer1@mmu.ac.ke', 'Dr. James Lecturer', 'lecturer', 'Faculty of Computing and Information Technology', '+254700000003', true),
+('00000000-0000-0000-0000-000000000004', 'lecturer2@mmu.ac.ke', 'Dr. Sarah Professor', 'lecturer', 'Faculty of Computing and Information Technology', '+254700000004', true),
+('00000000-0000-0000-0000-000000000005', 'lecturer3@mmu.ac.ke', 'Dr. Michael Teacher', 'lecturer', 'Faculty of Computing and Information Technology', '+254700000005', true);
 
--- Sample Student Users
+-- Sample Student Users (Using real MMU faculty name and proper student IDs)
 INSERT INTO users (auth_id, email, full_name, role, department, student_id, phone, is_active) VALUES
-('00000000-0000-0000-0000-000000000006', 'student1@mmu.ac.ke', 'Alice Student', 'student', 'Faculty of Computing & IT', 'CS2021001', '+254700000006', true),
-('00000000-0000-0000-0000-000000000007', 'student2@mmu.ac.ke', 'Bob Learner', 'student', 'Faculty of Computing & IT', 'CS2021002', '+254700000007', true),
-('00000000-0000-0000-0000-000000000008', 'student3@mmu.ac.ke', 'Carol Scholar', 'student', 'Faculty of Computing & IT', 'CS2021003', '+254700000008', true),
-('00000000-0000-0000-0000-000000000009', 'student4@mmu.ac.ke', 'David Pupil', 'student', 'Faculty of Computing & IT', 'CS2021004', '+254700000009', true),
-('00000000-0000-0000-0000-000000000010', 'student5@mmu.ac.ke', 'Eve Undergraduate', 'student', 'Faculty of Computing & IT', 'CS2021005', '+254700000010', true);
+('00000000-0000-0000-0000-000000000006', 'student1@mmu.ac.ke', 'Alice Student', 'student', 'Faculty of Computing and Information Technology', 'FoCIT/2021/001', '+254700000006', true),
+('00000000-0000-0000-0000-000000000007', 'student2@mmu.ac.ke', 'Bob Learner', 'student', 'Faculty of Computing and Information Technology', 'FoCIT/2021/002', '+254700000007', true),
+('00000000-0000-0000-0000-000000000008', 'student3@mmu.ac.ke', 'Carol Scholar', 'student', 'Faculty of Computing and Information Technology', 'FoCIT/2021/003', '+254700000008', true),
+('00000000-0000-0000-0000-000000000009', 'student4@mmu.ac.ke', 'David Pupil', 'student', 'Faculty of Computing and Information Technology', 'FoCIT/2021/004', '+254700000009', true),
+('00000000-0000-0000-0000-000000000010', 'student5@mmu.ac.ke', 'Eve Undergraduate', 'student', 'Faculty of Computing and Information Technology', 'FoCIT/2021/005', '+254700000010', true);
+
+-- Additional users from other MMU faculties for diversity
+INSERT INTO users (auth_id, email, full_name, role, department, phone, is_active) VALUES
+-- Business Faculty Dean
+('00000000-0000-0000-0000-000000000011', 'dean.business@mmu.ac.ke', 'Dr. Dorcas Kerre', 'dean', 'Faculty of Business and Economics', '+254700000011', true),
+-- Business Faculty Lecturer
+('00000000-0000-0000-0000-000000000012', 'lecturer.business@mmu.ac.ke', 'Dr. Business Lecturer', 'lecturer', 'Faculty of Business and Economics', '+254700000012', true);
+
+-- Business Students
+INSERT INTO users (auth_id, email, full_name, role, department, student_id, phone, is_active) VALUES
+('00000000-0000-0000-0000-000000000013', 'student.business1@mmu.ac.ke', 'Grace Business', 'student', 'Faculty of Business and Economics', 'FoBE/2021/001', '+254700000013', true),
+('00000000-0000-0000-0000-000000000014', 'student.business2@mmu.ac.ke', 'John Commerce', 'student', 'Faculty of Business and Economics', 'FoBE/2021/002', '+254700000014', true);
+
+-- Engineering Faculty Users
+INSERT INTO users (auth_id, email, full_name, role, department, phone, is_active) VALUES
+('00000000-0000-0000-0000-000000000015', 'dean.engineering@mmu.ac.ke', 'Dr. Engineering Dean', 'dean', 'Faculty of Engineering and Technology', '+254700000015', true),
+('00000000-0000-0000-0000-000000000016', 'lecturer.engineering@mmu.ac.ke', 'Dr. Engineering Lecturer', 'lecturer', 'Faculty of Engineering and Technology', '+254700000016', true);
+
+-- Engineering Students
+INSERT INTO users (auth_id, email, full_name, role, department, student_id, phone, is_active) VALUES
+('00000000-0000-0000-0000-000000000017', 'student.eng1@mmu.ac.ke', 'Peter Engineer', 'student', 'Faculty of Engineering and Technology', 'FoET/2021/001', '+254700000017', true),
+('00000000-0000-0000-0000-000000000018', 'student.eng2@mmu.ac.ke', 'Mary Mechanical', 'student', 'Faculty of Engineering and Technology', 'FoET/2021/002', '+254700000018', true);
 
 -- =============================================
 -- SAMPLE COURSES
 -- =============================================
 
 INSERT INTO courses (id, code, title, description, credit_hours, department, level, semester, year, max_students, created_by, is_active) VALUES
-('10000000-0000-0000-0000-000000000001', 'CS301', 'Data Structures and Algorithms', 'Comprehensive study of fundamental data structures and algorithms including arrays, linked lists, stacks, queues, trees, graphs, and sorting/searching algorithms.', 3, 'Faculty of Computing & IT', 'undergraduate', 'fall', 2024, 50, '00000000-0000-0000-0000-000000000003', true),
-('10000000-0000-0000-0000-000000000002', 'CS205', 'Database Management Systems', 'Introduction to database concepts, relational model, SQL, database design, normalization, and database administration.', 3, 'Faculty of Computing & IT', 'undergraduate', 'fall', 2024, 45, '00000000-0000-0000-0000-000000000004', true),
-('10000000-0000-0000-0000-000000000003', 'CS401', 'Software Engineering', 'Software development lifecycle, project management, requirements analysis, system design, testing, and maintenance.', 4, 'Faculty of Computing & IT', 'undergraduate', 'fall', 2024, 40, '00000000-0000-0000-0000-000000000005', true),
-('10000000-0000-0000-0000-000000000004', 'CS102', 'Introduction to Programming', 'Basic programming concepts using Python, including variables, control structures, functions, and object-oriented programming.', 3, 'Faculty of Computing & IT', 'undergraduate', 'fall', 2024, 60, '00000000-0000-0000-0000-000000000003', true),
-('10000000-0000-0000-0000-000000000005', 'CS350', 'Computer Networks', 'Network protocols, OSI model, TCP/IP, network security, and network administration.', 3, 'Faculty of Computing & IT', 'undergraduate', 'spring', 2024, 35, '00000000-0000-0000-0000-000000000004', true);
+('10000000-0000-0000-0000-000000000001', 'CS301', 'Data Structures and Algorithms', 'Comprehensive study of fundamental data structures and algorithms including arrays, linked lists, stacks, queues, trees, graphs, and sorting/searching algorithms.', 3, 'Faculty of Computing and Information Technology', 'undergraduate', 'fall', 2024, 50, '00000000-0000-0000-0000-000000000003', true),
+('10000000-0000-0000-0000-000000000002', 'CS205', 'Database Management Systems', 'Introduction to database concepts, relational model, SQL, database design, normalization, and database administration.', 3, 'Faculty of Computing and Information Technology', 'undergraduate', 'fall', 2024, 45, '00000000-0000-0000-0000-000000000004', true),
+('10000000-0000-0000-0000-000000000003', 'CS401', 'Software Engineering', 'Software development lifecycle, project management, requirements analysis, system design, testing, and maintenance.', 4, 'Faculty of Computing and Information Technology', 'undergraduate', 'fall', 2024, 40, '00000000-0000-0000-0000-000000000005', true),
+('10000000-0000-0000-0000-000000000004', 'CS102', 'Introduction to Programming', 'Basic programming concepts using Python, including variables, control structures, functions, and object-oriented programming.', 3, 'Faculty of Computing and Information Technology', 'undergraduate', 'fall', 2024, 60, '00000000-0000-0000-0000-000000000003', true),
+('10000000-0000-0000-0000-000000000005', 'CS350', 'Computer Networks', 'Network protocols, OSI model, TCP/IP, network security, and network administration.', 3, 'Faculty of Computing and Information Technology', 'undergraduate', 'spring', 2024, 35, '00000000-0000-0000-0000-000000000004', true);
+
+-- Additional courses from other MMU faculties
+INSERT INTO courses (id, code, title, description, credit_hours, department, level, semester, year, max_students, created_by, is_active) VALUES
+-- Business Faculty Courses
+('10000000-0000-0000-0000-000000000006', 'BUS201', 'Principles of Management', 'Introduction to management principles, organizational behavior, and leadership concepts in modern business environments.', 3, 'Faculty of Business and Economics', 'undergraduate', 'fall', 2024, 40, '00000000-0000-0000-0000-000000000012', true),
+('10000000-0000-0000-0000-000000000007', 'ACC101', 'Financial Accounting', 'Fundamentals of financial accounting including recording transactions, preparing financial statements, and basic financial analysis.', 3, 'Faculty of Business and Economics', 'undergraduate', 'fall', 2024, 45, '00000000-0000-0000-0000-000000000012', true),
+('10000000-0000-0000-0000-000000000008', 'ECO301', 'Microeconomics', 'Advanced study of microeconomic theory including consumer behavior, market structures, and resource allocation.', 4, 'Faculty of Business and Economics', 'undergraduate', 'spring', 2024, 30, '00000000-0000-0000-0000-000000000012', true),
+
+-- Engineering Faculty Courses
+('10000000-0000-0000-0000-000000000009', 'ENG201', 'Engineering Mathematics', 'Advanced mathematics for engineering including calculus, differential equations, and linear algebra applications.', 4, 'Faculty of Engineering and Technology', 'undergraduate', 'fall', 2024, 35, '00000000-0000-0000-0000-000000000016', true),
+('10000000-0000-0000-0000-000000000010', 'ELE301', 'Circuit Analysis', 'Analysis of electrical circuits including AC/DC circuits, network theorems, and circuit design principles.', 3, 'Faculty of Engineering and Technology', 'undergraduate', 'spring', 2024, 25, '00000000-0000-0000-0000-000000000016', true),
+('10000000-0000-0000-0000-000000000011', 'MEC201', 'Thermodynamics', 'Principles of thermodynamics including energy systems, heat transfer, and mechanical engineering applications.', 3, 'Faculty of Engineering and Technology', 'undergraduate', 'fall', 2024, 30, '00000000-0000-0000-0000-000000000016', true);
 
 -- =============================================
 -- SAMPLE COURSE ENROLLMENTS
@@ -70,6 +104,26 @@ INSERT INTO course_enrollments (user_id, course_id, status, enrollment_date) VAL
 ('00000000-0000-0000-0000-000000000010', '10000000-0000-0000-0000-000000000003', 'enrolled', '2024-01-19'),
 ('00000000-0000-0000-0000-000000000010', '10000000-0000-0000-0000-000000000004', 'enrolled', '2024-01-19'),
 ('00000000-0000-0000-0000-000000000010', '10000000-0000-0000-0000-000000000005', 'enrolled', '2024-01-19');
+
+-- Business Students enrollments
+INSERT INTO course_enrollments (user_id, course_id, status, enrollment_date) VALUES
+-- Grace Business enrollments
+('00000000-0000-0000-0000-000000000013', '10000000-0000-0000-0000-000000000006', 'enrolled', '2024-01-20'),
+('00000000-0000-0000-0000-000000000013', '10000000-0000-0000-0000-000000000007', 'enrolled', '2024-01-20'),
+
+-- John Commerce enrollments
+('00000000-0000-0000-0000-000000000014', '10000000-0000-0000-0000-000000000006', 'enrolled', '2024-01-21'),
+('00000000-0000-0000-0000-000000000014', '10000000-0000-0000-0000-000000000008', 'enrolled', '2024-01-21');
+
+-- Engineering Students enrollments
+INSERT INTO course_enrollments (user_id, course_id, status, enrollment_date) VALUES
+-- Peter Engineer enrollments
+('00000000-0000-0000-0000-000000000017', '10000000-0000-0000-0000-000000000009', 'enrolled', '2024-01-22'),
+('00000000-0000-0000-0000-000000000017', '10000000-0000-0000-0000-000000000010', 'enrolled', '2024-01-22'),
+
+-- Mary Mechanical enrollments
+('00000000-0000-0000-0000-000000000018', '10000000-0000-0000-0000-000000000009', 'enrolled', '2024-01-23'),
+('00000000-0000-0000-0000-000000000018', '10000000-0000-0000-0000-000000000011', 'enrolled', '2024-01-23');
 
 -- =============================================
 -- SAMPLE ASSIGNMENTS
@@ -128,12 +182,55 @@ INSERT INTO course_materials (id, course_id, title, description, type, url, tags
 -- SAMPLE ANNOUNCEMENTS
 -- =============================================
 
-INSERT INTO announcements (id, title, content, course_id, priority, is_public, created_by) VALUES
-('40000000-0000-0000-0000-000000000001', 'Welcome to Data Structures and Algorithms', 'Welcome to CS301! Please review the course syllabus and prepare for our first lab session next week.', '10000000-0000-0000-0000-000000000001', 'normal', false, '00000000-0000-0000-0000-000000000003'),
-('40000000-0000-0000-0000-000000000002', 'Assignment 1 Due Date Reminder', 'Reminder: Binary Tree Implementation assignment is due this Friday at 11:59 PM. Please submit through the course portal.', '10000000-0000-0000-0000-000000000001', 'high', false, '00000000-0000-0000-0000-000000000003'),
-('40000000-0000-0000-0000-000000000003', 'Database Lab Schedule Change', 'The database lab scheduled for Thursday has been moved to Friday 2:00 PM in Lab 204.', '10000000-0000-0000-0000-000000000002', 'high', false, '00000000-0000-0000-0000-000000000004'),
-('40000000-0000-0000-0000-000000000004', 'New Academic Year Registration', 'Registration for the new academic year is now open. Please visit the registrar office or use the online portal.', NULL, 'normal', true, '00000000-0000-0000-0000-000000000001'),
-('40000000-0000-0000-0000-000000000005', 'Software Engineering Project Guidelines', 'Updated project guidelines and rubric have been posted. Please review before starting your final project.', '10000000-0000-0000-0000-000000000003', 'normal', false, '00000000-0000-0000-0000-000000000005');
+INSERT INTO announcements (id, title, content, course_id, priority, is_public, created_by, category, external_link, expires_at) VALUES
+-- Course-specific announcements
+('40000000-0000-0000-0000-000000000001', 'Welcome to Data Structures and Algorithms', 'Welcome to CS301! Please review the course syllabus and prepare for our first lab session next week.', '10000000-0000-0000-0000-000000000001', 'normal', false, '00000000-0000-0000-0000-000000000003', 'academic', null, null),
+('40000000-0000-0000-0000-000000000002', 'Assignment 1 Due Date Reminder', 'Reminder: Binary Tree Implementation assignment is due this Friday at 11:59 PM. Please submit through the course portal.', '10000000-0000-0000-0000-000000000001', 'high', false, '00000000-0000-0000-0000-000000000003', 'academic', null, null),
+('40000000-0000-0000-0000-000000000003', 'Database Lab Schedule Change', 'The database lab scheduled for Thursday has been moved to Friday 2:00 PM in Lab 204.', '10000000-0000-0000-0000-000000000002', 'high', false, '00000000-0000-0000-0000-000000000004', 'academic', null, null),
+('40000000-0000-0000-0000-000000000005', 'Software Engineering Project Guidelines', 'Updated project guidelines and rubric have been posted. Please review before starting your final project.', '10000000-0000-0000-0000-000000000003', 'normal', false, '00000000-0000-0000-0000-000000000005', 'academic', null, null),
+
+-- Public announcements for landing page
+('40000000-0000-0000-0000-000000000004', 'New Academic Year Registration Open', 'Registration for the new academic year 2024/2025 is now open. Students can apply online through the MMU portal.', NULL, 'high', true, '00000000-0000-0000-0000-000000000001', 'academic', 'https://www.mmu.ac.ke/admissions/', '2024-12-31 23:59:59+00'),
+('40000000-0000-0000-0000-000000000006', 'MMU Digital Campus Launch', 'We are excited to announce the launch of MMU Digital Campus - your gateway to modern education with AI-powered learning and real-time collaboration.', NULL, 'medium', true, '00000000-0000-0000-0000-000000000001', 'announcement', null, null),
+('40000000-0000-0000-0000-000000000007', 'Annual Research Conference 2024', 'MMU will host the Annual Research Conference on December 15-16, 2024. Faculty and students are invited to submit their research abstracts.', NULL, 'medium', true, '00000000-0000-0000-0000-000000000001', 'research', 'https://www.mmu.ac.ke/research/', '2024-12-10 23:59:59+00'),
+('40000000-0000-0000-0000-000000000008', 'Library Services Enhancement', 'The MMU Library has extended its operating hours and introduced new digital resources including e-books and online databases.', NULL, 'low', true, '00000000-0000-0000-0000-000000000001', 'services', null, null),
+('40000000-0000-0000-0000-000000000009', 'Career Fair 2024', 'Join us for the MMU Career Fair on November 20-21, 2024. Connect with top employers and explore career opportunities in technology and business.', NULL, 'high', true, '00000000-0000-0000-0000-000000000001', 'career', null, '2024-11-25 23:59:59+00'),
+('40000000-0000-0000-0000-000000000010', 'System Maintenance Notice', 'The MMU Digital Campus will undergo scheduled maintenance on Saturday, November 16, 2024, from 2:00 AM to 4:00 AM. Services may be temporarily unavailable.', NULL, 'urgent', true, '00000000-0000-0000-0000-000000000001', 'system', null, '2024-11-17 06:00:00+00');
+
+-- =============================================
+-- SAMPLE CLASS SESSIONS
+-- =============================================
+
+INSERT INTO class_sessions (id, course_id, title, description, session_date, start_time, end_time, location, is_online, meeting_link, session_type, status, created_by) VALUES
+-- CS301 Data Structures sessions (spread across the week)
+('50000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Introduction to Data Structures', 'Overview of fundamental data structures and their applications', '2024-11-18', '09:00:00', '10:30:00', 'Room 201, Computer Science Building', false, null, 'lecture', 'scheduled', '00000000-0000-0000-0000-000000000003'),
+('50000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 'Binary Trees Lab', 'Hands-on implementation of binary tree data structures', '2024-11-19', '14:00:00', '16:00:00', 'Computer Lab 1', false, null, 'lab', 'scheduled', '00000000-0000-0000-0000-000000000003'),
+('50000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001', 'Algorithm Analysis', 'Time and space complexity analysis of algorithms', '2024-11-20', '10:00:00', '11:30:00', 'Room 201, Computer Science Building', false, null, 'lecture', 'scheduled', '00000000-0000-0000-0000-000000000003'),
+
+-- CS205 Database sessions
+('50000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000002', 'Database Design Principles', 'Introduction to relational database design and normalization', '2024-11-18', '14:00:00', '15:30:00', 'Room 305, Engineering Building', false, null, 'lecture', 'scheduled', '00000000-0000-0000-0000-000000000004'),
+('50000000-0000-0000-0000-000000000005', '10000000-0000-0000-0000-000000000002', 'SQL Queries Workshop', 'Practical session on writing complex SQL queries', '2024-11-21', '09:00:00', '11:00:00', 'Computer Lab 2', false, null, 'lab', 'scheduled', '00000000-0000-0000-0000-000000000004'),
+
+-- CS401 Software Engineering sessions (some online)
+('50000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000003', 'Software Development Lifecycle', 'Overview of SDLC methodologies including Agile and Waterfall', '2024-11-19', '10:00:00', '11:30:00', null, true, 'https://zoom.us/j/123456789', 'lecture', 'scheduled', '00000000-0000-0000-0000-000000000005'),
+('50000000-0000-0000-0000-000000000007', '10000000-0000-0000-0000-000000000003', 'Project Planning Session', 'Team formation and project planning for final project', '2024-11-21', '14:00:00', '16:00:00', 'Room 401, Engineering Building', false, null, 'tutorial', 'scheduled', '00000000-0000-0000-0000-000000000005'),
+
+-- CS102 Programming sessions
+('50000000-0000-0000-0000-000000000008', '10000000-0000-0000-0000-000000000004', 'Python Fundamentals', 'Introduction to Python programming language', '2024-11-18', '11:00:00', '12:30:00', 'Room 101, Computer Science Building', false, null, 'lecture', 'scheduled', '00000000-0000-0000-0000-000000000003'),
+('50000000-0000-0000-0000-000000000009', '10000000-0000-0000-0000-000000000004', 'Programming Lab', 'Hands-on Python programming exercises', '2024-11-20', '15:00:00', '17:00:00', 'Computer Lab 3', false, null, 'lab', 'scheduled', '00000000-0000-0000-0000-000000000003'),
+
+-- CS350 Networks sessions
+('50000000-0000-0000-0000-000000000010', '10000000-0000-0000-0000-000000000005', 'Network Protocols', 'Introduction to TCP/IP and network protocols', '2024-11-20', '13:00:00', '14:30:00', 'Room 203, Computer Science Building', false, null, 'lecture', 'scheduled', '00000000-0000-0000-0000-000000000004'),
+
+-- Sample cancelled session
+('50000000-0000-0000-0000-000000000011', '10000000-0000-0000-0000-000000000001', 'Advanced Algorithms', 'Advanced algorithm design techniques', '2024-11-22', '09:00:00', '10:30:00', 'Room 201, Computer Science Building', false, null, 'lecture', 'cancelled', '00000000-0000-0000-0000-000000000003'),
+
+-- Additional sessions for better week view testing
+('50000000-0000-0000-0000-000000000012', '10000000-0000-0000-0000-000000000001', 'Data Structures Review', 'Review session for midterm exam', '2024-11-25', '11:00:00', '12:30:00', 'Room 201, Computer Science Building', false, null, 'tutorial', 'scheduled', '00000000-0000-0000-0000-000000000003'),
+('50000000-0000-0000-0000-000000000013', '10000000-0000-0000-0000-000000000002', 'Database Project Presentation', 'Student project presentations', '2024-11-26', '13:00:00', '15:00:00', null, true, 'https://zoom.us/j/987654321', 'seminar', 'scheduled', '00000000-0000-0000-0000-000000000004'),
+('50000000-0000-0000-0000-000000000014', '10000000-0000-0000-0000-000000000003', 'Software Testing Workshop', 'Hands-on testing methodologies', '2024-11-27', '10:00:00', '12:00:00', 'Computer Lab 1', false, null, 'lab', 'scheduled', '00000000-0000-0000-0000-000000000005'),
+('50000000-0000-0000-0000-000000000015', '10000000-0000-0000-0000-000000000004', 'Python Advanced Topics', 'Advanced Python programming concepts', '2024-11-28', '14:00:00', '16:00:00', 'Room 101, Computer Science Building', false, null, 'lecture', 'scheduled', '00000000-0000-0000-0000-000000000003'),
+('50000000-0000-0000-0000-000000000016', '10000000-0000-0000-0000-000000000005', 'Network Security Lab', 'Practical network security exercises', '2024-11-29', '09:00:00', '11:00:00', 'Security Lab', false, null, 'lab', 'scheduled', '00000000-0000-0000-0000-000000000004');
 
 -- =============================================
 -- SAMPLE ANALYTICS DATA
@@ -157,3 +254,9 @@ INSERT INTO analytics_data (user_id, course_id, activity_type, created_at) VALUE
 ('00000000-0000-0000-0000-000000000008', '10000000-0000-0000-0000-000000000002', 'material_view', '2024-01-21 16:10:00'),
 ('00000000-0000-0000-0000-000000000008', '10000000-0000-0000-0000-000000000003', 'login', '2024-01-23 13:00:00'),
 ('00000000-0000-0000-0000-000000000008', '10000000-0000-0000-0000-000000000003', 'assignment_view', '2024-01-23 13:20:00');
+
+-- =============================================
+-- UPDATE COURSES WITH INSTRUCTOR ASSIGNMENTS
+-- =============================================
+
+

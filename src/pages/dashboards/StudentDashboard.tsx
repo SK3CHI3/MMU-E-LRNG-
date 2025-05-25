@@ -3,15 +3,53 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CalendarDays, Clock, FileText, ArrowRight, BookOpen, GraduationCap } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
+import { getStudentData, StudentData } from "@/services/userDataService";
+import { getUserNotifications, getCourseAnnouncements } from "@/services/notificationService";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const StudentDashboard = () => {
-  const { dbUser } = useAuth();
+  const { dbUser, user } = useAuth();
+  const [studentData, setStudentData] = useState<StudentData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
 
-  // Student-specific data
-  const studentInfo = {
+  useEffect(() => {
+    const fetchStudentData = async () => {
+      if (!user?.id) return;
+
+      setLoading(true);
+      try {
+        // Fetch dynamic student data
+        const data = await getStudentData(user.id);
+        setStudentData(data);
+
+        // Fetch notifications
+        const userNotifications = await getUserNotifications(user.id);
+        setNotifications(userNotifications);
+
+        // If we have course enrollments, fetch course announcements
+        if (data?.enrolledCourses) {
+          // This would need course IDs - we'll implement this when we have enrollment data
+          // const courseAnnouncements = await getCourseAnnouncements(courseIds);
+          // setAnnouncements(courseAnnouncements);
+        }
+      } catch (error) {
+        console.error('Error fetching student data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudentData();
+  }, [user?.id]);
+
+  // Fallback data if dynamic data is not available
+  const studentInfo = studentData || {
     name: dbUser?.full_name || "Student",
-    admissionNumber: dbUser?.student_id || "MCS-234-178/2024",
-    faculty: dbUser?.department || "Faculty of Computing & IT",
+    admissionNumber: dbUser?.student_id || "FoCIT/2024/001",
+    faculty: dbUser?.department || "Faculty of Computing and Information Technology",
     semester: "2.1",
     gpa: 3.7,
     feeBalance: 15000,
@@ -19,38 +57,8 @@ const StudentDashboard = () => {
     enrolledCourses: 6,
     completedCredits: 45,
     requiredCredits: 120,
-    upcomingClasses: [
-      {
-        id: 1,
-        unit: "Advanced Database Systems",
-        time: "Today, 2:00 PM",
-        location: "Room 305",
-        isOnline: false,
-      },
-      {
-        id: 2,
-        unit: "Software Engineering",
-        time: "Tomorrow, 10:30 AM",
-        location: "https://zoom.us/j/123456",
-        isOnline: true,
-      },
-    ],
-    pendingAssignments: [
-      {
-        id: 1,
-        unit: "Data Structures and Algorithms",
-        title: "Assignment 3: Binary Trees",
-        dueDate: "May 25, 2025",
-        daysRemaining: 5,
-      },
-      {
-        id: 2,
-        unit: "Operating Systems",
-        title: "Lab 4: Process Scheduling",
-        dueDate: "May 23, 2025",
-        daysRemaining: 3,
-      },
-    ],
+    upcomingClasses: [],
+    pendingAssignments: [],
   };
 
   // Calculate percentages

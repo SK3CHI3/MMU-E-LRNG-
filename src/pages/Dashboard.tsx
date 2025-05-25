@@ -11,8 +11,8 @@ const Dashboard = () => {
   // Use real user data from context and add some sample data
   const studentInfo = {
     name: dbUser?.full_name || "Student",
-    admissionNumber: dbUser?.student_id || "MCS-234-178/2024",
-    faculty: dbUser?.department || "Faculty of Computing & IT",
+    admissionNumber: dbUser?.student_id || "FoCIT/2024/001",
+    faculty: dbUser?.department || "Faculty of Computing and Information Technology",
     role: dbUser?.role || "student",
     semester: "2.1",
     gpa: 3.7,

@@ -13,8 +13,8 @@ const LecturerDashboard = () => {
   // Lecturer-specific data
   const lecturerInfo = {
     name: dbUser?.full_name || "Dr. Lecturer",
-    employeeId: dbUser?.employee_id || "EMP-2024-001",
-    department: dbUser?.department || "Faculty of Computing & IT",
+    employeeId: dbUser?.id || "EMP-2024-001",
+    department: dbUser?.department || "Faculty of Computing and Information Technology",
     assignedCourses: [
       {
         id: 1,

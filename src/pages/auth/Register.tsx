@@ -14,19 +14,20 @@ const Register = () => {
   const [clickCount, setClickCount] = useState(0);
   const [showLecturerRegistration, setShowLecturerRegistration] = useState(false);
   const [selectedRole, setSelectedRole] = useState("lecturer");
-  
+
   const faculties = [
-    "Faculty of Media & Communication",
-    "Faculty of Computing & IT",
-    "Faculty of Business & Economics",
-    "Faculty of Social Sciences",
-    "Faculty of Engineering",
+    "Faculty of Computing and Information Technology",
+    "Faculty of Business and Economics",
+    "Faculty of Engineering and Technology",
+    "Faculty of Media and Communication",
+    "Faculty of Science & Technology",
+    "Faculty of Social Sciences and Technology",
   ];
 
   const handleLogoClick = () => {
     const newCount = clickCount + 1;
     setClickCount(newCount);
-    
+
     if (newCount === 3) {
       setShowLecturerRegistration(true);
       setClickCount(0);
@@ -36,7 +37,7 @@ const Register = () => {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-background to-secondary/20 p-4">
       <div className="mb-8 flex flex-col items-center">
-        <div 
+        <div
           className="flex h-16 w-16 items-center justify-center rounded-full bg-primary"
           onClick={handleLogoClick}
         >
@@ -52,7 +53,7 @@ const Register = () => {
           {showLecturerRegistration && <TabsTrigger value="lecturer">Lecturer</TabsTrigger>}
           {!showLecturerRegistration && <div className="h-10"></div>}
         </TabsList>
-        
+
         <TabsContent value="student">
           <Card>
             <CardHeader>
@@ -91,7 +92,7 @@ const Register = () => {
             </CardFooter>
           </Card>
         </TabsContent>
-        
+
         {showLecturerRegistration && (
           <TabsContent value="lecturer">
             <Card>
@@ -129,9 +130,9 @@ const Register = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Role</Label>
-                  <RadioGroup 
-                    value={selectedRole} 
-                    onValueChange={setSelectedRole} 
+                  <RadioGroup
+                    value={selectedRole}
+                    onValueChange={setSelectedRole}
                     className="flex flex-col space-y-1"
                   >
                     <div className="flex items-center space-x-2">
@@ -160,7 +161,7 @@ const Register = () => {
           </TabsContent>
         )}
       </Tabs>
-      
+
       <div className="mt-6">
         <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
