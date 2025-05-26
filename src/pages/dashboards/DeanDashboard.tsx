@@ -10,7 +10,7 @@ const DeanDashboard = () => {
   // Dean-specific data (faculty-scoped)
   const deanInfo = {
     name: dbUser?.full_name || "Prof. Dean",
-    faculty: dbUser?.department || "Faculty of Computing and Information Technology",
+    faculty: dbUser?.faculty || "Faculty of Computing and Information Technology",
     facultyCode: "FoCIT",
     departments: [
       {

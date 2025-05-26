@@ -93,44 +93,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.error('fetchDbUser: Error fetching user:', error);
 
-        // If the user doesn't exist in the database yet, create a default user
+        // If the user doesn't exist in the database, this is an error
         if (error.code === 'PGRST116') { // No rows returned
-          console.log('fetchDbUser: User not found in database, creating default user');
-
-          // Get user email from auth
-          const { data: authUser } = await supabase.auth.getUser();
-          if (!authUser.user) {
-            throw new Error('No authenticated user found');
-          }
-
-          // Create a default user record
-          const defaultUser = {
-            auth_id: authId,
-            email: authUser.user.email,
-            full_name: authUser.user.email?.split('@')[0] || 'New User',
-            role: 'student',
-            department: 'General',
-          };
-
-          console.log('fetchDbUser: Creating default user', defaultUser);
-
-          // Use admin client to bypass RLS and speed up the process
-          const { error: insertError } = await supabaseAdmin
-            .from('users')
-            .insert(defaultUser);
-
-          if (insertError) {
-            console.error('fetchDbUser: Error creating default user:', insertError);
-            setDbUser(null);
-          } else {
-            console.log('fetchDbUser: Default user created successfully');
-            setDbUser(defaultUser as DbUser);
-          }
+          console.error('fetchDbUser: User not found in database. This should not happen for registered users.');
+          setDbUser(null);
         } else {
           setDbUser(null);
         }
       } else {
         console.log('fetchDbUser: User found in database', data);
+        console.log('fetchDbUser: User role:', data.role);
+        console.log('fetchDbUser: User role type:', typeof data.role);
         setDbUser(data as DbUser);
       }
     } catch (error) {
@@ -146,6 +119,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Starting signup process with:', { email, userData });
 
+      // First, check if email already exists in database
+      const { data: existingEmailUser } = await supabase
+        .from('users')
+        .select('id, email')
+        .eq('email', email)
+        .single();
+
+      if (existingEmailUser) {
+        return {
+          error: {
+            message: 'This email address is already registered. Please use a different email or sign in to your existing account.'
+          },
+          data: null
+        };
+      }
+
       // Create auth user
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -154,34 +143,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Auth signup error:', error);
-
-        // Transform Supabase auth errors to user-friendly messages
-        let userFriendlyError = error;
-
-        if (error.message?.includes('User already registered')) {
-          userFriendlyError = {
-            ...error,
-            message: 'This email address is already registered. Please use a different email or sign in instead.'
-          };
-        } else if (error.message?.includes('Invalid email')) {
-          userFriendlyError = {
-            ...error,
-            message: 'Please enter a valid email address.'
-          };
-        } else if (error.message?.includes('Password should be at least 6 characters')) {
-          userFriendlyError = {
-            ...error,
-            message: 'Password must be at least 6 characters long.'
-          };
-        }
-
-        return { error: userFriendlyError, data: null };
+        return { error, data: null };
       }
 
       console.log('Auth signup successful:', data);
 
       if (data.user) {
-        // Create user record in the database using admin client to bypass RLS
+        // Create user record in the database
         const userRecord = {
           auth_id: data.user.id,
           email: data.user.email,
@@ -189,56 +157,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
 
         console.log('Creating user record:', userRecord);
+        console.log('User record role:', userRecord.role);
+        console.log('User record type:', typeof userRecord.role);
 
         try {
-          // Use the admin client to bypass RLS policies
-          const { error: dbError } = await supabaseAdmin
+          // First, check if a user with this auth_id already exists
+          const { data: existingUser } = await supabase
             .from('users')
-            .insert(userRecord);
+            .select('id')
+            .eq('auth_id', data.user.id)
+            .single();
+
+          if (existingUser) {
+            console.log('User already exists in database, registration successful');
+            return { data: { user: data.user, session: data.session }, error: null };
+          }
+
+          // Insert user record into database
+          console.log('Attempting to insert user into database...');
+          console.log('Final userRecord before insert:', JSON.stringify(userRecord, null, 2));
+          const { error: dbError, data: insertedUser } = await supabase
+            .from('users')
+            .insert(userRecord)
+            .select()
+            .single();
+
+          console.log('Database insert result:', { dbError, insertedUser });
 
           if (dbError) {
             console.error('Database user creation error:', dbError);
+            console.error('Full error details:', JSON.stringify(dbError, null, 2));
 
-            // Transform database errors to user-friendly messages
-            let userFriendlyError = dbError;
+            // If it's a duplicate key error, check if the user actually exists
+            if (dbError.message?.includes('duplicate key value violates unique constraint')) {
+              const { data: duplicateUser } = await supabase
+                .from('users')
+                .select('id')
+                .eq('auth_id', data.user.id)
+                .single();
 
-            if (dbError.message?.includes('duplicate key value violates unique constraint "users_email_key"')) {
-              userFriendlyError = {
-                ...dbError,
-                message: 'An account with this email already exists. Please use a different email address or sign in to your existing account.'
-              };
-            } else if (dbError.message?.includes('duplicate key value violates unique constraint "users_student_id_key"')) {
-              userFriendlyError = {
-                ...dbError,
-                message: 'This student ID is already registered. Please check your student ID or contact support if you believe this is an error.'
-              };
-            } else if (dbError.message?.includes('duplicate key value violates unique constraint')) {
-              userFriendlyError = {
-                ...dbError,
-                message: 'Some of the information you provided is already registered. Please check your details and try again.'
-              };
-            } else if (dbError.message?.includes('violates foreign key constraint')) {
-              userFriendlyError = {
-                ...dbError,
-                message: 'Invalid department or faculty selected. Please choose a valid option.'
-              };
-            } else if (dbError.message?.includes('permission denied')) {
-              userFriendlyError = {
-                ...dbError,
-                message: 'Registration is currently unavailable. Please contact support for assistance.'
-              };
+              if (duplicateUser) {
+                console.log('User was created successfully despite error message');
+                return { data: { user: data.user, session: data.session }, error: null };
+              }
             }
 
-            // If there's an error creating the DB user, delete the auth user
+            // Clean up the auth user if database creation fails
             try {
-              // Use the admin client for deletion as well
-              await supabaseAdmin.auth.admin.deleteUser(data.user.id);
-              console.log('Cleaned up orphaned auth user');
+              await supabase.auth.signOut();
+              console.log('Signed out user after DB error');
             } catch (deleteError) {
-              console.error('Failed to delete auth user after DB error:', deleteError);
+              console.error('Failed to sign out user after DB error:', deleteError);
             }
 
-            return { error: userFriendlyError, data: null };
+            // Return a user-friendly error message
+            return {
+              error: {
+                message: 'Registration failed. Please try again with a different email address.'
+              },
+              data: null
+            };
           }
         } catch (insertError) {
           console.error('Unexpected error during user creation:', insertError);
@@ -310,6 +288,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         email = userData.email;
         console.log('signIn: Found email for admission number');
+      } else {
+        // For email login, check if the email exists in our system first
+        console.log('signIn: Input detected as email, checking if user exists');
+
+        const { data: userData, error: lookupError } = await supabase
+          .from('users')
+          .select('email')
+          .eq('email', email.toLowerCase())
+          .single();
+
+        if (lookupError || !userData) {
+          console.error('signIn: Email not found in system:', lookupError);
+          return {
+            data: null,
+            error: { message: 'No account found with this email address. Please check your email or register for a new account.' }
+          };
+        }
+
+        console.log('signIn: Email found in system, proceeding with authentication');
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({

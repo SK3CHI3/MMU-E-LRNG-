@@ -1,6 +1,7 @@
 // Email availability checker utility
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient';
+import { comprehensiveEmailCheck } from './authCleanup';
 
 export interface EmailCheckResult {
   isAvailable: boolean;
@@ -11,36 +12,17 @@ export interface EmailCheckResult {
 // Check if an email is already registered
 export const checkEmailAvailability = async (email: string): Promise<EmailCheckResult> => {
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('email')
-      .eq('email', email.toLowerCase())
-      .single();
-
-    if (error && error.code === 'PGRST116') {
-      // No rows returned - email is available
-      return {
-        isAvailable: true,
-        message: 'Email is available'
-      };
-    }
-
-    if (data) {
-      // Email exists
-      return {
-        isAvailable: false,
-        message: 'This email is already registered'
-      };
-    }
+    // Use comprehensive check to verify both database and auth
+    const result = await comprehensiveEmailCheck(email);
 
     return {
-      isAvailable: true,
-      message: 'Email is available'
+      isAvailable: result.isAvailable,
+      message: result.isAvailable ? 'Email is available' : 'This email is already registered'
     };
   } catch (error) {
     console.error('Error checking email availability:', error);
     return {
-      isAvailable: true, // Assume available if check fails
+      isAvailable: null,
       message: 'Unable to verify email availability'
     };
   }
@@ -48,13 +30,13 @@ export const checkEmailAvailability = async (email: string): Promise<EmailCheckR
 
 // Generate available email suggestions based on a taken email
 export const generateAvailableEmailSuggestions = async (
-  baseEmail: string, 
-  role: string, 
+  baseEmail: string,
+  role: string,
   maxSuggestions: number = 5
 ): Promise<string[]> => {
   const [localPart, domain] = baseEmail.split('@');
   const suggestions: string[] = [];
-  
+
   // Generate potential alternatives
   const potentialEmails = [
     // Add numbers
@@ -75,7 +57,7 @@ export const generateAvailableEmailSuggestions = async (
   // Check each potential email
   for (const email of potentialEmails) {
     if (suggestions.length >= maxSuggestions) break;
-    
+
     try {
       const result = await checkEmailAvailability(email);
       if (result.isAvailable) {
@@ -124,7 +106,7 @@ export const validateEmailRealTime = async (email: string): Promise<{
 // Debounced email checker for real-time validation
 export const createDebouncedEmailChecker = (delay: number = 500) => {
   let timeoutId: NodeJS.Timeout;
-  
+
   return (email: string, callback: (result: any) => void) => {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(async () => {

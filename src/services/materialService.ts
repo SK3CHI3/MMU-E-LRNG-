@@ -16,6 +16,8 @@ export interface MaterialWithStats extends CourseMaterial {
   views: number;
   course_name: string;
   course_code: string;
+  tags?: string[];
+  is_public?: boolean;
 }
 
 // Upload a new material
@@ -179,7 +181,7 @@ export const getCourseMaterials = async (courseId: string): Promise<MaterialWith
 
 // Update a material
 export const updateMaterial = async (
-  materialId: string, 
+  materialId: string,
   updates: Partial<CourseMaterial>
 ): Promise<CourseMaterial> => {
   try {
@@ -292,8 +294,8 @@ export const trackMaterialView = async (materialId: string, userId: string): Pro
 
 // Search materials
 export const searchMaterials = async (
-  query: string, 
-  courseId?: string, 
+  query: string,
+  courseId?: string,
   type?: string
 ): Promise<MaterialWithStats[]> => {
   try {

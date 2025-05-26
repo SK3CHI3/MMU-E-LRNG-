@@ -6,13 +6,13 @@ import { Input, PasswordInput } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { EnhancedErrorAlert } from '@/components/ui/enhanced-alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { showErrorToast, showSuccessToast } from '@/utils/toast';
 import { getFacultyNames, getDepartmentsByFaculty } from '@/services/facultyService';
 import { mmuFaculties } from '@/data/mmuData';
+// Removed complex email checking utilities
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -21,10 +21,10 @@ const Register = () => {
     confirmPassword: '',
     fullName: '',
     studentId: '',
-    department: '',
-    role: 'student' as 'student' | 'lecturer' | 'dean' | 'admin',
+    department: '', // Only for deans (they head departments)
+    role: '' as 'student' | 'lecturer' | 'dean' | 'admin' | '',
     faculty: '', // For all roles that need faculty
-    programme: '', // For students and lecturers
+    programme: '', // For students and lecturers (department auto-determined from programme)
   });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,6 +32,7 @@ const Register = () => {
   const [faculties, setFaculties] = useState<string[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [programmes, setProgrammes] = useState<string[]>([]);
+  // Removed complex email status checking
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
@@ -95,9 +96,16 @@ const Register = () => {
     }
   }, [formData.faculty]);
 
+  // Removed complex email checking logic
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Clear error when user starts typing
+    if (error) {
+      setError(null);
+    }
   };
 
   const handleRoleChange = (value: 'student' | 'lecturer' | 'dean' | 'admin') => {
@@ -105,19 +113,81 @@ const Register = () => {
       ...prev,
       role: value,
       // Clear fields based on role
-      department: value === 'dean' || value === 'admin' ? '' : prev.department,
+      department: value === 'dean' ? prev.faculty : (value === 'student' || value === 'lecturer') ? '' : prev.department, // Deans: department = faculty they head
       faculty: value === 'admin' ? '' : prev.faculty,
-      programme: value === 'dean' || value === 'admin' ? '' : prev.programme,
+      programme: value === 'dean' || value === 'admin' ? '' : prev.programme, // Students and lecturers select programmes
       studentId: value !== 'student' ? '' : prev.studentId
     }));
   };
 
   const handleFacultyChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, faculty: value, programme: '', department: '' }));
+    setFormData((prev) => ({
+      ...prev,
+      faculty: value,
+      programme: '',
+      // For deans, department should be set to the faculty they head
+      department: prev.role === 'dean' ? value : ''
+    }));
   };
 
   const handleProgrammeChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, programme: value }));
+    // When programme is selected, automatically determine the department
+    const selectedFaculty = mmuFaculties.find(f => f.name === formData.faculty);
+    let programDepartment = '';
+
+    if (selectedFaculty) {
+      // Find which department this programme belongs to
+      // For now, we'll use a simple mapping based on programme name
+      const programme = selectedFaculty.programmes.find(p => p.name === value);
+      if (programme) {
+        // Map programme to department based on programme content and faculty
+        if (value.includes('Computer Science') || value.includes('Computer Technology')) {
+          programDepartment = 'Department of Computer Science';
+        } else if (value.includes('Information Technology') || value.includes('ICT')) {
+          programDepartment = 'Department of Information Technology';
+        } else if (value.includes('Software Engineering')) {
+          programDepartment = 'Department of Computer Science'; // Software Engineering typically under CS
+        } else if (value.includes('Business') || value.includes('Commerce') || value.includes('MBA') || value.includes('Management')) {
+          programDepartment = 'Department of Marketing and Management';
+        } else if (value.includes('Procurement') || value.includes('Logistics')) {
+          programDepartment = 'Department of Procurement and Logistics Management';
+        } else if (value.includes('Finance') || value.includes('Accounting') || value.includes('Actuarial')) {
+          programDepartment = 'Department of Finance and Accounting';
+        } else if (value.includes('Electrical') || value.includes('Communication')) {
+          programDepartment = 'Department of Electrical & Communication Engineering (ECE)';
+        } else if (value.includes('Mechanical') || value.includes('Mechatronics')) {
+          programDepartment = 'Department of Mechanical & Mechatronics Engineering (MME)';
+        } else if (value.includes('Civil Engineering')) {
+          programDepartment = 'Department of Civil Engineering (CE)';
+        } else if (value.includes('Film') || value.includes('Broadcast')) {
+          programDepartment = 'Department of Film and Broadcast';
+        } else if (value.includes('Journalism') || value.includes('Communication')) {
+          programDepartment = 'Department of Journalism and Communication';
+        } else if (value.includes('Chemistry')) {
+          programDepartment = 'Department of Chemistry';
+        } else if (value.includes('Physics')) {
+          programDepartment = 'Department of Physics';
+        } else if (value.includes('Mathematics')) {
+          programDepartment = 'Department of Mathematics';
+        } else if (value.includes('Psychology')) {
+          programDepartment = 'Department of Psychology';
+        } else if (value.includes('Sociology')) {
+          programDepartment = 'Department of Sociology';
+        } else if (value.includes('Political Science')) {
+          programDepartment = 'Department of Political Science';
+        } else {
+          // Default to first department in faculty
+          programDepartment = selectedFaculty.departments[0]?.name || '';
+        }
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      programme: value,
+      // Auto-set department for students and lecturers based on programme
+      department: (prev.role === 'student' || prev.role === 'lecturer') ? programDepartment : prev.department
+    }));
   };
 
   const handleDepartmentChange = (value: string) => {
@@ -146,6 +216,11 @@ const Register = () => {
       throw new Error('Full name is required');
     }
 
+    // Role validation
+    if (!formData.role || formData.role === '') {
+      throw new Error('Please select your role');
+    }
+
     // Student ID validation (only for students)
     if (formData.role === 'student') {
       if (!formData.studentId.trim()) {
@@ -169,20 +244,10 @@ const Register = () => {
       throw new Error('Programme is required');
     }
 
-    // Department validation (required for students and lecturers only)
-    if ((formData.role === 'student' || formData.role === 'lecturer') && !formData.department) {
-      throw new Error('Department is required');
+    // Faculty validation for deans (they head the entire faculty)
+    if (formData.role === 'dean' && !formData.faculty) {
+      throw new Error('Faculty is required for deans - you must select the faculty you head');
     }
-  };
-
-  const handleEmailSelect = (email: string) => {
-    setFormData(prev => ({ ...prev, email }));
-    setError(null); // Clear error when email is selected
-  };
-
-  const handleRetry = () => {
-    setError(null);
-    setSuccessMessage(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -198,13 +263,17 @@ const Register = () => {
       // Prepare user data
       const userData = {
         full_name: formData.fullName,
-        role: formData.role,
+        role: formData.role as 'student' | 'lecturer' | 'dean' | 'admin',
         student_id: formData.role === 'student' ? formData.studentId : null,
-        department: formData.role === 'dean' ? formData.faculty : (formData.role !== 'admin' ? formData.department : null),
+        department: formData.role === 'dean' ? formData.faculty : formData.department || null, // Deans: department = faculty they head
         faculty: formData.role !== 'admin' ? formData.faculty : null,
         programme_id: (formData.role === 'student' || formData.role === 'lecturer') ? formData.programme : null,
       };
 
+      console.log('Form data role:', formData.role);
+      console.log('Form data role type:', typeof formData.role);
+      console.log('User data role:', userData.role);
+      console.log('User data role type:', typeof userData.role);
       console.log('Submitting registration with data:', {
         email: formData.email,
         userData
@@ -215,27 +284,8 @@ const Register = () => {
 
       if (error) {
         console.error('Registration error:', error);
-
-        // Handle specific error cases with better user-friendly messages
-        if (error.message?.includes('already registered') ||
-            error.message?.includes('User already registered') ||
-            error.message?.includes('duplicate key value violates unique constraint')) {
-          throw new Error('This email address is already registered. Please use a different email or try to sign in instead.');
-        } else if (error.message?.includes('duplicate key value violates unique constraint "users_email_key"')) {
-          throw new Error('An account with this email already exists. Please use a different email address or sign in to your existing account.');
-        } else if (error.message?.includes('duplicate key value violates unique constraint "users_student_id_key"')) {
-          throw new Error('This student ID is already registered. Please check your student ID or contact support if you believe this is an error.');
-        } else if (error.message?.includes('invalid api key')) {
-          throw new Error('There was a problem connecting to the server. Please try again later or contact support.');
-        } else if (error.message?.includes('Email rate limit exceeded')) {
-          throw new Error('Too many registration attempts. Please wait a few minutes before trying again.');
-        } else if (error.message?.includes('Invalid email')) {
-          throw new Error('Please enter a valid email address.');
-        } else if (error.message?.includes('Password should be at least 6 characters')) {
-          throw new Error('Password must be at least 6 characters long.');
-        } else {
-          throw new Error(error.message || 'Failed to create account. Please try again.');
-        }
+        // Use the error message as-is from the AuthContext
+        throw new Error(error.message || 'Failed to create account. Please try again.');
       }
 
       console.log('Registration successful:', data);
@@ -283,16 +333,11 @@ const Register = () => {
 
         <CardContent>
           {error && (
-            <div className="mb-4">
-              <EnhancedErrorAlert
-                error={error}
-                originalEmail={formData.email}
-                role={formData.role}
-                faculty={formData.faculty}
-                onEmailSelect={handleEmailSelect}
-                onRetry={handleRetry}
-              />
-            </div>
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Registration Failed</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
           {successMessage && (
@@ -438,29 +483,29 @@ const Register = () => {
                     ))}
                   </SelectContent>
                 </Select>
+                {formData.programme && formData.department && (
+                  <p className="text-xs text-muted-foreground">
+                    Department: {formData.department}
+                  </p>
+                )}
               </div>
             )}
 
-            {/* Department selection for students and lecturers */}
-            {(formData.role === 'student' || formData.role === 'lecturer') && formData.faculty && (
+            {/* Information for deans - they head the entire faculty */}
+            {formData.role === 'dean' && formData.faculty && (
               <div className="space-y-2">
-                <Label htmlFor="department">Department</Label>
-                <Select
-                  value={formData.department}
-                  onValueChange={handleDepartmentChange}
-                  disabled={isLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept} value={dept}>
-                        {dept}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Faculty Leadership</Label>
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                    You are registering as the Dean of:
+                  </p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                    {formData.faculty}
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  As a dean, you head the entire faculty and oversee all departments within it
+                </p>
               </div>
             )}
 

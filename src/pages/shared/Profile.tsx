@@ -70,7 +70,7 @@ const Profile = () => {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Profile</h1>
           <p className="text-gray-600 dark:text-gray-400">Manage your personal information and preferences</p>
         </div>
-        <Button 
+        <Button
           onClick={() => isEditing ? handleSave() : setIsEditing(true)}
           className={isEditing ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"}
         >
@@ -101,7 +101,7 @@ const Profile = () => {
                   <Camera className="h-4 w-4" />
                 </Button>
               </div>
-              
+
               <div className="text-center space-y-2">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                   {formData.fullName}
@@ -215,6 +215,14 @@ const Profile = () => {
                       onChange={(e) => handleInputChange('department', e.target.value)}
                       disabled={!isEditing}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      {dbUser?.role === 'dean'
+                        ? 'As a dean, this shows the faculty you head'
+                        : dbUser?.role === 'student' || dbUser?.role === 'lecturer'
+                        ? 'Department determined by your programme'
+                        : 'Your organizational department'
+                      }
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="faculty">Faculty</Label>

@@ -22,7 +22,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Service role key for admin operations (only used in secure server contexts)
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVla2FqbWZ2cW50YmxvcWdpendrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NjIyOTk1MiwiZXhwIjoyMDYxODA1OTUyfQ.IQgAFxPi-0Oy9KX4MVFXsoTymxSVCzgPNIw76Um9UCQ';
+const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVla2FqbWZ2cW50YmxvcWdpendrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NjIyOTk1MiwiZXhwIjoyMDYxODA1OTUyfQ.IQgAFxPi-0Oy9KX4MVFXsoTymxSVCzgPNIw76Um9UCQ';
 
 // Create a separate admin client with service role key
 // WARNING: This should only be used for operations that require admin privileges
@@ -30,6 +30,7 @@ const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXB
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     persistSession: false,
+    autoRefreshToken: false,
   },
 });
 
@@ -52,9 +53,19 @@ export type User = {
   email: string;
   full_name: string;
   avatar_url?: string;
-  role: 'student' | 'lecturer' | 'admin';
+  role: 'student' | 'lecturer' | 'dean' | 'admin';
   student_id?: string;
+  staff_id?: string;
   department?: string;
+  faculty?: string;
+  programme_id?: string;
+  current_semester?: number;
+  year_of_study?: number;
+  phone?: string;
+  date_of_birth?: string;
+  address?: string;
+  emergency_contact?: any;
+  is_active?: boolean;
   created_at: string;
   updated_at: string;
 };

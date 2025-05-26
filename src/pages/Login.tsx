@@ -42,7 +42,16 @@ const Login = () => {
         const { data, error } = await signIn(admissionNumber, password);
         if (error) {
           console.error('Login: Sign in error:', error);
-          throw new Error(error.message || 'Failed to sign in');
+          // Provide more helpful error messages
+          if (error.message?.includes('No account found')) {
+            throw new Error('No account found with this email. Please check your email or register for a new account.');
+          } else if (error.message?.includes('Invalid login credentials')) {
+            throw new Error('Invalid email or password. Please check your credentials and try again.');
+          } else if (error.message?.includes('Invalid admission number')) {
+            throw new Error('Invalid admission number. Please check your admission number and try again.');
+          } else {
+            throw new Error(error.message || 'Failed to sign in');
+          }
         }
         if (data) {
           showSuccessToast('Signed in successfully');
@@ -61,7 +70,14 @@ const Login = () => {
         const { data, error } = await signIn(email, password);
         if (error) {
           console.error('Login: Sign in error:', error);
-          throw new Error(error.message || 'Failed to sign in');
+          // Provide more helpful error messages
+          if (error.message?.includes('No account found')) {
+            throw new Error('No account found with this email. Please check your email or register for a new account.');
+          } else if (error.message?.includes('Invalid login credentials')) {
+            throw new Error('Invalid email or password. Please check your credentials and try again.');
+          } else {
+            throw new Error(error.message || 'Failed to sign in');
+          }
         }
         if (data) {
           showSuccessToast('Signed in successfully');

@@ -31,14 +31,16 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) UNIQUE NOT NULL,
     full_name VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL CHECK (role IN ('student', 'lecturer', 'dean', 'admin')),
-    department VARCHAR(255),
+    department VARCHAR(255), -- For deans: faculty they head; For students/lecturers: auto-determined from programme
+    faculty VARCHAR(255), -- Faculty name (required for all roles except admin)
     student_id VARCHAR(50) UNIQUE, -- Only for students
+    staff_id VARCHAR(50) UNIQUE, -- For lecturers and deans
     phone VARCHAR(20),
     avatar_url TEXT,
     date_of_birth DATE,
     address TEXT,
     emergency_contact JSONB,
-    programme_id UUID REFERENCES programmes(id), -- Reference to programmes table
+    programme_id UUID REFERENCES programmes(id), -- Reference to programmes table (for students and lecturers)
     current_semester INTEGER DEFAULT 1,
     year_of_study INTEGER DEFAULT 1,
     is_active BOOLEAN DEFAULT true,
@@ -420,7 +422,7 @@ CREATE TABLE session_attachments (
     file_size BIGINT NOT NULL,
     file_type VARCHAR(100) NOT NULL,
     file_path TEXT NOT NULL,
-    uploaded_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    uploaded_by UUID NOT NULL REFERENCES users(auth_id) ON DELETE CASCADE,
     description TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -434,7 +436,9 @@ CREATE TABLE session_attachments (
 CREATE INDEX IF NOT EXISTS idx_users_auth_id ON users(auth_id);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_department ON users(department);
+CREATE INDEX IF NOT EXISTS idx_users_faculty ON users(faculty);
 CREATE INDEX IF NOT EXISTS idx_users_student_id ON users(student_id);
+CREATE INDEX IF NOT EXISTS idx_users_staff_id ON users(staff_id);
 CREATE INDEX IF NOT EXISTS idx_users_programme_id ON users(programme_id);
 
 -- Programmes indexes

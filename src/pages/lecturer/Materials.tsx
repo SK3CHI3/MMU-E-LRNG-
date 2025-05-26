@@ -25,13 +25,10 @@ import {
   Image,
   Download,
   Share2,
-  Edit,
   Trash2,
   Eye,
   Calendar,
-  Users,
-  BookOpen,
-  Link
+  BookOpen
 } from 'lucide-react';
 
 const Materials = () => {
@@ -166,7 +163,7 @@ const Materials = () => {
   };
 
   // Handle material download
-  const handleDownload = async (materialId: string, url: string, title: string) => {
+  const handleDownload = async (materialId: string, url: string) => {
     if (!dbUser?.auth_id) return;
 
     try {
@@ -466,7 +463,7 @@ const Materials = () => {
                   </p>
 
                   <div className="flex flex-wrap gap-1">
-                    {material.tags && Array.isArray(material.tags) && material.tags.map((tag, index) => (
+                    {material.tags && Array.isArray(material.tags) && material.tags.map((tag: string, index: number) => (
                       <Badge key={index} variant="outline" className="text-xs">
                         {tag}
                       </Badge>
@@ -502,7 +499,7 @@ const Materials = () => {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleDownload(material.id, material.url, material.title)}
+                      onClick={() => handleDownload(material.id, material.url)}
                     >
                       <Download className="h-4 w-4 mr-2" />
                       Download
@@ -532,6 +529,7 @@ const Materials = () => {
               </Card>
             ))}
           </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
