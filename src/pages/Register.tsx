@@ -12,6 +12,7 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { showErrorToast, showSuccessToast } from '@/utils/toast';
 import { getFacultyNames, getDepartmentsByFaculty } from '@/services/facultyService';
+import { mmuFaculties } from '@/data/mmuData';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -32,59 +33,29 @@ const Register = () => {
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
-  // Load dynamic faculty data on component mount
+  // Load real MMU faculty data on component mount
   useEffect(() => {
-    const loadFaculties = () => {
-      try {
-        const facultyNames = getFacultyNames();
-        setFaculties(facultyNames);
-      } catch (error) {
-        console.error('Error loading faculties:', error);
-        // Fallback to hardcoded data
-        setFaculties([
-          'Faculty of Computing and Information Technology',
-          'Faculty of Business and Economics',
-          'Faculty of Engineering and Technology',
-          'Faculty of Media and Communication',
-          'Faculty of Science & Technology',
-          'Faculty of Social Sciences and Technology'
-        ]);
-      }
-    };
-
-    loadFaculties();
+    // Use real MMU faculty data
+    const facultyNames = mmuFaculties.map(faculty => faculty.name);
+    setFaculties(facultyNames);
   }, []);
 
-  // Load departments when faculty changes (for dean role)
+  // Load departments for students and lecturers only (deans don't need departments)
   useEffect(() => {
-    if (formData.role === 'dean' && formData.faculty) {
-      try {
-        const facultyDepartments = getDepartmentsByFaculty(formData.faculty);
-        setDepartments(facultyDepartments);
-      } catch (error) {
-        console.error('Error loading departments:', error);
-        // Fallback to generic departments
-        setDepartments([
-          'Computer Science',
-          'Business Administration',
-          'Engineering',
-          'Other'
-        ]);
-      }
+    if (formData.role === 'student' || formData.role === 'lecturer') {
+      // Get all departments from all faculties for students and lecturers
+      const allDepartments: string[] = [];
+      mmuFaculties.forEach(faculty => {
+        faculty.departments.forEach(dept => {
+          allDepartments.push(dept.name);
+        });
+      });
+      setDepartments(allDepartments);
     } else {
-      // For non-dean roles, use generic departments
-      setDepartments([
-        'Computer Science',
-        'Information Technology',
-        'Business Administration',
-        'Engineering',
-        'Media and Communication',
-        'Science',
-        'Social Sciences',
-        'Other'
-      ]);
+      // Deans and admins don't need departments
+      setDepartments([]);
     }
-  }, [formData.role, formData.faculty]);
+  }, [formData.role]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -92,7 +63,16 @@ const Register = () => {
   };
 
   const handleRoleChange = (value: 'student' | 'lecturer' | 'dean' | 'admin') => {
-    setFormData((prev) => ({ ...prev, role: value }));
+    setFormData((prev) => ({
+      ...prev,
+      role: value,
+      // Clear department when dean is selected (they don't need departments)
+      department: value === 'dean' ? '' : prev.department,
+      // Clear faculty when non-dean is selected
+      faculty: value !== 'dean' ? '' : prev.faculty,
+      // Clear student ID when non-student is selected
+      studentId: value !== 'student' ? '' : prev.studentId
+    }));
   };
 
   const handleFacultyChange = (value: string) => {
@@ -145,8 +125,8 @@ const Register = () => {
       }
     }
 
-    // Department validation (required for students, lecturers, and deans)
-    if (formData.role !== 'admin' && !formData.department) {
+    // Department validation (required for students and lecturers only)
+    if ((formData.role === 'student' || formData.role === 'lecturer') && !formData.department) {
       throw new Error('Department is required');
     }
   };
@@ -176,7 +156,7 @@ const Register = () => {
         full_name: formData.fullName,
         role: formData.role,
         student_id: formData.role === 'student' ? formData.studentId : null,
-        department: formData.role !== 'admin' ? formData.department : null,
+        department: (formData.role === 'student' || formData.role === 'lecturer') ? formData.department : null,
         faculty: formData.role === 'dean' ? formData.faculty : null,
       };
 
@@ -394,11 +374,9 @@ const Register = () => {
               </div>
             )}
 
-            {formData.role !== 'admin' && (
+            {(formData.role === 'student' || formData.role === 'lecturer') && (
               <div className="space-y-2">
-                <Label htmlFor="department">
-                  {formData.role === 'dean' ? 'Primary Department' : 'Department'}
-                </Label>
+                <Label htmlFor="department">Department</Label>
                 <Select
                   value={formData.department}
                   onValueChange={handleDepartmentChange}
