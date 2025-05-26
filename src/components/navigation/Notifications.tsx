@@ -7,35 +7,86 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell } from "lucide-react";
+import { Bell, Clock, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { getUnifiedNotifications, markNotificationAsRead, markAnnouncementAsRead, EnhancedNotification } from "@/services/notificationService";
+import { useNavigate } from "react-router-dom";
 
 export const Notifications = () => {
-  // In a real app, these would come from an API or context
-  const notifications = [
-    {
-      id: 1,
-      title: "New Assignment Posted",
-      message: "Data Structures Assignment #3 due in 5 days",
-      time: "2 hours ago",
-      isRead: false,
-    },
-    {
-      id: 2,
-      title: "Class Canceled",
-      message: "Today's Advanced Database class has been canceled",
-      time: "1 day ago",
-      isRead: true,
-    },
-    {
-      id: 3,
-      title: "Grade Posted",
-      message: "Your Web Development grade has been posted",
-      time: "2 days ago",
-      isRead: true,
-    },
-  ];
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState<EnhancedNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadNotifications();
+    }
+  }, [user?.id]);
+
+  const loadNotifications = async () => {
+    if (!user?.id) return;
+
+    setLoading(true);
+    try {
+      const data = await getUnifiedNotifications(user.id);
+      setNotifications(data.slice(0, 5)); // Show only latest 5 in dropdown
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNotificationClick = async (notification: EnhancedNotification) => {
+    if (!user?.id) return;
+
+    // Mark as read if not already read
+    if (!notification.isRead) {
+      try {
+        if (notification.type === 'notification') {
+          await markNotificationAsRead(user.id, notification.id);
+        } else {
+          await markAnnouncementAsRead(user.id, notification.id);
+        }
+        // Update local state
+        setNotifications(prev =>
+          prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n)
+        );
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
+      }
+    }
+
+    // Handle navigation
+    if (notification.externalLink) {
+      if (notification.externalLink.startsWith('http')) {
+        window.open(notification.externalLink, '_blank');
+      } else {
+        navigate(notification.externalLink);
+      }
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+
+    if (diffInHours < 1) {
+      return "Just now";
+    } else if (diffInHours < 24) {
+      return `${diffInHours}h ago`;
+    } else if (diffInHours < 48) {
+      return "Yesterday";
+    } else {
+      const days = Math.floor(diffInHours / 24);
+      return `${days}d ago`;
+    }
+  };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -52,28 +103,76 @@ export const Notifications = () => {
           <span className="sr-only">Notifications</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
-        <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+      <DropdownMenuContent align="end" className="w-96">
+        <DropdownMenuLabel className="flex items-center justify-between">
+          <span>Notifications</span>
+          {unreadCount > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {unreadCount} unread
+            </Badge>
+          )}
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {notifications.length > 0 ? (
+        {loading ? (
+          <div className="py-4 text-center text-sm text-muted-foreground">
+            Loading notifications...
+          </div>
+        ) : notifications.length > 0 ? (
           <>
             {notifications.map((notification) => (
-              <DropdownMenuItem key={notification.id} className="flex flex-col items-start py-2">
-                <div className="flex w-full justify-between">
-                  <span className="font-medium">{notification.title}</span>
-                  <span className="text-xs text-muted-foreground">{notification.time}</span>
+              <DropdownMenuItem
+                key={notification.id}
+                className="flex flex-col items-start py-3 cursor-pointer hover:bg-accent"
+                onClick={() => handleNotificationClick(notification)}
+              >
+                <div className="flex w-full justify-between items-start">
+                  <div className="flex items-start gap-2 flex-1">
+                    {!notification.isRead && (
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-1 flex-shrink-0"></div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`font-medium text-sm ${!notification.isRead ? 'text-foreground' : 'text-muted-foreground'}`}>
+                          {notification.title}
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          {notification.category}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mb-1">
+                        {notification.content}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{notification.sender.name}</span>
+                        <span>•</span>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {formatTime(notification.date)}
+                        </div>
+                        {notification.externalLink && (
+                          <>
+                            <span>•</span>
+                            <ExternalLink className="h-3 w-3" />
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground">{notification.message}</p>
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="flex justify-center">
+            <DropdownMenuItem
+              className="flex justify-center cursor-pointer"
+              onClick={() => navigate('/announcements')}
+            >
               <span className="text-sm font-medium">View all notifications</span>
             </DropdownMenuItem>
           </>
         ) : (
-          <div className="py-4 text-center text-sm text-muted-foreground">
-            No new notifications
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p>No new notifications</p>
           </div>
         )}
       </DropdownMenuContent>

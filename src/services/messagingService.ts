@@ -6,8 +6,22 @@ export interface Message {
   sender_id: string;
   content: string;
   attachments?: string[];
-  created_at: string;
+  topic: string;
+  extension: string;
+  payload?: any;
+  event?: string;
+  private?: boolean;
+  message_type?: string;
   is_read: boolean;
+  read_at?: string;
+  reply_to?: string;
+  inserted_at: string;
+  updated_at: string;
+  created_at: string;
+  // Joined data for UI
+  sender_name?: string;
+  sender_role?: string;
+  sender_avatar?: string;
 }
 
 export interface Conversation {
@@ -83,7 +97,7 @@ export const sendMessage = async (messageData: NewMessage, senderId: string): Pr
       attachmentUrls = await uploadAttachments(messageData.attachments, senderId);
     }
 
-    // Create the message
+    // Create the message with required fields for the database schema
     const { data: message, error: messageError } = await supabase
       .from('messages')
       .insert({
@@ -91,8 +105,14 @@ export const sendMessage = async (messageData: NewMessage, senderId: string): Pr
         sender_id: senderId,
         content: messageData.content,
         attachments: attachmentUrls,
-        created_at: new Date().toISOString(),
-        is_read: false
+        topic: messageData.subject || 'Message',
+        extension: 'text',
+        message_type: 'text',
+        private: false,
+        is_read: false,
+        inserted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
       })
       .select()
       .single();
@@ -118,7 +138,7 @@ export const sendMessage = async (messageData: NewMessage, senderId: string): Pr
 
     if (conversation) {
       const recipients = conversation.participants.filter((id: string) => id !== senderId);
-      
+
       const notifications = recipients.map((recipientId: string) => ({
         user_id: recipientId,
         title: 'New Message',
@@ -193,7 +213,7 @@ export const getUserConversations = async (userId: string): Promise<Conversation
         const { data: otherParticipant } = await supabase
           .from('users')
           .select('id, full_name, email, role, avatar_url')
-          .eq('id', otherParticipantId)
+          .eq('auth_id', otherParticipantId)
           .single();
 
         // Get course details if applicable
@@ -216,7 +236,7 @@ export const getUserConversations = async (userId: string): Promise<Conversation
           .neq('sender_id', userId);
 
         // Sort messages by created_at
-        const sortedMessages = conv.messages.sort((a: any, b: any) => 
+        const sortedMessages = conv.messages.sort((a: any, b: any) =>
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         );
 
@@ -237,17 +257,33 @@ export const getUserConversations = async (userId: string): Promise<Conversation
   }
 };
 
-// Get messages for a conversation
+// Get messages for a conversation with sender details
 export const getConversationMessages = async (conversationId: string): Promise<Message[]> => {
   try {
     const { data: messages, error } = await supabase
       .from('messages')
-      .select('*')
+      .select(`
+        *,
+        users!messages_sender_id_fkey (
+          full_name,
+          role,
+          avatar_url
+        )
+      `)
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: true });
 
     if (error) throw error;
-    return messages;
+
+    // Transform the data to include sender information
+    const messagesWithSenderInfo = messages?.map(message => ({
+      ...message,
+      sender_name: message.users?.full_name || 'Unknown User',
+      sender_role: message.users?.role || 'user',
+      sender_avatar: message.users?.avatar_url || null
+    })) || [];
+
+    return messagesWithSenderInfo;
   } catch (error) {
     console.error('Error fetching conversation messages:', error);
     throw error;
@@ -259,11 +295,301 @@ export const markMessagesAsRead = async (conversationId: string, userId: string)
   try {
     await supabase
       .from('messages')
-      .update({ is_read: true })
+      .update({
+        is_read: true,
+        read_at: new Date().toISOString()
+      })
       .eq('conversation_id', conversationId)
       .neq('sender_id', userId);
   } catch (error) {
     console.error('Error marking messages as read:', error);
+    throw error;
+  }
+};
+
+// Subscribe to real-time messages for a conversation
+export const subscribeToConversationMessages = (
+  conversationId: string,
+  onNewMessage: (message: Message) => void,
+  onMessageUpdate: (message: Message) => void
+) => {
+  const subscription = supabase
+    .channel(`conversation:${conversationId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `conversation_id=eq.${conversationId}`
+      },
+      async (payload) => {
+        // Get the full message with sender details
+        const { data: messageWithSender } = await supabase
+          .from('messages')
+          .select(`
+            *,
+            users!messages_sender_id_fkey (
+              full_name,
+              role,
+              avatar_url
+            )
+          `)
+          .eq('id', payload.new.id)
+          .single();
+
+        if (messageWithSender) {
+          const enrichedMessage = {
+            ...messageWithSender,
+            sender_name: messageWithSender.users?.full_name || 'Unknown User',
+            sender_role: messageWithSender.users?.role || 'user',
+            sender_avatar: messageWithSender.users?.avatar_url || null
+          };
+          onNewMessage(enrichedMessage);
+        }
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages',
+        filter: `conversation_id=eq.${conversationId}`
+      },
+      async (payload) => {
+        // Get the updated message with sender details
+        const { data: messageWithSender } = await supabase
+          .from('messages')
+          .select(`
+            *,
+            users!messages_sender_id_fkey (
+              full_name,
+              role,
+              avatar_url
+            )
+          `)
+          .eq('id', payload.new.id)
+          .single();
+
+        if (messageWithSender) {
+          const enrichedMessage = {
+            ...messageWithSender,
+            sender_name: messageWithSender.users?.full_name || 'Unknown User',
+            sender_role: messageWithSender.users?.role || 'user',
+            sender_avatar: messageWithSender.users?.avatar_url || null
+          };
+          onMessageUpdate(enrichedMessage);
+        }
+      }
+    )
+    .subscribe();
+
+  return subscription;
+};
+
+// Subscribe to conversation updates
+export const subscribeToUserConversations = (
+  userId: string,
+  onConversationUpdate: () => void
+) => {
+  const subscription = supabase
+    .channel(`user_conversations:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'conversations'
+      },
+      (payload) => {
+        // Check if user is participant in this conversation
+        const participants = payload.new?.participants || payload.old?.participants;
+        if (participants && participants.includes(userId)) {
+          onConversationUpdate();
+        }
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'messages'
+      },
+      async (payload) => {
+        // Check if this message belongs to a conversation the user is part of
+        const conversationId = payload.new?.conversation_id || payload.old?.conversation_id;
+        if (conversationId) {
+          const { data: conversation } = await supabase
+            .from('conversations')
+            .select('participants')
+            .eq('id', conversationId)
+            .single();
+
+          if (conversation && conversation.participants.includes(userId)) {
+            onConversationUpdate();
+          }
+        }
+      }
+    )
+    .subscribe();
+
+  return subscription;
+};
+
+// Find or create a conversation between two users
+export const findOrCreateConversation = async (
+  userId1: string,
+  userId2: string,
+  subject?: string,
+  courseId?: string
+): Promise<string> => {
+  try {
+    // First, try to find existing conversation between these two users
+    const { data: existingConversations, error: searchError } = await supabase
+      .from('conversations')
+      .select('*')
+      .contains('participants', [userId1])
+      .contains('participants', [userId2])
+      .eq('is_group', false);
+
+    if (searchError) throw searchError;
+
+    // If conversation exists, return its ID
+    if (existingConversations && existingConversations.length > 0) {
+      return existingConversations[0].id;
+    }
+
+    // Create new conversation
+    const { data: newConversation, error: createError } = await supabase
+      .from('conversations')
+      .insert({
+        participants: [userId1, userId2],
+        subject: subject || 'Direct Message',
+        course_id: courseId,
+        is_group: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (createError) throw createError;
+
+    return newConversation.id;
+  } catch (error) {
+    console.error('Error finding or creating conversation:', error);
+    throw error;
+  }
+};
+
+// Get all users that can be messaged based on faculty and role
+export const getMessageableUsers = async (currentUserId: string, currentUserRole: string): Promise<any[]> => {
+  try {
+    console.log('getMessageableUsers called with:', { currentUserId, currentUserRole });
+
+    // First check if we have a valid connection to Supabase
+    const { data: testConnection, error: connectionError } = await supabase
+      .from('users')
+      .select('count')
+      .limit(1);
+
+    if (connectionError) {
+      console.error('Supabase connection error:', connectionError);
+      throw new Error(`Database connection failed: ${connectionError.message}`);
+    }
+
+    // Get all users except current user
+    const { data: allUsers, error: usersError } = await supabase
+      .from('users')
+      .select(`
+        auth_id,
+        full_name,
+        email,
+        role,
+        avatar_url,
+        student_id,
+        staff_id,
+        department,
+        faculty_id
+      `)
+      .neq('auth_id', currentUserId)
+      .not('full_name', 'is', null); // Exclude users without names
+
+    if (usersError) {
+      console.error('Error fetching users:', usersError);
+      throw new Error(`Failed to fetch users: ${usersError.message}`);
+    }
+
+    console.log('Raw users from database:', allUsers);
+
+    if (!allUsers || allUsers.length === 0) {
+      console.log('No users found in database - this might mean:');
+      console.log('1. Database is empty');
+      console.log('2. All users have null names');
+      console.log('3. Current user is the only user');
+      return [];
+    }
+
+    // Get current user's info for faculty filtering
+    const { data: currentUser, error: currentUserError } = await supabase
+      .from('users')
+      .select('auth_id, faculty_id, department, role')
+      .eq('auth_id', currentUserId)
+      .single();
+
+    if (currentUserError) {
+      console.error('Error fetching current user:', currentUserError);
+      console.log('Proceeding without faculty filtering');
+    }
+
+    console.log('Current user info:', currentUser);
+
+    // Role-based filtering (simplified for now)
+    let filteredUsers = [];
+
+    if (currentUserRole === 'student') {
+      // Students can message lecturers, other students, deans, and admins
+      filteredUsers = allUsers.filter(user =>
+        user.role === 'lecturer' ||
+        user.role === 'student' ||
+        user.role === 'dean' ||
+        user.role === 'admin'
+      );
+    } else if (currentUserRole === 'lecturer') {
+      // Lecturers can message students, other lecturers, deans, and admins
+      filteredUsers = allUsers.filter(user =>
+        user.role === 'student' ||
+        user.role === 'lecturer' ||
+        user.role === 'dean' ||
+        user.role === 'admin'
+      );
+    } else if (currentUserRole === 'dean') {
+      // Deans can message everyone
+      filteredUsers = allUsers;
+    } else if (currentUserRole === 'admin') {
+      // Admins can message everyone
+      filteredUsers = allUsers;
+    } else {
+      console.log('Unknown user role:', currentUserRole);
+      // Default: can message everyone
+      filteredUsers = allUsers;
+    }
+
+    console.log('Users after role filtering:', filteredUsers);
+
+    // Transform the data to include display information
+    const transformedUsers = filteredUsers.map(user => ({
+      ...user,
+      faculty_name: user.department || 'No Department',
+      programme_title: null
+    }));
+
+    console.log('Final transformed users:', transformedUsers);
+    return transformedUsers;
+  } catch (error) {
+    console.error('Error in getMessageableUsers:', error);
     throw error;
   }
 };
@@ -353,8 +679,8 @@ export const searchConversations = async (
 ): Promise<ConversationWithDetails[]> => {
   try {
     const conversations = await getUserConversations(userId);
-    
-    return conversations.filter(conv => 
+
+    return conversations.filter(conv =>
       conv.subject.toLowerCase().includes(query.toLowerCase()) ||
       conv.other_participant.full_name.toLowerCase().includes(query.toLowerCase()) ||
       conv.last_message?.toLowerCase().includes(query.toLowerCase()) ||

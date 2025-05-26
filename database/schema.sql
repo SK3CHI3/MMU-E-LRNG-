@@ -38,6 +38,46 @@ CREATE TABLE IF NOT EXISTS users (
     date_of_birth DATE,
     address TEXT,
     emergency_contact JSONB,
+    programme_id UUID REFERENCES programmes(id), -- Reference to programmes table
+    current_semester INTEGER DEFAULT 1,
+    year_of_study INTEGER DEFAULT 1,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =============================================
+-- ACADEMIC STRUCTURE
+-- =============================================
+
+-- Programmes table
+CREATE TABLE IF NOT EXISTS programmes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    code VARCHAR(20) UNIQUE NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    level VARCHAR(50) NOT NULL CHECK (level IN ('certificate', 'diploma', 'bachelors', 'masters', 'phd')),
+    faculty VARCHAR(255) NOT NULL,
+    department VARCHAR(255),
+    duration_years INTEGER NOT NULL DEFAULT 4,
+    total_units INTEGER NOT NULL DEFAULT 40,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Academic calendar table
+CREATE TABLE IF NOT EXISTS academic_calendar (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    academic_year VARCHAR(20) NOT NULL, -- e.g., "2024/2025"
+    current_semester VARCHAR(20) NOT NULL, -- e.g., "Semester 1", "Semester 2"
+    semester_start_date DATE NOT NULL,
+    semester_end_date DATE NOT NULL,
+    registration_start_date DATE,
+    registration_end_date DATE,
+    exam_start_date DATE,
+    exam_end_date DATE,
+    is_current BOOLEAN DEFAULT false,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -53,7 +93,6 @@ CREATE TABLE IF NOT EXISTS courses (
     code VARCHAR(20) UNIQUE NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    credit_hours INTEGER NOT NULL DEFAULT 3,
     department VARCHAR(255) NOT NULL,
     level VARCHAR(50) NOT NULL CHECK (level IN ('undergraduate', 'graduate', 'postgraduate')),
     semester VARCHAR(20) NOT NULL CHECK (semester IN ('fall', 'spring', 'summer')),
@@ -61,6 +100,7 @@ CREATE TABLE IF NOT EXISTS courses (
     max_students INTEGER DEFAULT 50,
     prerequisites TEXT[], -- Array of course codes
     syllabus_url TEXT,
+    programme_id UUID REFERENCES programmes(id),
     created_by UUID NOT NULL REFERENCES users(auth_id),
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -298,6 +338,43 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 -- =============================================
+-- STUDENT FEES AND PAYMENTS
+-- =============================================
+
+-- Student fees table
+CREATE TABLE IF NOT EXISTS student_fees (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    student_id UUID NOT NULL REFERENCES users(auth_id),
+    academic_year VARCHAR(20) NOT NULL,
+    semester VARCHAR(20) NOT NULL,
+    total_fees DECIMAL(10,2) NOT NULL DEFAULT 0,
+    amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0,
+    due_date DATE,
+    registration_threshold INTEGER DEFAULT 60, -- Percentage required for registration
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(student_id, academic_year, semester)
+);
+
+-- Payment history table
+CREATE TABLE IF NOT EXISTS payment_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    student_id UUID NOT NULL REFERENCES users(auth_id),
+    amount DECIMAL(10,2) NOT NULL,
+    payment_method VARCHAR(50) NOT NULL CHECK (payment_method IN ('mpesa', 'bank_transfer', 'cash', 'cheque', 'card')),
+    reference_number VARCHAR(100) UNIQUE NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed', 'cancelled')),
+    description TEXT,
+    phone_number VARCHAR(20),
+    account_number VARCHAR(50),
+    transaction_id VARCHAR(100),
+    processed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =============================================
 -- ANALYTICS AND TRACKING
 -- =============================================
 
@@ -358,6 +435,26 @@ CREATE INDEX IF NOT EXISTS idx_users_auth_id ON users(auth_id);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_department ON users(department);
 CREATE INDEX IF NOT EXISTS idx_users_student_id ON users(student_id);
+CREATE INDEX IF NOT EXISTS idx_users_programme_id ON users(programme_id);
+
+-- Programmes indexes
+CREATE INDEX IF NOT EXISTS idx_programmes_code ON programmes(code);
+CREATE INDEX IF NOT EXISTS idx_programmes_faculty ON programmes(faculty);
+CREATE INDEX IF NOT EXISTS idx_programmes_level ON programmes(level);
+
+-- Academic calendar indexes
+CREATE INDEX IF NOT EXISTS idx_academic_calendar_year ON academic_calendar(academic_year);
+CREATE INDEX IF NOT EXISTS idx_academic_calendar_current ON academic_calendar(is_current);
+
+-- Student fees indexes
+CREATE INDEX IF NOT EXISTS idx_student_fees_student_id ON student_fees(student_id);
+CREATE INDEX IF NOT EXISTS idx_student_fees_academic_year ON student_fees(academic_year);
+CREATE INDEX IF NOT EXISTS idx_student_fees_active ON student_fees(is_active);
+
+-- Payment history indexes
+CREATE INDEX IF NOT EXISTS idx_payment_history_student_id ON payment_history(student_id);
+CREATE INDEX IF NOT EXISTS idx_payment_history_reference ON payment_history(reference_number);
+CREATE INDEX IF NOT EXISTS idx_payment_history_status ON payment_history(status);
 
 -- Courses indexes
 CREATE INDEX IF NOT EXISTS idx_courses_code ON courses(code);
@@ -438,6 +535,10 @@ CREATE INDEX IF NOT EXISTS idx_session_materials_material_id ON session_material
 
 -- Enable RLS on all tables
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE programmes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE academic_calendar ENABLE ROW LEVEL SECURITY;
+ALTER TABLE student_fees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payment_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE courses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE course_enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE assignments ENABLE ROW LEVEL SECURITY;
@@ -787,3 +888,56 @@ CREATE TRIGGER update_announcements_updated_at BEFORE UPDATE ON announcements
 
 CREATE TRIGGER update_notifications_updated_at BEFORE UPDATE ON notifications
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_programmes_updated_at BEFORE UPDATE ON programmes
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_academic_calendar_updated_at BEFORE UPDATE ON academic_calendar
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_student_fees_updated_at BEFORE UPDATE ON student_fees
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_payment_history_updated_at BEFORE UPDATE ON payment_history
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =============================================
+-- ADDITIONAL RLS POLICIES FOR NEW TABLES
+-- =============================================
+
+-- Programmes policies (readable by all authenticated users)
+CREATE POLICY "All users can read programmes" ON programmes
+    FOR SELECT USING (auth.uid() IS NOT NULL);
+
+-- Academic calendar policies (readable by all authenticated users)
+CREATE POLICY "All users can read academic calendar" ON academic_calendar
+    FOR SELECT USING (auth.uid() IS NOT NULL);
+
+-- Student fees policies
+CREATE POLICY "Students can read own fees" ON student_fees
+    FOR SELECT USING (student_id = auth.uid());
+
+CREATE POLICY "Admins can read all fees" ON student_fees
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE auth_id = auth.uid()
+            AND role IN ('admin', 'dean')
+        )
+    );
+
+-- Payment history policies
+CREATE POLICY "Students can read own payment history" ON payment_history
+    FOR SELECT USING (student_id = auth.uid());
+
+CREATE POLICY "Students can insert own payments" ON payment_history
+    FOR INSERT WITH CHECK (student_id = auth.uid());
+
+CREATE POLICY "Admins can read all payment history" ON payment_history
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE auth_id = auth.uid()
+            AND role IN ('admin', 'dean')
+        )
+    );

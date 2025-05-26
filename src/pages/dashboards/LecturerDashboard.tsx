@@ -22,7 +22,7 @@ const LecturerDashboard = () => {
         name: "Advanced Database Systems",
         students: 45,
         semester: "2.1",
-        credits: 3,
+
         nextClass: "Today, 2:00 PM"
       },
       {
@@ -31,7 +31,7 @@ const LecturerDashboard = () => {
         name: "Software Engineering",
         students: 38,
         semester: "2.1",
-        credits: 4,
+
         nextClass: "Tomorrow, 10:30 AM"
       },
       {
@@ -40,7 +40,7 @@ const LecturerDashboard = () => {
         name: "Data Structures",
         students: 52,
         semester: "2.1",
-        credits: 3,
+
         nextClass: "Friday, 9:00 AM"
       }
     ],
@@ -189,10 +189,7 @@ const LecturerDashboard = () => {
                       <Users className="h-3 w-3" />
                       {course.students} students
                     </span>
-                    <span className="flex items-center gap-1">
-                      <BookOpen className="h-3 w-3" />
-                      {course.credits} credits
-                    </span>
+
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       Next: {course.nextClass}
@@ -209,8 +206,8 @@ const LecturerDashboard = () => {
       </Card>
 
       {/* Main Content Grid */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300">
+      <div className="grid gap-8 md:grid-cols-2 md:divide-x md:divide-gray-100 dark:md:divide-gray-800">
+        <Card className="bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300 md:pr-6">
           <CardHeader>
             <CardTitle>Upcoming Classes</CardTitle>
             <CardDescription>Your scheduled classes for the next 24 hours</CardDescription>
@@ -240,7 +237,7 @@ const LecturerDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300">
+        <Card className="bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300 md:pl-6">
           <CardHeader>
             <CardTitle>Pending Grading</CardTitle>
             <CardDescription>Assignments waiting for your review</CardDescription>

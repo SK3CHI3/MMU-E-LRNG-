@@ -25,12 +25,18 @@ import Unauthorized from "./pages/Unauthorized";
 const Profile = lazy(() => import("./pages/shared/Profile"));
 const Settings = lazy(() => import("./pages/shared/Settings"));
 const Support = lazy(() => import("./pages/shared/Support"));
+const SharedMessages = lazy(() => import("./pages/shared/Messages"));
 
 // Student pages
 const StudentCourses = lazy(() => import("./pages/student/Courses"));
 const StudentAssignments = lazy(() => import("./pages/student/Assignments"));
 const StudentGrades = lazy(() => import("./pages/student/Grades"));
 const StudentSchedule = lazy(() => import("./pages/student/Schedule"));
+const StudentResources = lazy(() => import("./pages/student/Resources"));
+const StudentFees = lazy(() => import("./pages/student/Fees"));
+const StudentAnnouncements = lazy(() => import("./pages/student/Announcements"));
+const StudyAI = lazy(() => import("./pages/student/StudyAI"));
+const StudentMessages = lazy(() => import("./pages/student/Messages"));
 
 // Lecturer pages
 const LecturerCourses = lazy(() => import("./pages/lecturer/Courses"));
@@ -61,11 +67,7 @@ const PlaceholderPage = () => (
 // Dashboard Router
 import { DashboardRouter } from "./components/dashboard/DashboardRouter";
 
-// Role-specific dashboard imports - direct imports for now
-import StudentDashboard from "./pages/dashboards/StudentDashboard";
-import LecturerDashboard from "./pages/dashboards/LecturerDashboard";
-import DeanDashboard from "./pages/dashboards/DeanDashboard";
-import AdminDashboard from "./pages/dashboards/AdminDashboard";
+// Dashboard router handles role-specific dashboard rendering
 
 // 404 Page
 import NotFound from "./pages/NotFound";
@@ -104,7 +106,7 @@ const App = () => {
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
 
-              {/* Dashboard Router - handles role-based redirection */}
+              {/* Dashboard Router - handles all dashboard paths and role-based redirection */}
               <Route element={<ProtectedRoute />}>
                 <Route element={
                   <MainLayout>
@@ -114,6 +116,7 @@ const App = () => {
                   </MainLayout>
                 }>
                   <Route path="/dashboard" element={<DashboardRouter />} />
+                  <Route path="/dashboard/*" element={<DashboardRouter />} />
                 </Route>
               </Route>
 
@@ -129,7 +132,7 @@ const App = () => {
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/support" element={<Support />} />
-                  <Route path="/announcements" element={<PlaceholderPage />} />
+                  <Route path="/announcements" element={<StudentAnnouncements />} />
                 </Route>
               </Route>
 
@@ -142,13 +145,14 @@ const App = () => {
                     </Suspense>
                   </MainLayout>
                 }>
-                  <Route path="/dashboard/student" element={<StudentDashboard />} />
+
                   <Route path="/courses" element={<StudentCourses />} />
                   <Route path="/assignments" element={<StudentAssignments />} />
                   <Route path="/grades" element={<StudentGrades />} />
-                  <Route path="/library" element={<PlaceholderPage />} />
-                  <Route path="/fees" element={<PlaceholderPage />} />
-                  <Route path="/ai-assistant" element={<PlaceholderPage />} />
+                  <Route path="/resources" element={<StudentResources />} />
+                  <Route path="/fees" element={<StudentFees />} />
+                  <Route path="/study-ai" element={<StudyAI />} />
+                  <Route path="/student/messages" element={<StudentMessages />} />
                 </Route>
               </Route>
 
@@ -161,7 +165,7 @@ const App = () => {
                     </Suspense>
                   </MainLayout>
                 }>
-                  <Route path="/dashboard/lecturer" element={<LecturerDashboard />} />
+
                   <Route path="/lecturer/courses" element={<LecturerCourses />} />
                   <Route path="/lecturer/assignments" element={<AssignmentManagement />} />
                   <Route path="/grading" element={<Grading />} />
@@ -180,12 +184,13 @@ const App = () => {
                     </Suspense>
                   </MainLayout>
                 }>
-                  <Route path="/dashboard/dean" element={<DeanDashboard />} />
+
                   <Route path="/faculty" element={<DeanFaculty />} />
                   <Route path="/departments" element={<PlaceholderPage />} />
                   <Route path="/performance" element={<PlaceholderPage />} />
                   <Route path="/budget" element={<PlaceholderPage />} />
                   <Route path="/management-ai" element={<PlaceholderPage />} />
+                  <Route path="/dean/messages" element={<SharedMessages />} />
                 </Route>
               </Route>
 
@@ -198,13 +203,14 @@ const App = () => {
                     </Suspense>
                   </MainLayout>
                 }>
-                  <Route path="/dashboard/admin" element={<AdminDashboard />} />
+
                   <Route path="/users" element={<AdminUsers />} />
                   <Route path="/system" element={<PlaceholderPage />} />
                   <Route path="/faculties" element={<PlaceholderPage />} />
                   <Route path="/security" element={<PlaceholderPage />} />
                   <Route path="/global-settings" element={<PlaceholderPage />} />
                   <Route path="/admin-ai" element={<PlaceholderPage />} />
+                  <Route path="/admin/messages" element={<SharedMessages />} />
                 </Route>
               </Route>
 

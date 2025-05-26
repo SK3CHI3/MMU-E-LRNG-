@@ -3,6 +3,12 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types/auth';
 
+// Import dashboard components
+import StudentDashboard from '@/pages/dashboards/StudentDashboard';
+import LecturerDashboard from '@/pages/dashboards/LecturerDashboard';
+import DeanDashboard from '@/pages/dashboards/DeanDashboard';
+import AdminDashboard from '@/pages/dashboards/AdminDashboard';
+
 // Dashboard route mapping
 const dashboardRoutes: Record<UserRole, string> = {
   student: '/dashboard/student',
@@ -59,9 +65,47 @@ export const DashboardRouter: React.FC = () => {
     return <Navigate to={userDashboardPath} replace />;
   }
 
-  // If we reach here, the user is on the correct path
-  console.log('DashboardRouter: User is on correct path');
-  return null;
+  // If we reach here, the user is on the correct path, render the appropriate dashboard
+  console.log('DashboardRouter: User is on correct path, rendering dashboard for role:', dbUser.role);
+
+  // Render the appropriate dashboard component based on user role
+  try {
+    console.log('DashboardRouter: About to render dashboard component for role:', dbUser.role);
+
+    switch (dbUser.role as UserRole) {
+      case 'student':
+        console.log('DashboardRouter: Rendering StudentDashboard');
+        return <StudentDashboard />;
+      case 'lecturer':
+        console.log('DashboardRouter: Rendering LecturerDashboard');
+        return <LecturerDashboard />;
+      case 'dean':
+        console.log('DashboardRouter: Rendering DeanDashboard');
+        return <DeanDashboard />;
+      case 'admin':
+        console.log('DashboardRouter: Rendering AdminDashboard');
+        return <AdminDashboard />;
+      default:
+        console.error('DashboardRouter: Unknown user role:', dbUser.role);
+        return <Navigate to="/unauthorized" replace />;
+    }
+  } catch (error) {
+    console.error('DashboardRouter: Error rendering dashboard:', error);
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Dashboard Error</h2>
+          <p className="text-muted-foreground mb-4">There was an error loading your dashboard.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
 };
 
 // Hook to get the correct dashboard path for current user

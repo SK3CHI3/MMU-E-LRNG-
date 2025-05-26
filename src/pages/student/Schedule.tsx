@@ -393,6 +393,7 @@ const Schedule = () => {
         return 'secondary';
     }
   };
+
   const todayClasses = selectedDay === 'week' ? [] : (currentSchedule[selectedDay] || []);
   const totalClassesToday = todayClasses.length;
   const onlineClassesToday = todayClasses.filter(c => c.isOnline).length;
@@ -674,7 +675,7 @@ const Schedule = () => {
           )}
           <Button className="bg-blue-600 hover:bg-blue-700">
             <Calendar className="h-4 w-4 mr-2" />
-            Export Schedule
+            Export Classes
           </Button>
         </div>
       </div>
@@ -783,7 +784,7 @@ const Schedule = () => {
         // Full Week View for Lecturers
         <div className="space-y-6">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Weekly Schedule Overview
+            Weekly Classes Overview
           </h2>
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
@@ -903,7 +904,7 @@ const Schedule = () => {
         // Day View for Students and Individual Day View for Lecturers
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {dayLabels[selectedDay]} Schedule
+            {dayLabels[selectedDay]} Classes
           </h2>
 
           {todayClasses.length === 0 ? (

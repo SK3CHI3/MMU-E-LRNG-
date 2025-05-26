@@ -51,7 +51,6 @@ export interface Unit {
   id: string;
   name: string;
   code: string;
-  credits: number;
   course: Course;
   lecturer?: Lecturer;
   students: Student[];

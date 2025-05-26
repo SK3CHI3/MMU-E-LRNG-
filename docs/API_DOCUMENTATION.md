@@ -1,63 +1,105 @@
-# MMU LMS - API Documentation
+# MMU LMS API Documentation
 
-## 🔗 **API Overview**
+This document provides comprehensive documentation for the MMU Learning Management System API endpoints and services.
 
-The MMU LMS uses Supabase as its backend, providing a RESTful API with real-time capabilities. All API endpoints are automatically generated from the database schema and include built-in authentication and authorization.
+## Overview
 
-## 🔐 **Authentication**
+The MMU LMS uses Supabase as the backend, providing RESTful API endpoints for all data operations. The system implements Row Level Security (RLS) to ensure data privacy and security with a **unit-based academic system** (no credit system).
 
-### **Authentication Methods**
-```typescript
-// Email/Password Authentication
-const { data, error } = await supabase.auth.signInWithPassword({
-  email: 'user@mmu.ac.ke',
-  password: 'password123'
-});
+## Authentication
 
-// JWT Token Usage
-const { data, error } = await supabase.auth.getSession();
-const token = data.session?.access_token;
-```
+All API requests require authentication using Supabase Auth. The system supports:
 
-### **Authorization Headers**
-```http
+- Email/Password authentication
+- JWT token-based sessions
+- Role-based access control (Student, Lecturer, Dean, Admin)
+
+### Authentication Headers
+
+```javascript
 Authorization: Bearer <jwt_token>
-Content-Type: application/json
+apikey: <supabase_anon_key>
 ```
 
-## 👥 **User Management API**
+## Base URL
 
-### **Get User Profile**
+```
+https://eekajmfvqntbloqgizwk.supabase.co/rest/v1/
+```
+
+## Core Entities
+
+### Users
+- **Endpoint**: `/users`
+- **Description**: User profiles with programme and academic information
+- **Roles**: student, lecturer, dean, admin
+- **New Fields**: `programme_id`, `current_semester`, `year_of_study`
+
+### Programmes
+- **Endpoint**: `/programmes`
+- **Description**: Academic programmes (Bachelor's, Master's degrees)
+- **Fields**: `code`, `title`, `level`, `faculty`, `total_units`
+
+### Courses
+- **Endpoint**: `/courses`
+- **Description**: Course/unit definitions (no credit_hours field)
+- **New Fields**: `programme_id`
+
+### Academic Calendar
+- **Endpoint**: `/academic_calendar`
+- **Description**: Academic year and semester management
+- **Fields**: `academic_year`, `current_semester`, `is_current`
+
+### Student Fees
+- **Endpoint**: `/student_fees`
+- **Description**: Student fee tracking and payment management
+- **Fields**: `total_fees`, `amount_paid`, `due_date`, `registration_threshold`
+
+### Payment History
+- **Endpoint**: `/payment_history`
+- **Description**: Payment transaction records
+- **Fields**: `amount`, `payment_method`, `reference_number`, `status`
+
+## API Endpoints
+
+### User Management
+
+#### Get Current User Profile with Programme Info
 ```http
-GET /rest/v1/profiles?id=eq.<user_id>
+GET /users?auth_id=eq.{user_id}&select=*,programmes(title,total_units,duration_years)
 ```
 
 **Response:**
 ```json
 {
-  "id": "uuid",
+  "auth_id": "uuid",
   "email": "user@mmu.ac.ke",
-  "full_name": "John Doe",
+  "full_name": "User Name",
   "role": "student",
-  "avatar_url": "https://...",
-  "created_at": "2024-01-01T00:00:00Z"
+  "department": "Faculty of Computing and Information Technology",
+  "student_id": "FoCIT/2021/001",
+  "programme_id": "programme_uuid",
+  "current_semester": 7,
+  "year_of_study": 4,
+  "is_active": true,
+  "programmes": {
+    "title": "Bachelor of Science in Computer Science",
+    "total_units": 40,
+    "duration_years": 4
+  }
 }
 ```
 
-### **Update User Profile**
+#### Update User Profile
 ```http
-PATCH /rest/v1/profiles?id=eq.<user_id>
+PATCH /users?auth_id=eq.{user_id}
 Content-Type: application/json
 
 {
   "full_name": "Updated Name",
-  "avatar_url": "https://new-avatar-url.com"
+  "phone": "+254700000000",
+  "current_semester": 8
 }
-```
-
-### **Get Users by Role**
-```http
-GET /rest/v1/profiles?role=eq.lecturer
 ```
 
 ## 📚 **Course Management API**

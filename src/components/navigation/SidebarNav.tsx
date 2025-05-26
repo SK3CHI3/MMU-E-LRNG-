@@ -87,7 +87,7 @@ const getNavItemsForRole = (role: string): NavItem[] => {
       return [
         ...commonItems.slice(0, 1), // Dashboard
         {
-          title: 'My Courses',
+          title: 'My Units',
           href: '/courses',
           icon: <BookOpen className="h-4 w-4" />,
         },
@@ -102,13 +102,13 @@ const getNavItemsForRole = (role: string): NavItem[] => {
           icon: <GraduationCap className="h-4 w-4" />,
         },
         {
-          title: 'Schedule',
+          title: 'Classes',
           href: '/schedule',
           icon: <Calendar className="h-4 w-4" />,
         },
         {
-          title: 'Library',
-          href: '/library',
+          title: 'Resources',
+          href: '/resources',
           icon: <Library className="h-4 w-4" />,
         },
         {
@@ -123,8 +123,13 @@ const getNavItemsForRole = (role: string): NavItem[] => {
         },
         {
           title: 'Study AI Assistant',
-          href: '/ai-assistant',
+          href: '/study-ai',
           icon: <Bot className="h-4 w-4" />,
+        },
+        {
+          title: 'Messages',
+          href: '/student/messages',
+          icon: <MessageSquare className="h-4 w-4" />,
         },
         ...commonItems.slice(1), // Profile, Settings, Support
       ];
@@ -133,7 +138,7 @@ const getNavItemsForRole = (role: string): NavItem[] => {
       return [
         ...commonItems.slice(0, 1), // Dashboard
         {
-          title: 'My Courses',
+          title: 'My Units',
           href: '/lecturer/courses',
           icon: <School className="h-4 w-4" />,
         },
@@ -153,12 +158,12 @@ const getNavItemsForRole = (role: string): NavItem[] => {
           icon: <Award className="h-4 w-4" />,
         },
         {
-          title: 'Schedule',
+          title: 'Classes',
           href: '/schedule',
           icon: <Calendar className="h-4 w-4" />,
         },
         {
-          title: 'Course Materials',
+          title: 'Unit Materials',
           href: '/materials',
           icon: <FolderArchive className="h-4 w-4" />,
         },
@@ -224,6 +229,11 @@ const getNavItemsForRole = (role: string): NavItem[] => {
           icon: <Bell className="h-4 w-4" />,
         },
         {
+          title: 'Messages',
+          href: '/dean/messages',
+          icon: <MessageSquare className="h-4 w-4" />,
+        },
+        {
           title: 'Management AI',
           href: '/management-ai',
           icon: <Bot className="h-4 w-4" />,
@@ -273,6 +283,11 @@ const getNavItemsForRole = (role: string): NavItem[] => {
           title: 'Announcements',
           href: '/announcements',
           icon: <Bell className="h-4 w-4" />,
+        },
+        {
+          title: 'Messages',
+          href: '/admin/messages',
+          icon: <MessageSquare className="h-4 w-4" />,
         },
         {
           title: 'Admin AI',

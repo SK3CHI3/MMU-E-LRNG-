@@ -222,8 +222,8 @@ const DeanDashboard = () => {
       </Card>
 
       {/* Main Content Grid */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300">
+      <div className="grid gap-8 md:grid-cols-2 md:divide-x md:divide-gray-100 dark:md:divide-gray-800">
+        <Card className="bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300 md:pr-6">
           <CardHeader>
             <CardTitle>Faculty Performance</CardTitle>
             <CardDescription>Key performance indicators for your faculty</CardDescription>
@@ -254,7 +254,7 @@ const DeanDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300">
+        <Card className="bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300 md:pl-6">
           <CardHeader>
             <CardTitle>Recent Faculty Activities</CardTitle>
             <CardDescription>Latest updates from your faculty departments</CardDescription>

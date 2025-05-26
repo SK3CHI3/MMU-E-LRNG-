@@ -204,7 +204,6 @@ const Grades = () => {
               <CardTitle className="flex items-center justify-between">
                 <span>{currentSemester.semester}</span>
                 <div className="flex items-center space-x-4">
-                  <Badge variant="outline">{currentSemester.credits} Credits</Badge>
                   <Badge className="bg-green-600">GPA: {currentSemester.gpa}</Badge>
                 </div>
               </CardTitle>
@@ -223,7 +222,6 @@ const Grades = () => {
                         <Badge variant={getGradeBadgeVariant(course.grade)} className={getGradeColor(course.grade)}>
                           {course.grade}
                         </Badge>
-                        <Badge variant="outline">{course.credits} Credits</Badge>
                       </div>
                     </div>
                   </CardHeader>
@@ -233,7 +231,7 @@ const Grades = () => {
                       <span className="text-sm font-bold">{course.percentage}%</span>
                     </div>
                     <Progress value={course.percentage} className="h-2" />
-                    
+
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium">Recent Assignments</h4>
                       {course.assignments.map((assignment, idx) => (
@@ -259,7 +257,6 @@ const Grades = () => {
                 <CardTitle className="flex items-center justify-between">
                   <span>{semester.semester}</span>
                   <div className="flex items-center space-x-4">
-                    <Badge variant="outline">{semester.credits} Credits</Badge>
                     <Badge className="bg-blue-600">GPA: {semester.gpa}</Badge>
                   </div>
                 </CardTitle>

@@ -2,6 +2,26 @@
 -- This script populates the database with sample data for testing
 
 -- =============================================
+-- SAMPLE PROGRAMMES
+-- =============================================
+
+-- Insert sample programmes based on real MMU data
+INSERT INTO programmes (id, code, title, level, faculty, department, duration_years, total_units) VALUES
+('10000000-0000-0000-0000-000000000001', 'BSCS', 'Bachelor of Science in Computer Science', 'bachelors', 'Faculty of Computing and Information Technology', 'Computer Science', 4, 40),
+('10000000-0000-0000-0000-000000000002', 'BSIT', 'Bachelor of Science in Information Technology', 'bachelors', 'Faculty of Computing and Information Technology', 'Information Technology', 4, 40),
+('10000000-0000-0000-0000-000000000003', 'BSSE', 'Bachelor of Science in Software Engineering', 'bachelors', 'Faculty of Computing and Information Technology', 'Software Engineering', 4, 40),
+('10000000-0000-0000-0000-000000000004', 'BCOM', 'Bachelor of Commerce', 'bachelors', 'Faculty of Business and Economics', 'Business Administration', 4, 40),
+('10000000-0000-0000-0000-000000000005', 'MSIT', 'Master of Science in Information Technology', 'masters', 'Faculty of Computing and Information Technology', 'Information Technology', 2, 16);
+
+-- =============================================
+-- SAMPLE ACADEMIC CALENDAR
+-- =============================================
+
+-- Insert current academic calendar
+INSERT INTO academic_calendar (id, academic_year, current_semester, semester_start_date, semester_end_date, registration_start_date, registration_end_date, is_current) VALUES
+('20000000-0000-0000-0000-000000000001', '2024/2025', 'Semester 1', '2024-09-01', '2024-12-15', '2024-08-15', '2024-09-15', true);
+
+-- =============================================
 -- SAMPLE USERS
 -- =============================================
 
@@ -23,12 +43,12 @@ INSERT INTO users (auth_id, email, full_name, role, department, phone, is_active
 ('00000000-0000-0000-0000-000000000005', 'lecturer3@mmu.ac.ke', 'Dr. Michael Teacher', 'lecturer', 'Faculty of Computing and Information Technology', '+254700000005', true);
 
 -- Sample Student Users (Using real MMU faculty name and proper student IDs)
-INSERT INTO users (auth_id, email, full_name, role, department, student_id, phone, is_active) VALUES
-('00000000-0000-0000-0000-000000000006', 'student1@mmu.ac.ke', 'Alice Student', 'student', 'Faculty of Computing and Information Technology', 'FoCIT/2021/001', '+254700000006', true),
-('00000000-0000-0000-0000-000000000007', 'student2@mmu.ac.ke', 'Bob Learner', 'student', 'Faculty of Computing and Information Technology', 'FoCIT/2021/002', '+254700000007', true),
-('00000000-0000-0000-0000-000000000008', 'student3@mmu.ac.ke', 'Carol Scholar', 'student', 'Faculty of Computing and Information Technology', 'FoCIT/2021/003', '+254700000008', true),
-('00000000-0000-0000-0000-000000000009', 'student4@mmu.ac.ke', 'David Pupil', 'student', 'Faculty of Computing and Information Technology', 'FoCIT/2021/004', '+254700000009', true),
-('00000000-0000-0000-0000-000000000010', 'student5@mmu.ac.ke', 'Eve Undergraduate', 'student', 'Faculty of Computing and Information Technology', 'FoCIT/2021/005', '+254700000010', true);
+INSERT INTO users (auth_id, email, full_name, role, department, student_id, phone, programme_id, current_semester, year_of_study, is_active) VALUES
+('00000000-0000-0000-0000-000000000006', 'student1@mmu.ac.ke', 'Alice Student', 'student', 'Faculty of Computing and Information Technology', 'FoCIT/2021/001', '+254700000006', '10000000-0000-0000-0000-000000000001', 7, 4, true),
+('00000000-0000-0000-0000-000000000007', 'student2@mmu.ac.ke', 'Bob Learner', 'student', 'Faculty of Computing and Information Technology', 'FoCIT/2021/002', '+254700000007', '10000000-0000-0000-0000-000000000002', 6, 3, true),
+('00000000-0000-0000-0000-000000000008', 'student3@mmu.ac.ke', 'Carol Scholar', 'student', 'Faculty of Computing and Information Technology', 'FoCIT/2021/003', '+254700000008', '10000000-0000-0000-0000-000000000003', 5, 3, true),
+('00000000-0000-0000-0000-000000000009', 'student4@mmu.ac.ke', 'David Pupil', 'student', 'Faculty of Computing and Information Technology', 'FoCIT/2021/004', '+254700000009', '10000000-0000-0000-0000-000000000001', 4, 2, true),
+('00000000-0000-0000-0000-000000000010', 'student5@mmu.ac.ke', 'Eve Undergraduate', 'student', 'Faculty of Computing and Information Technology', 'FoCIT/2021/005', '+254700000010', '10000000-0000-0000-0000-000000000002', 3, 2, true);
 
 -- Additional users from other MMU faculties for diversity
 INSERT INTO users (auth_id, email, full_name, role, department, phone, is_active) VALUES
@@ -56,24 +76,19 @@ INSERT INTO users (auth_id, email, full_name, role, department, student_id, phon
 -- SAMPLE COURSES
 -- =============================================
 
-INSERT INTO courses (id, code, title, description, credit_hours, department, level, semester, year, max_students, created_by, is_active) VALUES
-('10000000-0000-0000-0000-000000000001', 'CS301', 'Data Structures and Algorithms', 'Comprehensive study of fundamental data structures and algorithms including arrays, linked lists, stacks, queues, trees, graphs, and sorting/searching algorithms.', 3, 'Faculty of Computing and Information Technology', 'undergraduate', 'fall', 2024, 50, '00000000-0000-0000-0000-000000000003', true),
-('10000000-0000-0000-0000-000000000002', 'CS205', 'Database Management Systems', 'Introduction to database concepts, relational model, SQL, database design, normalization, and database administration.', 3, 'Faculty of Computing and Information Technology', 'undergraduate', 'fall', 2024, 45, '00000000-0000-0000-0000-000000000004', true),
-('10000000-0000-0000-0000-000000000003', 'CS401', 'Software Engineering', 'Software development lifecycle, project management, requirements analysis, system design, testing, and maintenance.', 4, 'Faculty of Computing and Information Technology', 'undergraduate', 'fall', 2024, 40, '00000000-0000-0000-0000-000000000005', true),
-('10000000-0000-0000-0000-000000000004', 'CS102', 'Introduction to Programming', 'Basic programming concepts using Python, including variables, control structures, functions, and object-oriented programming.', 3, 'Faculty of Computing and Information Technology', 'undergraduate', 'fall', 2024, 60, '00000000-0000-0000-0000-000000000003', true),
-('10000000-0000-0000-0000-000000000005', 'CS350', 'Computer Networks', 'Network protocols, OSI model, TCP/IP, network security, and network administration.', 3, 'Faculty of Computing and Information Technology', 'undergraduate', 'spring', 2024, 35, '00000000-0000-0000-0000-000000000004', true);
+INSERT INTO courses (id, code, title, description, department, level, semester, year, max_students, programme_id, created_by, is_active) VALUES
+('10000000-0000-0000-0000-000000000001', 'CS301', 'Data Structures and Algorithms', 'Comprehensive study of fundamental data structures and algorithms including arrays, linked lists, stacks, queues, trees, graphs, and sorting/searching algorithms.', 'Faculty of Computing and Information Technology', 'undergraduate', 'fall', 2024, 50, '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003', true),
+('10000000-0000-0000-0000-000000000002', 'CS205', 'Database Management Systems', 'Introduction to database concepts, relational model, SQL, database design, normalization, and database administration.', 'Faculty of Computing and Information Technology', 'undergraduate', 'fall', 2024, 45, '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000004', true),
+('10000000-0000-0000-0000-000000000003', 'CS401', 'Software Engineering', 'Software development lifecycle, project management, requirements analysis, system design, testing, and maintenance.', 'Faculty of Computing and Information Technology', 'undergraduate', 'fall', 2024, 40, '10000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000005', true),
+('10000000-0000-0000-0000-000000000004', 'CS102', 'Introduction to Programming', 'Basic programming concepts using Python, including variables, control structures, functions, and object-oriented programming.', 'Faculty of Computing and Information Technology', 'undergraduate', 'fall', 2024, 60, '10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003', true),
+('10000000-0000-0000-0000-000000000005', 'CS350', 'Computer Networks', 'Network protocols, OSI model, TCP/IP, network security, and network administration.', 'Faculty of Computing and Information Technology', 'undergraduate', 'spring', 2024, 35, '10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000004', true);
 
 -- Additional courses from other MMU faculties
-INSERT INTO courses (id, code, title, description, credit_hours, department, level, semester, year, max_students, created_by, is_active) VALUES
+INSERT INTO courses (id, code, title, description, department, level, semester, year, max_students, programme_id, created_by, is_active) VALUES
 -- Business Faculty Courses
-('10000000-0000-0000-0000-000000000006', 'BUS201', 'Principles of Management', 'Introduction to management principles, organizational behavior, and leadership concepts in modern business environments.', 3, 'Faculty of Business and Economics', 'undergraduate', 'fall', 2024, 40, '00000000-0000-0000-0000-000000000012', true),
-('10000000-0000-0000-0000-000000000007', 'ACC101', 'Financial Accounting', 'Fundamentals of financial accounting including recording transactions, preparing financial statements, and basic financial analysis.', 3, 'Faculty of Business and Economics', 'undergraduate', 'fall', 2024, 45, '00000000-0000-0000-0000-000000000012', true),
-('10000000-0000-0000-0000-000000000008', 'ECO301', 'Microeconomics', 'Advanced study of microeconomic theory including consumer behavior, market structures, and resource allocation.', 4, 'Faculty of Business and Economics', 'undergraduate', 'spring', 2024, 30, '00000000-0000-0000-0000-000000000012', true),
-
--- Engineering Faculty Courses
-('10000000-0000-0000-0000-000000000009', 'ENG201', 'Engineering Mathematics', 'Advanced mathematics for engineering including calculus, differential equations, and linear algebra applications.', 4, 'Faculty of Engineering and Technology', 'undergraduate', 'fall', 2024, 35, '00000000-0000-0000-0000-000000000016', true),
-('10000000-0000-0000-0000-000000000010', 'ELE301', 'Circuit Analysis', 'Analysis of electrical circuits including AC/DC circuits, network theorems, and circuit design principles.', 3, 'Faculty of Engineering and Technology', 'undergraduate', 'spring', 2024, 25, '00000000-0000-0000-0000-000000000016', true),
-('10000000-0000-0000-0000-000000000011', 'MEC201', 'Thermodynamics', 'Principles of thermodynamics including energy systems, heat transfer, and mechanical engineering applications.', 3, 'Faculty of Engineering and Technology', 'undergraduate', 'fall', 2024, 30, '00000000-0000-0000-0000-000000000016', true);
+('10000000-0000-0000-0000-000000000006', 'BUS201', 'Principles of Management', 'Introduction to management principles, organizational behavior, and leadership concepts in modern business environments.', 'Faculty of Business and Economics', 'undergraduate', 'fall', 2024, 40, '10000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000012', true),
+('10000000-0000-0000-0000-000000000007', 'ACC101', 'Financial Accounting', 'Fundamentals of financial accounting including recording transactions, preparing financial statements, and basic financial analysis.', 'Faculty of Business and Economics', 'undergraduate', 'fall', 2024, 45, '10000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000012', true),
+('10000000-0000-0000-0000-000000000008', 'ECO301', 'Microeconomics', 'Advanced study of microeconomic theory including consumer behavior, market structures, and resource allocation.', 'Faculty of Business and Economics', 'undergraduate', 'spring', 2024, 30, '10000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000012', true);
 
 -- =============================================
 -- SAMPLE COURSE ENROLLMENTS
@@ -254,6 +269,40 @@ INSERT INTO analytics_data (user_id, course_id, activity_type, created_at) VALUE
 ('00000000-0000-0000-0000-000000000008', '10000000-0000-0000-0000-000000000002', 'material_view', '2024-01-21 16:10:00'),
 ('00000000-0000-0000-0000-000000000008', '10000000-0000-0000-0000-000000000003', 'login', '2024-01-23 13:00:00'),
 ('00000000-0000-0000-0000-000000000008', '10000000-0000-0000-0000-000000000003', 'assignment_view', '2024-01-23 13:20:00');
+
+-- =============================================
+-- SAMPLE STUDENT FEES
+-- =============================================
+
+-- Insert sample student fees for current academic year
+INSERT INTO student_fees (student_id, academic_year, semester, total_fees, amount_paid, due_date, registration_threshold) VALUES
+-- Computing students
+('00000000-0000-0000-0000-000000000006', '2024/2025', 'Semester 1', 120000.00, 72000.00, '2024-12-15', 60),
+('00000000-0000-0000-0000-000000000007', '2024/2025', 'Semester 1', 120000.00, 84000.00, '2024-12-15', 60),
+('00000000-0000-0000-0000-000000000008', '2024/2025', 'Semester 1', 120000.00, 96000.00, '2024-12-15', 60),
+('00000000-0000-0000-0000-000000000009', '2024/2025', 'Semester 1', 120000.00, 48000.00, '2024-12-15', 60),
+('00000000-0000-0000-0000-000000000010', '2024/2025', 'Semester 1', 120000.00, 60000.00, '2024-12-15', 60),
+
+-- Business students
+('00000000-0000-0000-0000-000000000013', '2024/2025', 'Semester 1', 110000.00, 77000.00, '2024-12-15', 60),
+('00000000-0000-0000-0000-000000000014', '2024/2025', 'Semester 1', 110000.00, 55000.00, '2024-12-15', 60),
+
+-- Engineering students
+('00000000-0000-0000-0000-000000000017', '2024/2025', 'Semester 1', 130000.00, 91000.00, '2024-12-15', 60),
+('00000000-0000-0000-0000-000000000018', '2024/2025', 'Semester 1', 130000.00, 65000.00, '2024-12-15', 60);
+
+-- =============================================
+-- SAMPLE PAYMENT HISTORY
+-- =============================================
+
+-- Insert sample payment records
+INSERT INTO payment_history (student_id, amount, payment_method, reference_number, status, description, processed_at) VALUES
+('00000000-0000-0000-0000-000000000006', 36000.00, 'mpesa', 'MMU1730000001-ABC123', 'completed', 'Semester 1 fees payment', '2024-09-15 10:30:00'),
+('00000000-0000-0000-0000-000000000006', 36000.00, 'bank_transfer', 'MMU1730000002-DEF456', 'completed', 'Semester 1 fees payment', '2024-10-15 14:20:00'),
+('00000000-0000-0000-0000-000000000007', 42000.00, 'mpesa', 'MMU1730000003-GHI789', 'completed', 'Semester 1 fees payment', '2024-09-10 09:15:00'),
+('00000000-0000-0000-0000-000000000007', 42000.00, 'mpesa', 'MMU1730000004-JKL012', 'completed', 'Semester 1 fees payment', '2024-10-20 16:45:00'),
+('00000000-0000-0000-0000-000000000008', 48000.00, 'bank_transfer', 'MMU1730000005-MNO345', 'completed', 'Semester 1 fees payment', '2024-09-05 11:00:00'),
+('00000000-0000-0000-0000-000000000008', 48000.00, 'mpesa', 'MMU1730000006-PQR678', 'completed', 'Semester 1 fees payment', '2024-10-25 13:30:00');
 
 -- =============================================
 -- UPDATE COURSES WITH INSTRUCTOR ASSIGNMENTS
