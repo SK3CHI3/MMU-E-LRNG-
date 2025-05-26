@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { EnhancedErrorAlert } from '@/components/ui/enhanced-alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -150,6 +151,16 @@ const Register = () => {
     }
   };
 
+  const handleEmailSelect = (email: string) => {
+    setFormData(prev => ({ ...prev, email }));
+    setError(null); // Clear error when email is selected
+  };
+
+  const handleRetry = () => {
+    setError(null);
+    setSuccessMessage(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -180,13 +191,25 @@ const Register = () => {
       if (error) {
         console.error('Registration error:', error);
 
-        // Handle specific error cases
-        if (error.message?.includes('already registered')) {
-          throw new Error('This email is already registered. Please use a different email or try to sign in.');
+        // Handle specific error cases with better user-friendly messages
+        if (error.message?.includes('already registered') ||
+            error.message?.includes('User already registered') ||
+            error.message?.includes('duplicate key value violates unique constraint')) {
+          throw new Error('This email address is already registered. Please use a different email or try to sign in instead.');
+        } else if (error.message?.includes('duplicate key value violates unique constraint "users_email_key"')) {
+          throw new Error('An account with this email already exists. Please use a different email address or sign in to your existing account.');
+        } else if (error.message?.includes('duplicate key value violates unique constraint "users_student_id_key"')) {
+          throw new Error('This student ID is already registered. Please check your student ID or contact support if you believe this is an error.');
         } else if (error.message?.includes('invalid api key')) {
           throw new Error('There was a problem connecting to the server. Please try again later or contact support.');
+        } else if (error.message?.includes('Email rate limit exceeded')) {
+          throw new Error('Too many registration attempts. Please wait a few minutes before trying again.');
+        } else if (error.message?.includes('Invalid email')) {
+          throw new Error('Please enter a valid email address.');
+        } else if (error.message?.includes('Password should be at least 6 characters')) {
+          throw new Error('Password must be at least 6 characters long.');
         } else {
-          throw new Error(error.message || 'Failed to create account');
+          throw new Error(error.message || 'Failed to create account. Please try again.');
         }
       }
 
@@ -235,11 +258,16 @@ const Register = () => {
 
         <CardContent>
           {error && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+            <div className="mb-4">
+              <EnhancedErrorAlert
+                error={error}
+                originalEmail={formData.email}
+                role={formData.role}
+                faculty={formData.faculty}
+                onEmailSelect={handleEmailSelect}
+                onRetry={handleRetry}
+              />
+            </div>
           )}
 
           {successMessage && (

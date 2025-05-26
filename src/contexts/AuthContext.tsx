@@ -154,7 +154,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Auth signup error:', error);
-        return { error, data: null };
+
+        // Transform Supabase auth errors to user-friendly messages
+        let userFriendlyError = error;
+
+        if (error.message?.includes('User already registered')) {
+          userFriendlyError = {
+            ...error,
+            message: 'This email address is already registered. Please use a different email or sign in instead.'
+          };
+        } else if (error.message?.includes('Invalid email')) {
+          userFriendlyError = {
+            ...error,
+            message: 'Please enter a valid email address.'
+          };
+        } else if (error.message?.includes('Password should be at least 6 characters')) {
+          userFriendlyError = {
+            ...error,
+            message: 'Password must be at least 6 characters long.'
+          };
+        }
+
+        return { error: userFriendlyError, data: null };
       }
 
       console.log('Auth signup successful:', data);
@@ -178,15 +199,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (dbError) {
             console.error('Database user creation error:', dbError);
 
+            // Transform database errors to user-friendly messages
+            let userFriendlyError = dbError;
+
+            if (dbError.message?.includes('duplicate key value violates unique constraint "users_email_key"')) {
+              userFriendlyError = {
+                ...dbError,
+                message: 'An account with this email already exists. Please use a different email address or sign in to your existing account.'
+              };
+            } else if (dbError.message?.includes('duplicate key value violates unique constraint "users_student_id_key"')) {
+              userFriendlyError = {
+                ...dbError,
+                message: 'This student ID is already registered. Please check your student ID or contact support if you believe this is an error.'
+              };
+            } else if (dbError.message?.includes('duplicate key value violates unique constraint')) {
+              userFriendlyError = {
+                ...dbError,
+                message: 'Some of the information you provided is already registered. Please check your details and try again.'
+              };
+            } else if (dbError.message?.includes('violates foreign key constraint')) {
+              userFriendlyError = {
+                ...dbError,
+                message: 'Invalid department or faculty selected. Please choose a valid option.'
+              };
+            } else if (dbError.message?.includes('permission denied')) {
+              userFriendlyError = {
+                ...dbError,
+                message: 'Registration is currently unavailable. Please contact support for assistance.'
+              };
+            }
+
             // If there's an error creating the DB user, delete the auth user
             try {
               // Use the admin client for deletion as well
               await supabaseAdmin.auth.admin.deleteUser(data.user.id);
+              console.log('Cleaned up orphaned auth user');
             } catch (deleteError) {
               console.error('Failed to delete auth user after DB error:', deleteError);
             }
 
-            return { error: dbError, data: null };
+            return { error: userFriendlyError, data: null };
           }
         } catch (insertError) {
           console.error('Unexpected error during user creation:', insertError);
