@@ -9,7 +9,7 @@ interface AuthContextType {
   dbUser: DbUser | null;
   isLoading: boolean;
   signUp: (email: string, password: string, userData: Partial<DbUser>) => Promise<{ error: any | null; data: any | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: any | null; data: any | null }>;
+  signIn: (emailOrAdmissionNumber: string, password: string) => Promise<{ error: any | null; data: any | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any | null; data: any | null }>;
   updatePassword: (password: string) => Promise<{ error: any | null; data: any | null }>;
@@ -282,10 +282,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Sign in an existing user
-  const signIn = async (email: string, password: string) => {
-    console.log('signIn: Attempting to sign in with email', email);
+  const signIn = async (emailOrAdmissionNumber: string, password: string) => {
+    console.log('signIn: Attempting to sign in with:', emailOrAdmissionNumber);
 
     try {
+      let email = emailOrAdmissionNumber;
+
+      // Check if input looks like an admission number (format: ABC-123-456/2024)
+      const admissionNumberRegex = /^[A-Z]{2,4}-\d{3}-\d{3}\/\d{4}$/;
+      if (admissionNumberRegex.test(emailOrAdmissionNumber)) {
+        console.log('signIn: Input detected as admission number, looking up email');
+
+        // Look up the user's email from the database using admission number
+        const { data: userData, error: lookupError } = await supabase
+          .from('users')
+          .select('email')
+          .eq('student_id', emailOrAdmissionNumber)
+          .single();
+
+        if (lookupError || !userData) {
+          console.error('signIn: Failed to find user with admission number:', lookupError);
+          return {
+            data: null,
+            error: { message: 'Invalid admission number. Please check your admission number and try again.' }
+          };
+        }
+
+        email = userData.email;
+        console.log('signIn: Found email for admission number');
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,

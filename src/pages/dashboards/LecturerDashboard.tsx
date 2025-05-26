@@ -1,14 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, Users, FileText, BarChart3, Clock, CheckCircle, AlertCircle, GraduationCap, Database } from "lucide-react";
+import { BookOpen, Users, FileText, BarChart3, Clock, AlertCircle, GraduationCap } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import TestDataGenerator from "@/components/debug/TestDataGenerator";
-import { useState } from "react";
 
 const LecturerDashboard = () => {
   const { dbUser } = useAuth();
-  const [showTestDataGenerator, setShowTestDataGenerator] = useState(false);
 
   // Lecturer-specific data
   const lecturerInfo = {
@@ -94,28 +91,11 @@ const LecturerDashboard = () => {
             {lecturerInfo.name} • {lecturerInfo.department}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setShowTestDataGenerator(!showTestDataGenerator)}
-            variant="outline"
-            size="sm"
-          >
-            <Database className="h-4 w-4 mr-2" />
-            {showTestDataGenerator ? 'Hide' : 'Show'} Test Data
-          </Button>
-          <div className="flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 rounded-full">
-            <GraduationCap className="h-4 w-4 text-green-600 dark:text-green-400" />
-            <span className="text-sm font-medium text-green-600 dark:text-green-400">Lecturer</span>
-          </div>
+        <div className="flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 rounded-full">
+          <GraduationCap className="h-4 w-4 text-green-600 dark:text-green-400" />
+          <span className="text-sm font-medium text-green-600 dark:text-green-400">Lecturer</span>
         </div>
       </div>
-
-      {/* Test Data Generator */}
-      {showTestDataGenerator && (
-        <div className="mb-6">
-          <TestDataGenerator />
-        </div>
-      )}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

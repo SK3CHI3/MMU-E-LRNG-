@@ -44,38 +44,43 @@ export const generateEmailSuggestions = (role: string, faculty?: string): EmailS
   return suggestions;
 };
 
-// Faculty-specific dean email suggestions based on real MMU faculties
+// Faculty-specific dean email suggestions
 const getFacultyEmailSuggestions = (faculty?: string): EmailSuggestion[] => {
   const facultyMap: { [key: string]: string[] } = {
-    'Faculty of Business and Economics': [
-      'dean.business@mmu.ac.ke',
-      'dean.fobe@mmu.ac.ke',
-      'dean.economics@mmu.ac.ke'
-    ],
     'Faculty of Computing and Information Technology': [
       'dean.computing@mmu.ac.ke',
-      'dean.focit@mmu.ac.ke',
+      'dean.cit@mmu.ac.ke',
       'dean.it@mmu.ac.ke'
+    ],
+    'Faculty of Business and Economics': [
+      'dean.business@mmu.ac.ke',
+      'dean.economics@mmu.ac.ke',
+      'dean.commerce@mmu.ac.ke'
     ],
     'Faculty of Engineering and Technology': [
       'dean.engineering@mmu.ac.ke',
-      'dean.foet@mmu.ac.ke',
-      'dean.technology@mmu.ac.ke'
+      'dean.technology@mmu.ac.ke',
+      'dean.eng@mmu.ac.ke'
     ],
-    'Faculty of Media and Communication': [
-      'dean.media@mmu.ac.ke',
-      'dean.fameco@mmu.ac.ke',
-      'dean.communication@mmu.ac.ke'
+    'Faculty of Health Sciences': [
+      'dean.health@mmu.ac.ke',
+      'dean.medicine@mmu.ac.ke',
+      'dean.nursing@mmu.ac.ke'
     ],
-    'Faculty of Science & Technology': [
-      'dean.science@mmu.ac.ke',
-      'dean.fost@mmu.ac.ke',
-      'dean.technology@mmu.ac.ke'
+    'Faculty of Agriculture and Natural Resources': [
+      'dean.agriculture@mmu.ac.ke',
+      'dean.agric@mmu.ac.ke',
+      'dean.natural.resources@mmu.ac.ke'
     ],
-    'Faculty of Social Sciences and Technology': [
-      'dean.social@mmu.ac.ke',
-      'dean.fosst@mmu.ac.ke',
-      'dean.socialsciences@mmu.ac.ke'
+    'Faculty of Education': [
+      'dean.education@mmu.ac.ke',
+      'dean.edu@mmu.ac.ke',
+      'dean.teaching@mmu.ac.ke'
+    ],
+    'Faculty of Law': [
+      'dean.law@mmu.ac.ke',
+      'dean.legal@mmu.ac.ke',
+      'dean.jurisprudence@mmu.ac.ke'
     ]
   };
 

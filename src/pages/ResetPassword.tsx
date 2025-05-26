@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input, PasswordInput } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -114,10 +114,9 @@ const ResetPassword = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="password">New Password</Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
-                placeholder="••••••••"
+                placeholder="use 8 char password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
@@ -130,10 +129,9 @@ const ResetPassword = () => {
 
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm New Password</Label>
-              <Input
+              <PasswordInput
                 id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
+                placeholder="confirm password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={isLoading}

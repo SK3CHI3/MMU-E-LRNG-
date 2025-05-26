@@ -3,28 +3,41 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Building, Users, BookOpen, TrendingUp, UserCheck, AlertTriangle, BarChart3, GraduationCap } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { mmuFaculties } from '@/data/mmuData';
 
 const DeanDashboard = () => {
   const { dbUser } = useAuth();
 
-  // Get dean's faculty and departments from real MMU data
-  const deanFaculty = dbUser?.faculty || "Faculty of Computing and Information Technology";
-  const facultyData = mmuFaculties.find(f => f.name === deanFaculty) || mmuFaculties[0];
-
   // Dean-specific data (faculty-scoped)
   const deanInfo = {
     name: dbUser?.full_name || "Prof. Dean",
-    faculty: deanFaculty,
-    facultyCode: facultyData.code,
-    departments: facultyData.departments.map((dept, index) => ({
-      id: index + 1,
-      name: dept.name,
-      head: dept.head || "Dr. Department Head",
-      lecturers: Math.floor(Math.random() * 15) + 5, // Random for demo
-      students: Math.floor(Math.random() * 200) + 50, // Random for demo
-      courses: dept.programmes?.length || Math.floor(Math.random() * 10) + 5
-    })),
+    faculty: dbUser?.department || "Faculty of Computing and Information Technology",
+    facultyCode: "FoCIT",
+    departments: [
+      {
+        id: 1,
+        name: "Department of Computer Science",
+        head: "Dr. John Kamau",
+        lecturers: 12,
+        students: 245,
+        courses: 18
+      },
+      {
+        id: 2,
+        name: "Department of Information Technology",
+        head: "Dr. Mary Wanjiku",
+        lecturers: 8,
+        students: 189,
+        courses: 14
+      },
+      {
+        id: 3,
+        name: "Kenya-Korea IAC Centre",
+        head: "Dr. Peter Mwangi",
+        lecturers: 5,
+        students: 67,
+        courses: 8
+      }
+    ],
     facultyStats: {
       totalLecturers: 25,
       totalStudents: 501,

@@ -2,19 +2,22 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input, PasswordInput } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { showErrorToast, showSuccessToast } from '@/utils/toast';
 
 const Login = () => {
+  const [admissionNumber, setAdmissionNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('student');
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
@@ -24,43 +27,46 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      console.log('Login: Starting login process');
+      console.log('Login: Starting login process for', activeTab);
 
-      // Validate inputs
-      if (!email.trim()) {
-        throw new Error('Email is required');
-      }
-      if (!password) {
-        throw new Error('Password is required');
-      }
-
-      console.log('Login: Inputs validated, attempting to sign in');
-
-      // For testing purposes, let's use a hardcoded email/password
-      // This is just for debugging - remove in production
-      const testEmail = email; // Use the entered email
-      const testPassword = password; // Use the entered password
-
-      // Sign in
-      const { data, error } = await signIn(testEmail, testPassword);
-
-      if (error) {
-        console.error('Login: Sign in error:', error);
-        throw new Error(error.message || 'Failed to sign in');
-      }
-
-      console.log('Login: Sign in successful, data:', data ? 'Data exists' : 'No data');
-
-      if (data) {
-        // Show success toast
-        showSuccessToast('Signed in successfully');
-        console.log('Login: Redirecting to dashboard');
-
-        // Redirect to dashboard on successful login
-        console.log('Login: Redirecting to dashboard');
-
-        // Redirect immediately without timeout
-        navigate('/dashboard', { replace: true });
+      // Validate inputs based on user type
+      if (activeTab === 'student') {
+        if (!admissionNumber.trim()) {
+          throw new Error('Admission number is required');
+        }
+        if (!password) {
+          throw new Error('Password is required');
+        }
+        console.log('Login: Student inputs validated, attempting to sign in with admission number');
+        // Sign in with admission number for students
+        const { data, error } = await signIn(admissionNumber, password);
+        if (error) {
+          console.error('Login: Sign in error:', error);
+          throw new Error(error.message || 'Failed to sign in');
+        }
+        if (data) {
+          showSuccessToast('Signed in successfully');
+          navigate('/dashboard', { replace: true });
+        }
+      } else {
+        // Staff login (lecturer, dean, admin)
+        if (!email.trim()) {
+          throw new Error('Email is required');
+        }
+        if (!password) {
+          throw new Error('Password is required');
+        }
+        console.log('Login: Staff inputs validated, attempting to sign in with email');
+        // Sign in with email for staff
+        const { data, error } = await signIn(email, password);
+        if (error) {
+          console.error('Login: Sign in error:', error);
+          throw new Error(error.message || 'Failed to sign in');
+        }
+        if (data) {
+          showSuccessToast('Signed in successfully');
+          navigate('/dashboard', { replace: true });
+        }
       }
     } catch (err: any) {
       console.error('Login: Error during login:', err);
@@ -86,7 +92,7 @@ const Login = () => {
           </div>
           <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle>
           <CardDescription className="text-center">
-            Enter your credentials to access your account
+            Students use admission number, Staff use email to sign in
           </CardDescription>
         </CardHeader>
 
@@ -99,56 +105,116 @@ const Login = () => {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="your.email@mmu.ac.ke"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-                required
-              />
-            </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="student">Student</TabsTrigger>
+              <TabsTrigger value="staff">Staff</TabsTrigger>
+            </TabsList>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link
-                  to="/forgot-password"
-                  className="text-sm text-primary hover:underline"
+            <TabsContent value="student" className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="admissionNumber">Admission Number</Label>
+                  <Input
+                    id="admissionNumber"
+                    type="text"
+                    placeholder="e.g., MCS-234-178/2024"
+                    value={admissionNumber}
+                    onChange={(e) => setAdmissionNumber(e.target.value)}
+                    disabled={isLoading}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    <Link
+                      to="/forgot-password"
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <PasswordInput
+                    id="password"
+                    placeholder="use 8 char password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                    required
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isLoading}
                 >
-                  Forgot password?
-                </Link>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-                required
-              />
-            </div>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    'Sign In as Student'
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                'Sign In'
-              )}
-            </Button>
-          </form>
+            <TabsContent value="staff" className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your.email@mmu.ac.ke"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="staffPassword">Password</Label>
+                    <Link
+                      to="/forgot-password"
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <PasswordInput
+                    id="staffPassword"
+                    placeholder="use 8 char password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                    required
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    'Sign In as Staff'
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
         </CardContent>
 
         <CardFooter className="flex flex-col space-y-4">

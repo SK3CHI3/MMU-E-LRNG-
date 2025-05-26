@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input, PasswordInput } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -23,39 +23,77 @@ const Register = () => {
     studentId: '',
     department: '',
     role: 'student' as 'student' | 'lecturer' | 'dean' | 'admin',
-    faculty: '', // For dean role
+    faculty: '', // For all roles that need faculty
+    programme: '', // For students and lecturers
   });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [faculties, setFaculties] = useState<string[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
+  const [programmes, setProgrammes] = useState<string[]>([]);
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
-  // Load real MMU faculty data on component mount
+  // Load dynamic faculty data on component mount
   useEffect(() => {
-    // Use real MMU faculty data
-    const facultyNames = mmuFaculties.map(faculty => faculty.name);
-    setFaculties(facultyNames);
+    const loadFaculties = () => {
+      try {
+        const facultyNames = getFacultyNames();
+        setFaculties(facultyNames);
+      } catch (error) {
+        console.error('Error loading faculties:', error);
+        // Fallback to hardcoded data
+        setFaculties([
+          'Faculty of Computing and Information Technology',
+          'Faculty of Business and Economics',
+          'Faculty of Engineering and Technology',
+          'Faculty of Media and Communication',
+          'Faculty of Science & Technology',
+          'Faculty of Social Sciences and Technology'
+        ]);
+      }
+    };
+
+    loadFaculties();
   }, []);
 
-  // Load departments for students and lecturers only (deans don't need departments)
+  // Load programmes and departments when faculty changes
   useEffect(() => {
-    if (formData.role === 'student' || formData.role === 'lecturer') {
-      // Get all departments from all faculties for students and lecturers
-      const allDepartments: string[] = [];
-      mmuFaculties.forEach(faculty => {
-        faculty.departments.forEach(dept => {
-          allDepartments.push(dept.name);
-        });
-      });
-      setDepartments(allDepartments);
+    if (formData.faculty) {
+      try {
+        const selectedFaculty = mmuFaculties.find(f => f.name === formData.faculty);
+        if (selectedFaculty) {
+          // Load programmes
+          const facultyProgrammes = selectedFaculty.programmes.map(p => p.name);
+          setProgrammes(facultyProgrammes);
+
+          // Load departments
+          const facultyDepartments = selectedFaculty.departments.map(d => d.name);
+          setDepartments(facultyDepartments);
+        }
+      } catch (error) {
+        console.error('Error loading faculty data:', error);
+        // Fallback to generic data
+        setProgrammes([
+          'Bachelor of Science in Computer Science',
+          'Bachelor of Science in Information Technology',
+          'Bachelor of Commerce',
+          'Bachelor of Engineering'
+        ]);
+        setDepartments([
+          'Computer Science',
+          'Information Technology',
+          'Business Administration',
+          'Engineering'
+        ]);
+      }
     } else {
-      // Deans and admins don't need departments
+      // Clear programmes and departments when no faculty is selected
+      setProgrammes([]);
       setDepartments([]);
     }
-  }, [formData.role]);
+  }, [formData.faculty]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -66,17 +104,20 @@ const Register = () => {
     setFormData((prev) => ({
       ...prev,
       role: value,
-      // Clear department when dean is selected (they don't need departments)
-      department: value === 'dean' ? '' : prev.department,
-      // Clear faculty when non-dean is selected
-      faculty: value !== 'dean' ? '' : prev.faculty,
-      // Clear student ID when non-student is selected
+      // Clear fields based on role
+      department: value === 'dean' || value === 'admin' ? '' : prev.department,
+      faculty: value === 'admin' ? '' : prev.faculty,
+      programme: value === 'dean' || value === 'admin' ? '' : prev.programme,
       studentId: value !== 'student' ? '' : prev.studentId
     }));
   };
 
   const handleFacultyChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, faculty: value }));
+    setFormData((prev) => ({ ...prev, faculty: value, programme: '', department: '' }));
+  };
+
+  const handleProgrammeChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, programme: value }));
   };
 
   const handleDepartmentChange = (value: string) => {
@@ -118,11 +159,14 @@ const Register = () => {
       }
     }
 
-    // Faculty validation (only for deans)
-    if (formData.role === 'dean') {
-      if (!formData.faculty) {
-        throw new Error('Faculty is required for deans');
-      }
+    // Faculty validation (required for all roles except admin)
+    if (formData.role !== 'admin' && !formData.faculty) {
+      throw new Error('Faculty is required');
+    }
+
+    // Programme validation (required for students and lecturers)
+    if ((formData.role === 'student' || formData.role === 'lecturer') && !formData.programme) {
+      throw new Error('Programme is required');
     }
 
     // Department validation (required for students and lecturers only)
@@ -156,8 +200,9 @@ const Register = () => {
         full_name: formData.fullName,
         role: formData.role,
         student_id: formData.role === 'student' ? formData.studentId : null,
-        department: (formData.role === 'student' || formData.role === 'lecturer') ? formData.department : null,
-        faculty: formData.role === 'dean' ? formData.faculty : null,
+        department: formData.role === 'dean' ? formData.faculty : (formData.role !== 'admin' ? formData.department : null),
+        faculty: formData.role !== 'admin' ? formData.faculty : null,
+        programme_id: (formData.role === 'student' || formData.role === 'lecturer') ? formData.programme : null,
       };
 
       console.log('Submitting registration with data:', {
@@ -288,11 +333,10 @@ const Register = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input
+                <PasswordInput
                   id="password"
                   name="password"
-                  type="password"
-                  placeholder="••••••••"
+                  placeholder="use 8 char password"
                   value={formData.password}
                   onChange={handleChange}
                   disabled={isLoading}
@@ -302,11 +346,10 @@ const Register = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
+                <PasswordInput
                   id="confirmPassword"
                   name="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
+                  placeholder="confirm password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   disabled={isLoading}
@@ -352,7 +395,8 @@ const Register = () => {
               </div>
             )}
 
-            {formData.role === 'dean' && (
+            {/* Faculty selection for all roles except admin */}
+            {formData.role !== 'admin' && (
               <div className="space-y-2">
                 <Label htmlFor="faculty">Faculty</Label>
                 <Select
@@ -374,7 +418,31 @@ const Register = () => {
               </div>
             )}
 
-            {(formData.role === 'student' || formData.role === 'lecturer') && (
+            {/* Programme selection for students and lecturers */}
+            {(formData.role === 'student' || formData.role === 'lecturer') && formData.faculty && (
+              <div className="space-y-2">
+                <Label htmlFor="programme">Programme</Label>
+                <Select
+                  value={formData.programme}
+                  onValueChange={handleProgrammeChange}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your programme" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {programmes.map((programme) => (
+                      <SelectItem key={programme} value={programme}>
+                        {programme}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Department selection for students and lecturers */}
+            {(formData.role === 'student' || formData.role === 'lecturer') && formData.faculty && (
               <div className="space-y-2">
                 <Label htmlFor="department">Department</Label>
                 <Select
