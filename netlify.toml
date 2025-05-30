@@ -1,15 +1,13 @@
 [build]
   # Build command
   command = "npm run build"
-  
+
   # Directory to publish (Vite builds to 'dist' by default)
   publish = "dist"
-  
-  # Node.js version
-  environment = { NODE_VERSION = "18" }
 
 [build.environment]
   # Environment variables for build
+  NODE_VERSION = "18"
   NODE_ENV = "production"
   GENERATE_SOURCEMAP = "false"
 
@@ -61,7 +59,7 @@
 [[headers]]
   for = "/index.html"
   [headers.values]
-    Link = "</assets/index.css>; rel=preload; as=style, </assets/index.js>; rel=preload; as=script"
+    Link = "</assets/index.css>; rel=preload; as=style"
 
 # Functions (if using Netlify Functions)
 [functions]
