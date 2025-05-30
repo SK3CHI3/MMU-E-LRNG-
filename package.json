@@ -1,7 +1,7 @@
 {
   "name": "mmu-digital-campus",
   "description": "Official digital learning platform for Multimedia University of Kenya students, lecturers, and staff",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "homepage": "https://mmu-digital-campus.netlify.app",
