@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="32" height="32" rx="8" fill="#1d4ed8"/>
-    <path d="M16 7l-10 5 10 5 10-5-10-5z" fill="#dc2626"/>
-    <path d="M6 12v6" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-    <path d="M16 17v6" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-    <path d="M16 17l10-5v6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
+  <!-- Graduation Cap -->
+  <path d="M16 2L2 9L16 16L30 9L16 2Z" fill="#1e40af"/>
+  <path d="M8 11.5V19C8 19 12 23 16 23C20 23 24 19 24 19V11.5" fill="#1e40af"/>
+  <path d="M16 2L2 9L16 16L30 9L16 2Z M8 11.5V19C8 19 12 23 16 23C20 23 24 19 24 19V11.5" stroke="#1e40af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Tassel -->
+  <path d="M24 11V21L26 25" stroke="#1e40af" stroke-width="2" stroke-linecap="round"/>
+</svg> 
