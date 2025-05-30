@@ -747,10 +747,10 @@ const Index = () => {
             <div className="bg-cyan-50 dark:bg-cyan-900/20 p-6 rounded-xl border border-cyan-100 dark:border-cyan-800/50 hover-lift reveal">
               <div className="flex items-center mb-4">
                 <div className="w-12 h-12 rounded-lg bg-cyan-100 dark:bg-cyan-800/30 flex items-center justify-center mr-4">
-                  <span className="text-cyan-600 dark:text-cyan-400 font-bold text-lg">JS</span>
+                  <span className="text-cyan-600 dark:text-cyan-400 font-bold text-lg">OV</span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-gray-900 dark:text-white">Jane Smith</h3>
+                  <h3 className="font-bold text-lg text-gray-900 dark:text-white">Omollo Victor</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Computer Science Student</p>
                 </div>
               </div>
@@ -785,10 +785,10 @@ const Index = () => {
             <div className="bg-emerald-50 dark:bg-emerald-900/20 p-6 rounded-xl border border-emerald-100 dark:border-emerald-800/50 hover-lift reveal reveal-delay-100">
               <div className="flex items-center mb-4">
                 <div className="w-12 h-12 rounded-lg bg-emerald-100 dark:bg-emerald-800/30 flex items-center justify-center mr-4">
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold text-lg">MK</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold text-lg">RL</span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-gray-900 dark:text-white">Dr. Michael Kumar</h3>
+                  <h3 className="font-bold text-lg text-gray-900 dark:text-white">Dr. Ratzinger Lester</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Engineering Faculty</p>
                 </div>
               </div>
@@ -823,10 +823,10 @@ const Index = () => {
             <div className="bg-amber-50 dark:bg-amber-900/20 p-6 rounded-xl border border-amber-100 dark:border-amber-800/50 hover-lift reveal reveal-delay-200">
               <div className="flex items-center mb-4">
                 <div className="w-12 h-12 rounded-lg bg-amber-100 dark:bg-amber-800/30 flex items-center justify-center mr-4">
-                  <span className="text-amber-600 dark:text-amber-400 font-bold text-lg">AL</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-bold text-lg">AW</span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-gray-900 dark:text-white">Amina Lowe</h3>
+                  <h3 className="font-bold text-lg text-gray-900 dark:text-white">Achieng Wanjiku</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Business Administration Student</p>
                 </div>
               </div>
