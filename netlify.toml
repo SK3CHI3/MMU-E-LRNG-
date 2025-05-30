@@ -58,8 +58,10 @@
 [[headers]]
   for = "/index.html"
   [headers.values]
-    Link = "</assets/index.css>; rel=preload; as=style"
-    Link = "</assets/index.js>; rel=preload; as=script"
+    Link = [
+      "</assets/index.css>; rel=preload; as=style",
+      "</assets/index.js>; rel=preload; as=script"
+    ]
 
 # Functions (if using Netlify Functions)
 [functions]
