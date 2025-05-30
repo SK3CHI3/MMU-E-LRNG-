@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,9 +24,11 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { getUnifiedNotifications, markAnnouncementAsRead, markNotificationAsRead, EnhancedNotification } from "@/services/notificationService";
 import { Skeleton } from "@/components/ui/skeleton";
+import NotificationDetailModal from "@/components/notifications/NotificationDetailModal";
 
 const Announcements = () => {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [announcements, setAnnouncements] = useState<EnhancedNotification[]>([]);
   const [filteredAnnouncements, setFilteredAnnouncements] = useState<EnhancedNotification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +36,10 @@ const Announcements = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedPriority, setSelectedPriority] = useState("all");
   const [activeTab, setActiveTab] = useState("all");
+  const [highlightedNotificationId, setHighlightedNotificationId] = useState<string | null>(null);
+  const notificationRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const [selectedNotification, setSelectedNotification] = useState<EnhancedNotification | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
@@ -43,6 +50,42 @@ const Announcements = () => {
   useEffect(() => {
     filterAnnouncements();
   }, [searchTerm, selectedCategory, selectedPriority, activeTab, announcements]);
+
+  // Handle notification parameter from URL
+  useEffect(() => {
+    const notificationId = searchParams.get('notification');
+    if (notificationId && announcements.length > 0) {
+      setHighlightedNotificationId(notificationId);
+
+      // Clear filters to ensure the notification is visible
+      setSearchTerm("");
+      setSelectedCategory("all");
+      setSelectedPriority("all");
+      setActiveTab("all");
+
+      // Scroll to the notification after a short delay
+      setTimeout(() => {
+        const element = notificationRefs.current[notificationId];
+        if (element) {
+          element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+
+          // Remove highlight after 3 seconds
+          setTimeout(() => {
+            setHighlightedNotificationId(null);
+            // Clear the URL parameter
+            setSearchParams(prev => {
+              const newParams = new URLSearchParams(prev);
+              newParams.delete('notification');
+              return newParams;
+            });
+          }, 3000);
+        }
+      }, 500);
+    }
+  }, [announcements, searchParams, setSearchParams]);
 
   const loadAnnouncements = async () => {
     if (!user?.id) return;
@@ -144,35 +187,49 @@ const Announcements = () => {
     }
   };
 
-  const handleAnnouncementClick = async (announcement: EnhancedNotification) => {
+  const handleAnnouncementClick = (announcement: EnhancedNotification) => {
+    setSelectedNotification(announcement);
+    setIsModalOpen(true);
+  };
+
+  const handleMarkAsRead = async (notificationId: string) => {
     if (!user?.id) return;
 
-    // Mark as read if not already read
-    if (!announcement.isRead) {
-      try {
-        if (announcement.type === 'notification') {
-          await markNotificationAsRead(user.id, announcement.id);
-        } else {
-          await markAnnouncementAsRead(user.id, announcement.id);
-        }
-        // Update local state
-        setAnnouncements(prev =>
-          prev.map(ann => ann.id === announcement.id ? { ...ann, isRead: true } : ann)
-        );
-      } catch (error) {
-        console.error('Error marking announcement as read:', error);
-      }
-    }
+    const announcement = announcements.find(n => n.id === notificationId);
+    if (!announcement || announcement.isRead) return;
 
-    // Handle navigation
-    if (announcement.externalLink) {
-      if (announcement.externalLink.startsWith('http')) {
-        window.open(announcement.externalLink, '_blank');
+    try {
+      if (announcement.type === 'notification') {
+        await markNotificationAsRead(user.id, notificationId);
       } else {
-        // Navigate to internal route
-        window.location.href = announcement.externalLink;
+        await markAnnouncementAsRead(user.id, notificationId);
       }
+
+      // Update local state
+      setAnnouncements(prev =>
+        prev.map(ann => ann.id === notificationId ? { ...ann, isRead: true } : ann)
+      );
+
+      // Update selected notification if it's the same one
+      if (selectedNotification?.id === notificationId) {
+        setSelectedNotification(prev => prev ? { ...prev, isRead: true } : null);
+      }
+    } catch (error) {
+      console.error('Error marking announcement as read:', error);
     }
+  };
+
+  const handleNavigateToLink = (link: string) => {
+    if (link.startsWith('http')) {
+      window.open(link, '_blank');
+    } else {
+      window.location.href = link;
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedNotification(null);
   };
 
   if (loading) {
@@ -280,8 +337,15 @@ const Announcements = () => {
             {filteredAnnouncements.map((announcement) => (
               <Card
                 key={announcement.id}
+                ref={(el) => {
+                  notificationRefs.current[announcement.id] = el;
+                }}
                 className={`cursor-pointer transition-all hover:shadow-md ${
                   !announcement.isRead ? 'border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20' : ''
+                } ${
+                  highlightedNotificationId === announcement.id
+                    ? 'ring-2 ring-yellow-400 bg-yellow-50/50 dark:bg-yellow-950/20 animate-pulse'
+                    : ''
                 }`}
                 onClick={() => handleAnnouncementClick(announcement)}
               >
@@ -357,6 +421,14 @@ const Announcements = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      <NotificationDetailModal
+        notification={selectedNotification}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onMarkAsRead={handleMarkAsRead}
+        onNavigateToLink={handleNavigateToLink}
+      />
     </div>
   );
 };

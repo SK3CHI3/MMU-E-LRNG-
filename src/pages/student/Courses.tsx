@@ -10,6 +10,7 @@ import { BookOpen, Clock, Users, Calendar, Play, FileText, Plus, AlertCircle, Ch
 import { useAuth } from '@/contexts/AuthContext';
 import { getStudentCourses, getAvailableUnitsForRegistration, registerForUnits } from '@/services/studentService';
 import { canRegisterForUnits } from '@/services/feeService';
+import { getStudentSemesterProgress, getStudentAcademicHistory } from '@/services/academicService';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
@@ -53,11 +54,13 @@ const Courses = () => {
   const [registrationLoading, setRegistrationLoading] = useState(false);
   const [canRegister, setCanRegister] = useState(false);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
+  const [semesterProgress, setSemesterProgress] = useState<any>(null);
+  const [academicHistory, setAcademicHistory] = useState<any>(null);
   const [registrationPeriod, setRegistrationPeriod] = useState({
     isOpen: true,
-    startDate: '2025-05-15',
-    endDate: '2025-06-15',
-    semester: '2.2',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+    semester: '1.1',
     academicYear: '2024/2025'
   });
 
@@ -65,6 +68,8 @@ const Courses = () => {
     if (user?.id) {
       loadStudentUnits();
       checkRegistrationEligibility();
+      loadSemesterProgress();
+      loadAcademicHistory();
     }
   }, [user?.id]);
 
@@ -96,8 +101,14 @@ const Courses = () => {
 
       // Get available units for registration
       if (registrationPeriod.isOpen) {
-        const availableUnits = await getAvailableUnitsForRegistration(user!.id);
-        setAvailableUnits(availableUnits);
+        try {
+          const availableUnits = await getAvailableUnitsForRegistration(user!.id);
+          setAvailableUnits(availableUnits);
+        } catch (error) {
+          console.error('Error loading available units:', error);
+          // For new students, set empty array - they can still see the interface
+          setAvailableUnits([]);
+        }
       }
     } catch (error) {
       console.error('Error loading student units:', error);
@@ -114,7 +125,55 @@ const Courses = () => {
       setCanRegister(eligible);
     } catch (error) {
       console.error('Error checking registration eligibility:', error);
-      setCanRegister(false);
+      // For new students without fee records, allow registration
+      setCanRegister(true);
+    }
+  };
+
+  const loadSemesterProgress = async () => {
+    try {
+      const progress = await getStudentSemesterProgress(user!.id);
+      setSemesterProgress(progress);
+
+      // Update registration period with current semester
+      setRegistrationPeriod(prev => ({
+        ...prev,
+        semester: progress.currentSemester,
+        academicYear: progress.academicYear
+      }));
+    } catch (error) {
+      console.error('Error loading semester progress:', error);
+      // Set default empty state for new students
+      setSemesterProgress({
+        academicYear: '2024/2025',
+        currentSemester: '1.1',
+        totalUnits: 0,
+        completedUnits: 0,
+        inProgressUnits: 0,
+        failedUnits: 0,
+        gpa: 0,
+        enrollments: []
+      });
+    }
+  };
+
+  const loadAcademicHistory = async () => {
+    try {
+      const history = await getStudentAcademicHistory(user!.id);
+      setAcademicHistory(history);
+    } catch (error) {
+      console.error('Error loading academic history:', error);
+      // Set default empty state for new students
+      setAcademicHistory({
+        semesters: [],
+        overall: {
+          totalUnits: 0,
+          passedUnits: 0,
+          failedUnits: 0,
+          gpa: 0,
+          passRate: 0
+        }
+      });
     }
   };
 
@@ -338,56 +397,60 @@ const Courses = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <GraduationCap className="h-5 w-5 text-blue-600" />
-            Semester Progress - {registrationPeriod.semester} {registrationPeriod.academicYear}
+            Semester Progress - {semesterProgress?.currentSemester || '1.1'} {semesterProgress?.academicYear || '2024/2025'}
           </CardTitle>
           <CardDescription>
             Your academic progress for the current semester
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{enrolledCourses.length}</div>
-              <div className="text-sm text-muted-foreground">Units Registered</div>
-            </div>
-            <div className="text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">
-                {enrolledCourses.filter(course => course.progress >= 80).length}
+          {semesterProgress ? (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">{semesterProgress.totalUnits}</div>
+                  <div className="text-sm text-muted-foreground">Units Registered</div>
+                </div>
+                <div className="text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">{semesterProgress.completedUnits}</div>
+                  <div className="text-sm text-muted-foreground">Units Completed</div>
+                </div>
+                <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
+                  <div className="text-2xl font-bold text-yellow-600">{semesterProgress.inProgressUnits}</div>
+                  <div className="text-sm text-muted-foreground">Units In Progress</div>
+                </div>
+                <div className="text-center p-4 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                  <div className="text-2xl font-bold text-red-600">{semesterProgress.failedUnits}</div>
+                  <div className="text-sm text-muted-foreground">Units Failed</div>
+                </div>
               </div>
-              <div className="text-sm text-muted-foreground">Units Completed</div>
-            </div>
-            <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
-              <div className="text-2xl font-bold text-yellow-600">
-                {enrolledCourses.filter(course => course.progress >= 50 && course.progress < 80).length}
-              </div>
-              <div className="text-sm text-muted-foreground">Units In Progress</div>
-            </div>
-            <div className="text-center p-4 bg-red-50 dark:bg-red-950/20 rounded-lg">
-              <div className="text-2xl font-bold text-red-600">
-                {enrolledCourses.filter(course => course.progress < 50).length}
-              </div>
-              <div className="text-sm text-muted-foreground">Units At Risk</div>
-            </div>
-          </div>
 
-          <div className="mt-6 space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium">Overall Semester Progress</span>
-              <span className="text-sm text-muted-foreground">{averageProgress}%</span>
-            </div>
-            <Progress value={averageProgress} className="h-2" />
+              <div className="mt-6 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Current Semester GPA</span>
+                  <span className="text-sm text-muted-foreground">{semesterProgress.gpa.toFixed(2)}</span>
+                </div>
+                <Progress value={(semesterProgress.gpa / 4.0) * 100} className="h-2" />
 
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Total Units:</span>
-                <span className="text-sm font-medium">{enrolledCourses.length}</span>
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Total Units:</span>
+                    <span className="text-sm font-medium">{semesterProgress.totalUnits}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Current GPA:</span>
+                    <span className="text-sm font-medium">{semesterProgress.gpa.toFixed(2)}</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">GPA Target:</span>
-                <span className="text-sm font-medium">3.5+</span>
-              </div>
+            </>
+          ) : (
+            <div className="space-y-4">
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-2 w-full" />
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -403,82 +466,107 @@ const Courses = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {/* Previous Semesters Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">11</div>
-                <div className="text-sm text-muted-foreground">Total Units Taken</div>
+          {academicHistory ? (
+            <div className="space-y-4">
+              {/* Previous Semesters Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">{academicHistory.overall.totalUnits}</div>
+                  <div className="text-sm text-muted-foreground">Total Units Taken</div>
+                </div>
+                <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">{academicHistory.overall.passedUnits}</div>
+                  <div className="text-sm text-muted-foreground">Units Passed</div>
+                </div>
+                <div className="text-center p-4 bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-950/20 dark:to-rose-950/20 rounded-lg">
+                  <div className="text-2xl font-bold text-red-600">{academicHistory.overall.failedUnits}</div>
+                  <div className="text-sm text-muted-foreground">Units Failed</div>
+                </div>
               </div>
-              <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">9</div>
-                <div className="text-sm text-muted-foreground">Units Passed</div>
-              </div>
-              <div className="text-center p-4 bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-950/20 dark:to-rose-950/20 rounded-lg">
-                <div className="text-2xl font-bold text-red-600">2</div>
-                <div className="text-sm text-muted-foreground">Units Failed</div>
-              </div>
-            </div>
 
-            {/* Semester Breakdown */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-sm">Semester Breakdown</h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="font-medium">Semester 1, 2024</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="text-green-600">4 Passed</span>
-                    <span className="text-red-600">1 Failed</span>
-                    <span className="font-medium">GPA: 3.2</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="font-medium">Semester 2, 2024</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="text-green-600">5 Passed</span>
-                    <span className="text-red-600">1 Failed</span>
-                    <span className="font-medium">GPA: 3.4</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-                    <span className="font-medium">Semester 1, 2025 (Current)</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="text-blue-600">{enrolledCourses.length} Registered</span>
-                    <span className="font-medium">Target GPA: 3.5+</span>
-                  </div>
+              {/* Semester Breakdown */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">Semester Breakdown</h4>
+                <div className="space-y-2">
+                  {academicHistory.semesters.length > 0 ? (
+                    <>
+                      {academicHistory.semesters.map((semester: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full ${
+                              semester.gpa >= 3.5 ? 'bg-green-500' :
+                              semester.gpa >= 3.0 ? 'bg-blue-500' :
+                              semester.gpa >= 2.5 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}></div>
+                            <span className="font-medium">{semester.semester} {semester.academicYear}</span>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm">
+                            <span className="text-green-600">{semester.passedUnits} Passed</span>
+                            <span className="text-red-600">{semester.failedUnits} Failed</span>
+                            <span className="font-medium">GPA: {semester.gpa.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      ))}
+                      {/* Current Semester */}
+                      {semesterProgress && (
+                        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                            <span className="font-medium">{semesterProgress.currentSemester} {semesterProgress.academicYear} (Current)</span>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm">
+                            <span className="text-blue-600">{semesterProgress.totalUnits} Registered</span>
+                            <span className="font-medium">Current GPA: {semesterProgress.gpa.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>No academic history available yet.</p>
+                      <p className="text-sm">Complete your first semester to see your academic progress here.</p>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
 
-            {/* Overall Statistics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
-              <div className="text-center">
-                <div className="text-lg font-bold text-blue-600">3.3</div>
-                <div className="text-xs text-muted-foreground">Cumulative GPA</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-green-600">82%</div>
-                <div className="text-xs text-muted-foreground">Pass Rate</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-purple-600">11</div>
-                <div className="text-xs text-muted-foreground">Total Units</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-orange-600">67%</div>
-                <div className="text-xs text-muted-foreground">Degree Progress</div>
+              {/* Overall Statistics */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-blue-600">{academicHistory.overall.gpa.toFixed(2)}</div>
+                  <div className="text-xs text-muted-foreground">Cumulative GPA</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-green-600">{academicHistory.overall.passRate}%</div>
+                  <div className="text-xs text-muted-foreground">Pass Rate</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-purple-600">{academicHistory.overall.totalUnits}</div>
+                  <div className="text-xs text-muted-foreground">Total Units</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-orange-600">
+                    {Math.round((academicHistory.overall.totalUnits / 40) * 100)}%
+                  </div>
+                  <div className="text-xs text-muted-foreground">Degree Progress</div>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-20 w-full" />
+                ))}
+              </div>
+              <Skeleton className="h-32 w-full" />
+              <div className="grid grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

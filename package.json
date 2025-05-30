@@ -1,8 +1,31 @@
 {
-  "name": "vite_react_shadcn_ts",
-  "private": true,
+  "name": "mmu-digital-campus",
+  "description": "Official digital learning platform for Multimedia University of Kenya students, lecturers, and staff",
   "version": "1.0.0",
+  "private": true,
   "type": "module",
+  "homepage": "https://mmu-digital-campus.netlify.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SK3CHI3/MMU-E-LRNG-.git"
+  },
+  "keywords": [
+    "mmu",
+    "multimedia-university-kenya",
+    "e-learning",
+    "digital-campus",
+    "education",
+    "lms",
+    "react",
+    "typescript",
+    "supabase"
+  ],
+  "author": {
+    "name": "Multimedia University of Kenya",
+    "email": "info@mmu.ac.ke",
+    "url": "https://mmu.ac.ke"
+  },
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -55,7 +78,7 @@
     "react-hook-form": "^7.53.0",
     "react-resizable-panels": "^2.1.3",
     "react-router-dom": "^6.26.2",
-    "recharts": "^2.12.7",
+    "recharts": "^2.15.3",
     "sonner": "^1.5.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",

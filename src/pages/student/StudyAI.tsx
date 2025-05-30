@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Brain,
   Send,
@@ -18,10 +19,22 @@ import {
   HelpCircle,
   Zap,
   CheckCircle,
-  TrendingUp
+  TrendingUp,
+  AlertCircle
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { getStudentCourses } from "@/services/studentService";
+import { showErrorToast } from "@/utils/ui/toast";
+
+interface EnrolledUnit {
+  id: string;
+  code: string;
+  name: string;
+  instructor: string;
+}
 
 const StudyAI = () => {
+  const { user } = useAuth();
   const [messages, setMessages] = useState([
     {
       role: "assistant",
@@ -32,15 +45,40 @@ const StudyAI = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState("");
   const [activeTab, setActiveTab] = useState("chat");
+  const [enrolledUnits, setEnrolledUnits] = useState<EnrolledUnit[]>([]);
+  const [unitsLoading, setUnitsLoading] = useState(true);
 
-  // Student's enrolled units (this would come from the student service in a real app)
-  const enrolledUnits = [
-    { id: 'cs301', name: 'CS 301 - Data Structures and Algorithms' },
-    { id: 'cs205', name: 'CS 205 - Database Management Systems' },
-    { id: 'cs401', name: 'CS 401 - Software Engineering' },
-    { id: 'math201', name: 'MATH 201 - Discrete Mathematics' },
-    { id: 'cs302', name: 'CS 302 - Computer Networks' }
-  ];
+  useEffect(() => {
+    if (user?.id) {
+      fetchEnrolledUnits();
+    }
+  }, [user?.id]);
+
+  const fetchEnrolledUnits = async () => {
+    if (!user?.id) return;
+
+    try {
+      setUnitsLoading(true);
+      const courses = await getStudentCourses(user.id);
+
+      // Transform courses to the format expected by the AI component
+      const transformedUnits = courses.map(course => ({
+        id: course.id,
+        code: course.code,
+        name: `${course.code} - ${course.name}`,
+        instructor: course.instructor
+      }));
+
+      setEnrolledUnits(transformedUnits);
+    } catch (error) {
+      console.error('Error fetching enrolled units:', error);
+      showErrorToast('Failed to load enrolled units');
+      // Set fallback empty array
+      setEnrolledUnits([]);
+    } finally {
+      setUnitsLoading(false);
+    }
+  };
 
   const quickActions = [
     {
@@ -292,18 +330,28 @@ What would you like to explore today? Feel free to ask about any concept, reques
           <p className="text-muted-foreground">Your intelligent study companion for academic success and learning support</p>
         </div>
         <div className="flex items-center space-x-2">
-          <Select value={selectedUnit} onValueChange={setSelectedUnit}>
-            <SelectTrigger className="w-64">
-              <SelectValue placeholder="Select unit context" />
-            </SelectTrigger>
-            <SelectContent>
-              {enrolledUnits.map(unit => (
-                <SelectItem key={unit.id} value={unit.id}>
-                  {unit.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {unitsLoading ? (
+            <Skeleton className="h-10 w-64" />
+          ) : (
+            <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+              <SelectTrigger className="w-64">
+                <SelectValue placeholder={enrolledUnits.length > 0 ? "Select unit context" : "No units enrolled"} />
+              </SelectTrigger>
+              <SelectContent>
+                {enrolledUnits.length > 0 ? (
+                  enrolledUnits.map(unit => (
+                    <SelectItem key={unit.id} value={unit.id}>
+                      {unit.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="none" disabled>
+                    No enrolled units found
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 

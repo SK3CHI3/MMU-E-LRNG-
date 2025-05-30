@@ -17,9 +17,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
       userExists: !!user,
       dbUserExists: !!dbUser,
       userEmail: user?.email,
-      dbUserRole: dbUser?.role
+      dbUserRole: dbUser?.role,
+      allowedRoles,
+      currentPath: window.location.pathname
     });
-  }, [isLoading, user, dbUser]);
+  }, [isLoading, user, dbUser, allowedRoles]);
 
   // Show loading spinner while checking authentication
   if (isLoading) {

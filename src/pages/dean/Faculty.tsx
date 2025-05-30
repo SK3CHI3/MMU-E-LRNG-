@@ -1,68 +1,62 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Building, Users, BookOpen, TrendingUp, Award, Calendar, Plus, BarChart3 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { getDeanStats, getFacultyDepartments, DeanStats, DepartmentData } from '@/services/deanService';
 
 const Faculty = () => {
+  const { dbUser } = useAuth();
+  const [stats, setStats] = useState<DeanStats>({
+    totalStudents: 0,
+    totalLecturers: 0,
+    totalCourses: 0,
+    totalDepartments: 0,
+    graduationRate: 0,
+    employmentRate: 0,
+    researchProjects: 0,
+    publications: 0
+  });
+  const [departments, setDepartments] = useState<DepartmentData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFacultyData = async () => {
+      if (!dbUser?.faculty) return;
+
+      try {
+        setLoading(true);
+        const [deanStats, facultyDepartments] = await Promise.all([
+          getDeanStats(dbUser.faculty),
+          getFacultyDepartments(dbUser.faculty)
+        ]);
+
+        setStats(deanStats);
+        setDepartments(facultyDepartments);
+      } catch (error) {
+        console.error('Error fetching faculty data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFacultyData();
+  }, [dbUser?.faculty]);
+
   const facultyOverview = {
-    name: 'Faculty of Computing and Information Technology',
-    dean: 'Dr. Jane Smith',
+    name: dbUser?.faculty || 'Faculty of Computing and Information Technology',
+    dean: dbUser?.full_name || 'Dr. Jane Smith',
     established: '1995',
-    totalStaff: 45,
-    totalStudents: 1250,
-    departments: 4,
-    programs: 12,
-    researchProjects: 18
+    totalStaff: stats.totalLecturers,
+    totalStudents: stats.totalStudents,
+    departments: stats.totalDepartments,
+    programs: 12, // This would come from programmes table
+    researchProjects: stats.researchProjects
   };
 
-  const departments = [
-    {
-      id: 1,
-      name: 'Computer Science',
-      head: 'Dr. Michael Johnson',
-      staff: 15,
-      students: 450,
-      programs: ['BSc Computer Science', 'MSc Computer Science', 'PhD Computer Science'],
-      budget: 850000,
-      budgetUsed: 65,
-      performance: 92
-    },
-    {
-      id: 2,
-      name: 'Information Technology',
-      head: 'Prof. Sarah Wilson',
-      staff: 12,
-      students: 380,
-      programs: ['BSc Information Technology', 'MSc IT Management'],
-      budget: 720000,
-      budgetUsed: 58,
-      performance: 88
-    },
-    {
-      id: 3,
-      name: 'Software Engineering',
-      head: 'Dr. Robert Chen',
-      staff: 10,
-      students: 320,
-      programs: ['BSc Software Engineering', 'MSc Software Engineering'],
-      budget: 680000,
-      budgetUsed: 72,
-      performance: 90
-    },
-    {
-      id: 4,
-      name: 'Data Science',
-      head: 'Dr. Emily Rodriguez',
-      staff: 8,
-      students: 100,
-      programs: ['BSc Data Science', 'MSc Data Analytics'],
-      budget: 450000,
-      budgetUsed: 45,
-      performance: 95
-    }
-  ];
+
 
   const recentActivities = [
     {
@@ -103,6 +97,24 @@ const Faculty = () => {
     if (used <= 80) return 'bg-yellow-500';
     return 'bg-red-500';
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="h-24 bg-gray-200 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -190,39 +202,28 @@ const Faculty = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-600 dark:text-gray-400">Staff:</span>
-                    <p className="font-medium">{dept.staff} members</p>
+                    <p className="font-medium">{dept.lecturers} members</p>
                   </div>
                   <div>
                     <span className="text-gray-600 dark:text-gray-400">Students:</span>
                     <p className="font-medium">{dept.students}</p>
                   </div>
                   <div>
-                    <span className="text-gray-600 dark:text-gray-400">Programs:</span>
-                    <p className="font-medium">{dept.programs.length}</p>
+                    <span className="text-gray-600 dark:text-gray-400">Courses:</span>
+                    <p className="font-medium">{dept.courses}</p>
                   </div>
                   <div>
-                    <span className="text-gray-600 dark:text-gray-400">Budget:</span>
-                    <p className="font-medium">${(dept.budget / 1000).toFixed(0)}K</p>
+                    <span className="text-gray-600 dark:text-gray-400">Performance:</span>
+                    <p className="font-medium">{dept.performance}%</p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Budget Utilization</span>
-                    <span>{dept.budgetUsed}%</span>
+                    <span>Department Performance</span>
+                    <span>{dept.performance}%</span>
                   </div>
-                  <Progress value={dept.budgetUsed} className="h-2" />
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Programs Offered:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {dept.programs.map((program, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {program}
-                      </Badge>
-                    ))}
-                  </div>
+                  <Progress value={dept.performance} className="h-2" />
                 </div>
 
                 <div className="flex space-x-2 pt-2">

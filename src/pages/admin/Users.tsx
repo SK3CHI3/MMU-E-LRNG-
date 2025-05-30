@@ -1,89 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserCog, Users, Search, Plus, Edit, Trash2, Shield, Mail, Phone } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { UserCog, Users, Search, Plus, Edit, Trash2, Shield, Mail, Phone, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { getAllUsers, User } from '@/services/adminService';
+import { showErrorToast } from '@/utils/ui/toast';
 
 const AdminUsers = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const users = [
-    {
-      id: 1,
-      name: 'Dr. Sarah Johnson',
-      email: 'sarah.johnson@mmu.ac.ke',
-      role: 'lecturer',
-      department: 'Computer Science',
-      faculty: 'Computing and IT',
-      status: 'active',
-      lastLogin: '2024-01-15 09:30',
-      joinDate: '2020-08-15',
-      phone: '+254 700 123 456'
-    },
-    {
-      id: 2,
-      name: 'John Doe',
-      email: 'john.doe@student.mmu.ac.ke',
-      role: 'student',
-      department: 'Computer Science',
-      faculty: 'Computing and IT',
-      status: 'active',
-      lastLogin: '2024-01-15 14:20',
-      joinDate: '2022-09-01',
-      studentId: 'MCS-234-178/2024'
-    },
-    {
-      id: 3,
-      name: 'Dr. Jane Smith',
-      email: 'jane.smith@mmu.ac.ke',
-      role: 'dean',
-      department: 'Computer Science',
-      faculty: 'Computing and IT',
-      status: 'active',
-      lastLogin: '2024-01-15 08:45',
-      joinDate: '2018-01-10',
-      phone: '+254 700 987 654'
-    },
-    {
-      id: 4,
-      name: 'Prof. Michael Chen',
-      email: 'michael.chen@mmu.ac.ke',
-      role: 'lecturer',
-      department: 'Information Technology',
-      faculty: 'Computing and IT',
-      status: 'active',
-      lastLogin: '2024-01-14 16:30',
-      joinDate: '2019-03-20',
-      phone: '+254 700 555 123'
-    },
-    {
-      id: 5,
-      name: 'System Administrator',
-      email: 'admin@mmu.ac.ke',
-      role: 'admin',
-      department: 'IT Services',
-      faculty: 'Administration',
-      status: 'active',
-      lastLogin: '2024-01-15 07:00',
-      joinDate: '2015-06-01',
-      phone: '+254 700 000 001'
-    },
-    {
-      id: 6,
-      name: 'Mary Wilson',
-      email: 'mary.wilson@student.mmu.ac.ke',
-      role: 'student',
-      department: 'Software Engineering',
-      faculty: 'Computing and IT',
-      status: 'inactive',
-      lastLogin: '2024-01-10 12:15',
-      joinDate: '2021-09-01',
-      studentId: 'MSE-156-089/2023'
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const data = await getAllUsers();
+      setUsers(data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      showErrorToast('Failed to load users');
+      setUsers([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  // All user data now comes from the database via getAllUsers()
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -101,7 +53,7 @@ const AdminUsers = () => {
   };
 
   const getStatusColor = (status: string) => {
-    return status === 'active' 
+    return status === 'active'
       ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
       : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
   };
@@ -110,7 +62,7 @@ const AdminUsers = () => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.department.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     if (activeTab === 'all') return matchesSearch;
     return matchesSearch && user.role === activeTab;
   });
@@ -124,6 +76,39 @@ const AdminUsers = () => {
     active: users.filter(u => u.status === 'active').length
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <Skeleton className="h-16 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="space-y-4">
+          {[...Array(5)].map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <Skeleton className="h-20 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -132,10 +117,16 @@ const AdminUsers = () => {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">User Management</h1>
           <p className="text-gray-600 dark:text-gray-400">Manage all system users and their permissions</p>
         </div>
-        <Button className="bg-red-600 hover:bg-red-700">
-          <Plus className="h-4 w-4 mr-2" />
-          Add New User
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => navigate('/user-management')}>
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Comprehensive Management
+          </Button>
+          <Button className="bg-red-600 hover:bg-red-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Add New User
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -238,7 +229,8 @@ const AdminUsers = () => {
 
         <TabsContent value={activeTab} className="space-y-4">
           <div className="grid grid-cols-1 gap-4">
-            {filteredUsers.map((user) => (
+            {filteredUsers.length > 0 ? (
+              filteredUsers.map((user) => (
               <Card key={user.id} className="hover:shadow-lg transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
@@ -300,7 +292,23 @@ const AdminUsers = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              ))
+            ) : (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Users Found</h3>
+                  <p className="text-muted-foreground">
+                    {searchTerm
+                      ? `No users match your search "${searchTerm}"`
+                      : activeTab === 'all'
+                      ? "No users have been registered yet."
+                      : `No ${activeTab}s found in the system.`
+                    }
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
       </Tabs>

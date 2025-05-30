@@ -28,7 +28,6 @@ import {
   School,
   UserCog,
   TrendingUp,
-  FileBarChart,
   Globe,
   Briefcase
 } from 'lucide-react';
@@ -118,7 +117,7 @@ const getNavItemsForRole = (role: string): NavItem[] => {
         },
         {
           title: 'Announcements',
-          href: '/announcements',
+          href: '/student/announcements',
           icon: <Bell className="h-4 w-4" />,
         },
         {
@@ -128,7 +127,7 @@ const getNavItemsForRole = (role: string): NavItem[] => {
         },
         {
           title: 'Messages',
-          href: '/student/messages',
+          href: '/messages',
           icon: <MessageSquare className="h-4 w-4" />,
         },
         ...commonItems.slice(1), // Profile, Settings, Support
@@ -173,6 +172,11 @@ const getNavItemsForRole = (role: string): NavItem[] => {
           icon: <BarChart3 className="h-4 w-4" />,
         },
         {
+          title: 'Announcements',
+          href: '/lecturer/announcements',
+          icon: <Bell className="h-4 w-4" />,
+        },
+        {
           title: 'Messages',
           href: '/messages',
           icon: <MessageSquare className="h-4 w-4" />,
@@ -205,7 +209,7 @@ const getNavItemsForRole = (role: string): NavItem[] => {
         },
         {
           title: 'Students',
-          href: '/students',
+          href: '/dean/students',
           icon: <Users className="h-4 w-4" />,
         },
         {
@@ -214,23 +218,13 @@ const getNavItemsForRole = (role: string): NavItem[] => {
           icon: <TrendingUp className="h-4 w-4" />,
         },
         {
-          title: 'Reports',
-          href: '/reports',
-          icon: <FileBarChart className="h-4 w-4" />,
-        },
-        {
-          title: 'Budget & Resources',
-          href: '/budget',
-          icon: <DollarSign className="h-4 w-4" />,
-        },
-        {
           title: 'Announcements',
-          href: '/announcements',
+          href: '/dean/announcements',
           icon: <Bell className="h-4 w-4" />,
         },
         {
           title: 'Messages',
-          href: '/dean/messages',
+          href: '/messages',
           icon: <MessageSquare className="h-4 w-4" />,
         },
         {
@@ -246,13 +240,8 @@ const getNavItemsForRole = (role: string): NavItem[] => {
         ...commonItems.slice(0, 1), // Dashboard
         {
           title: 'User Management',
-          href: '/users',
+          href: '/user-management',
           icon: <UserCog className="h-4 w-4" />,
-        },
-        {
-          title: 'System Overview',
-          href: '/system',
-          icon: <Database className="h-4 w-4" />,
         },
         {
           title: 'Faculties',
@@ -266,13 +255,8 @@ const getNavItemsForRole = (role: string): NavItem[] => {
         },
         {
           title: 'Analytics',
-          href: '/analytics',
+          href: '/admin/analytics',
           icon: <BarChart3 className="h-4 w-4" />,
-        },
-        {
-          title: 'Reports',
-          href: '/reports',
-          icon: <FileBarChart className="h-4 w-4" />,
         },
         {
           title: 'Global Settings',
@@ -281,12 +265,12 @@ const getNavItemsForRole = (role: string): NavItem[] => {
         },
         {
           title: 'Announcements',
-          href: '/announcements',
+          href: '/admin/announcements',
           icon: <Bell className="h-4 w-4" />,
         },
         {
           title: 'Messages',
-          href: '/admin/messages',
+          href: '/messages',
           icon: <MessageSquare className="h-4 w-4" />,
         },
         {

@@ -1,8 +1,13 @@
+# MMU Digital Campus - Robots.txt
+# Official e-learning platform for Multimedia University of Kenya
+
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Bingbot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Twitterbot
 Allow: /
@@ -10,5 +15,30 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
+User-agent: LinkedInBot
+Allow: /
+
 User-agent: *
 Allow: /
+Crawl-delay: 2
+
+# Disallow sensitive areas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /dashboard/
+Disallow: /student/
+Disallow: /lecturer/
+Disallow: /dean/
+Disallow: /login
+Disallow: /register
+Disallow: /reset-password
+Disallow: /forgot-password
+
+# Allow public pages
+Allow: /
+Allow: /guest/
+Allow: /about
+Allow: /contact
+
+# Sitemap location
+Sitemap: https://mmu-digital-campus.vercel.app/sitemap.xml

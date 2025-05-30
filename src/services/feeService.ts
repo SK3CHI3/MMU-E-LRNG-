@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, supabaseAdmin } from '@/lib/supabaseClient';
 
 export interface FeesSummary {
   totalFees: number | null;
@@ -36,7 +36,7 @@ export interface PaymentRequest {
 export const getStudentFeesSummary = async (studentId: string): Promise<FeesSummary | null> => {
   try {
     // This would query the fees table in Supabase
-    const { data: feesData, error: feesError } = await supabase
+    const { data: feesData, error: feesError } = await supabaseAdmin
       .from('student_fees')
       .select('*')
       .eq('student_id', studentId)

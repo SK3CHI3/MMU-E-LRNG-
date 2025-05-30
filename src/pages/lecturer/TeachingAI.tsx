@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,9 +6,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from '@/contexts/AuthContext';
+import { getLecturerCourses } from '@/services/courseService';
 import { Brain, Send, User, BookOpen, FileText, Users, Lightbulb, Target, Zap, Clock, CheckCircle } from "lucide-react";
 
 const TeachingAI = () => {
+  const { dbUser } = useAuth();
   const [messages, setMessages] = useState([
     {
       role: "assistant",
@@ -19,12 +22,25 @@ const TeachingAI = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState("");
   const [activeTab, setActiveTab] = useState("chat");
+  const [courses, setCourses] = useState<any[]>([]);
 
-  const courses = [
-    { id: 'cs301', name: 'CS 301 - Data Structures and Algorithms' },
-    { id: 'cs205', name: 'CS 205 - Database Management Systems' },
-    { id: 'cs401', name: 'CS 401 - Software Engineering' }
-  ];
+  useEffect(() => {
+    const fetchCourses = async () => {
+      if (!dbUser?.auth_id) return;
+
+      try {
+        const coursesData = await getLecturerCourses(dbUser.auth_id);
+        setCourses(coursesData.map(course => ({
+          id: course.id,
+          name: `${course.code} - ${course.title}`
+        })));
+      } catch (error) {
+        console.error('Error fetching courses:', error);
+      }
+    };
+
+    fetchCourses();
+  }, [dbUser?.auth_id]);
 
   const quickActions = [
     {
@@ -53,29 +69,8 @@ const TeachingAI = () => {
     }
   ];
 
-  const recentSuggestions = [
-    {
-      type: "Quiz Generated",
-      title: "Binary Trees Assessment",
-      course: "CS 301",
-      timestamp: "2 hours ago",
-      status: "completed"
-    },
-    {
-      type: "Lesson Plan",
-      title: "SQL Joins Tutorial",
-      course: "CS 205",
-      timestamp: "1 day ago",
-      status: "completed"
-    },
-    {
-      type: "Assignment",
-      title: "Software Design Patterns Project",
-      course: "CS 401",
-      timestamp: "2 days ago",
-      status: "in-progress"
-    }
-  ];
+  // This would be fetched from a service in a real implementation
+  const [recentSuggestions, setRecentSuggestions] = useState<any[]>([]);
 
   // Enhanced AI response logic for teaching scenarios
   const handleSendMessage = async () => {
@@ -420,40 +415,54 @@ What specific area would you like to explore today?`;
               <CardDescription>Your recent teaching content and tools</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {recentSuggestions.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        {item.type.includes('Quiz') && <FileText className="h-4 w-4" />}
-                        {item.type.includes('Lesson') && <BookOpen className="h-4 w-4" />}
-                        {item.type.includes('Assignment') && <Target className="h-4 w-4" />}
-                      </div>
-                      <div>
-                        <h4 className="font-medium">{item.title}</h4>
-                        <p className="text-sm text-gray-600">{item.type} • {item.course}</p>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <Clock className="h-3 w-3 text-gray-400" />
-                          <span className="text-xs text-gray-500">{item.timestamp}</span>
+              {recentSuggestions.length === 0 ? (
+                <div className="text-center py-12">
+                  <Brain className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No AI assistance history yet</h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    Start using the AI tools to see your generated content here
+                  </p>
+                  <Button onClick={() => setActiveTab("chat")}>
+                    <Brain className="h-4 w-4 mr-2" />
+                    Start AI Chat
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {recentSuggestions.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          {item.type.includes('Quiz') && <FileText className="h-4 w-4" />}
+                          {item.type.includes('Lesson') && <BookOpen className="h-4 w-4" />}
+                          {item.type.includes('Assignment') && <Target className="h-4 w-4" />}
+                        </div>
+                        <div>
+                          <h4 className="font-medium">{item.title}</h4>
+                          <p className="text-sm text-gray-600">{item.type} • {item.course}</p>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <Clock className="h-3 w-3 text-gray-400" />
+                            <span className="text-xs text-gray-500">{item.timestamp}</span>
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant={item.status === 'completed' ? 'default' : 'outline'}>
+                          {item.status === 'completed' ? (
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                          ) : (
+                            <Clock className="h-3 w-3 mr-1" />
+                          )}
+                          {item.status}
+                        </Badge>
+                        <Button size="sm" variant="outline">
+                          View
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant={item.status === 'completed' ? 'default' : 'outline'}>
-                        {item.status === 'completed' ? (
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                        ) : (
-                          <Clock className="h-3 w-3 mr-1" />
-                        )}
-                        {item.status}
-                      </Badge>
-                      <Button size="sm" variant="outline">
-                        View
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

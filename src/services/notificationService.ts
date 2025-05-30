@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, supabaseAdmin } from '@/lib/supabaseClient';
 import { sampleNotifications, PublicNotification } from '@/data/mmuData';
 
 export interface SystemNotification {
@@ -190,7 +190,7 @@ export const getUnifiedNotifications = async (userId: string): Promise<EnhancedN
 
     if (notifError) throw notifError;
 
-    // Get announcements (both public and course-specific)
+    // Get only public announcements to avoid RLS recursion issues
     const { data: announcements, error: announcementError } = await supabase
       .from('announcements')
       .select(`
@@ -198,12 +198,9 @@ export const getUnifiedNotifications = async (userId: string): Promise<EnhancedN
         users!announcements_created_by_fkey (
           full_name,
           role
-        ),
-        courses (
-          title
         )
       `)
-      .or(`is_public.eq.true,course_id.in.(${await getUserCourseIds(userId)})`)
+      .eq('is_public', true)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(30);
@@ -234,6 +231,22 @@ export const getUnifiedNotifications = async (userId: string): Promise<EnhancedN
     if (announcements) {
       for (const announcement of announcements) {
         const isRead = await isAnnouncementRead(userId, announcement.id);
+
+        // Get course name separately if course_id exists
+        let courseName = undefined;
+        if (announcement.course_id) {
+          try {
+            const { data: course } = await supabase
+              .from('courses')
+              .select('title')
+              .eq('id', announcement.course_id)
+              .single();
+            courseName = course?.title;
+          } catch (error) {
+            console.error('Error fetching course name:', error);
+          }
+        }
+
         transformedAnnouncements.push({
           id: announcement.id,
           title: announcement.title,
@@ -247,7 +260,7 @@ export const getUnifiedNotifications = async (userId: string): Promise<EnhancedN
           },
           date: announcement.created_at,
           isPublic: announcement.is_public,
-          courseName: announcement.courses?.title,
+          courseName,
           externalLink: announcement.external_link,
           isRead,
           type: 'announcement'
@@ -269,9 +282,10 @@ export const getUnifiedNotifications = async (userId: string): Promise<EnhancedN
 const getUserCourseIds = async (userId: string): Promise<string> => {
   try {
     const { data, error } = await supabase
-      .from('enrollments')
+      .from('course_enrollments')
       .select('course_id')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .eq('status', 'enrolled');
 
     if (error) throw error;
     return data?.map(enrollment => enrollment.course_id).join(',') || '';
@@ -426,7 +440,9 @@ export const createAnnouncement = async (
   priority: 'low' | 'normal' | 'high' | 'urgent' = 'normal',
   isPublic: boolean = false,
   expiresAt?: string,
-  externalLink?: string
+  externalLink?: string,
+  category: string = 'General',
+  faculty?: string
 ): Promise<boolean> => {
   try {
     const { error } = await supabase
@@ -440,6 +456,8 @@ export const createAnnouncement = async (
         created_by: createdBy,
         expires_at: expiresAt,
         external_link: externalLink,
+        category,
+        faculty: faculty,
         is_active: true
       });
 

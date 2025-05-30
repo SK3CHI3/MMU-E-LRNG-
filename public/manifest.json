@@ -1,0 +1,75 @@
+{
+  "name": "MMU Digital Campus - Multimedia University of Kenya",
+  "short_name": "MMU Digital Campus",
+  "description": "Official digital learning platform for Multimedia University of Kenya students, lecturers, and staff",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e40af",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide",
+      "label": "MMU Digital Campus Dashboard"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "750x1334",
+      "type": "image/svg+xml",
+      "form_factor": "narrow",
+      "label": "MMU Digital Campus Mobile"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Student Dashboard",
+      "short_name": "Dashboard",
+      "description": "Access your student dashboard",
+      "url": "/dashboard/student",
+      "icons": [
+        {
+          "src": "/favicon.svg",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Assignments",
+      "short_name": "Assignments",
+      "description": "View and submit assignments",
+      "url": "/student/assignments",
+      "icons": [
+        {
+          "src": "/favicon.svg",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Grades",
+      "short_name": "Grades",
+      "description": "Check your academic grades",
+      "url": "/student/grades",
+      "icons": [
+        {
+          "src": "/favicon.svg",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}

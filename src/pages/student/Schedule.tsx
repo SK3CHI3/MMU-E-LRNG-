@@ -32,7 +32,7 @@ import {
   isFileTypeAllowed
 } from '@/services/fileUploadService';
 import { Skeleton } from '@/components/ui/skeleton';
-import { showErrorToast, showSuccessToast } from '@/utils/toast';
+import { showErrorToast, showSuccessToast } from '@/utils/ui/toast';
 
 const Schedule = () => {
   const { user, dbUser } = useAuth();

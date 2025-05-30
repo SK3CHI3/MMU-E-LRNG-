@@ -335,30 +335,47 @@ export const getCourseAssignments = async (courseId: string) => {
 export const submitAssignment = async (
   assignmentId: string,
   userId: string,
-  submissionUrl: string
+  submissionData: any
 ) => {
   try {
+    // Check if assignment due date has passed
+    const { data: assignment } = await supabase
+      .from('assignments')
+      .select('due_date, course_id, late_submission_allowed')
+      .eq('id', assignmentId)
+      .single();
+
+    if (!assignment) {
+      throw new Error('Assignment not found');
+    }
+
+    const dueDate = new Date(assignment.due_date);
+    const now = new Date();
+    const isLate = now > dueDate;
+
+    if (isLate && !assignment.late_submission_allowed) {
+      throw new Error('Late submissions are not allowed for this assignment');
+    }
+
+    // Prepare submission data
+    const submissionRecord = {
+      assignment_id: assignmentId,
+      user_id: userId,
+      submitted_at: new Date().toISOString(),
+      is_late: isLate,
+      ...submissionData
+    };
+
     const { data, error } = await supabase
       .from('assignment_submissions')
-      .insert({
-        assignment_id: assignmentId,
-        user_id: userId,
-        submission_url: submissionUrl,
-        submitted_at: new Date().toISOString()
-      })
+      .insert(submissionRecord)
       .select()
       .single();
 
     if (error) throw error;
 
     // Track activity
-    const { data: assignment } = await supabase
-      .from('assignments')
-      .select('course_id')
-      .eq('id', assignmentId)
-      .single();
-
-    if (assignment) {
+    if (assignment.course_id) {
       await supabase
         .from('analytics_data')
         .insert({
@@ -378,19 +395,116 @@ export const submitAssignment = async (
 // Get student's assignments
 export const getStudentAssignments = async (userId: string) => {
   try {
-    const { data, error } = await supabase
+    // First, get the courses the student is enrolled in
+    const { data: enrolledCourses, error: enrollmentError } = await supabase
+      .from('course_enrollments')
+      .select('course_id')
+      .eq('user_id', userId)
+      .eq('status', 'enrolled');
+
+    if (enrollmentError) {
+      console.error('Error fetching enrolled courses:', enrollmentError);
+      // Return empty array instead of throwing error for better UX
+      return [];
+    }
+
+    // If no enrolled courses, return empty array
+    if (!enrolledCourses || enrolledCourses.length === 0) {
+      console.log('Student has no enrolled courses, returning empty assignments array');
+      return [];
+    }
+
+    // Extract course IDs
+    const courseIds = enrolledCourses.map(enrollment => enrollment.course_id);
+
+    // Get assignments for enrolled courses
+    const { data: assignments, error: assignmentError } = await supabase
       .from('assignments')
       .select(`
         *,
         course:courses!inner(title, code),
-        submission:assignment_submissions(*)
+        submission:assignment_submissions(
+          id,
+          user_id,
+          submission_text,
+          submission_url,
+          submitted_at,
+          grade,
+          percentage,
+          feedback,
+          is_late
+        )
       `)
-      .eq('course.course_enrollments.user_id', userId)
-      .eq('course.course_enrollments.status', 'enrolled')
+      .in('course_id', courseIds)
       .order('due_date', { ascending: true });
 
-    if (error) throw error;
-    return data;
+    if (assignmentError) {
+      console.error('Error fetching assignments:', assignmentError);
+      // Return empty array instead of throwing error for better UX
+      return [];
+    }
+
+    // Filter submissions to only include the current user's submissions and transform data
+    const assignmentsWithUserSubmissions = assignments?.map(assignment => {
+      const userSubmission = assignment.submission?.find((sub: any) => sub.user_id === userId);
+
+      // Calculate status
+      const dueDate = new Date(assignment.due_date);
+      const now = new Date();
+      const isOverdue = now > dueDate;
+
+      let status: 'pending' | 'submitted' | 'graded' | 'overdue';
+      if (userSubmission) {
+        status = userSubmission.grade !== null ? 'graded' : 'submitted';
+      } else {
+        status = isOverdue ? 'overdue' : 'pending';
+      }
+
+      // Calculate time left
+      const timeDiff = dueDate.getTime() - now.getTime();
+      const daysLeft = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+      let timeLeft: string;
+      if (daysLeft < 0) {
+        timeLeft = `${Math.abs(daysLeft)} days overdue`;
+      } else if (daysLeft === 0) {
+        timeLeft = 'Due today';
+      } else if (daysLeft === 1) {
+        timeLeft = '1 day left';
+      } else {
+        timeLeft = `${daysLeft} days left`;
+      }
+
+      // Determine priority based on days left
+      let priority: 'high' | 'medium' | 'low';
+      if (daysLeft <= 1) {
+        priority = 'high';
+      } else if (daysLeft <= 7) {
+        priority = 'medium';
+      } else {
+        priority = 'low';
+      }
+
+      // Calculate progress (for pending assignments)
+      const progress = status === 'pending' ? Math.floor(Math.random() * 30) : 100;
+
+      return {
+        ...assignment,
+        // Transform field names to match UI expectations
+        course: assignment.course?.title || 'Unknown Course',
+        dueDate: dueDate.toLocaleDateString(),
+        dueTime: dueDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        points: assignment.total_points,
+        timeLeft,
+        status,
+        priority,
+        progress,
+        grade: userSubmission?.grade || null,
+        feedback: userSubmission?.feedback || null,
+        submission: userSubmission || null
+      };
+    }) || [];
+
+    return assignmentsWithUserSubmissions;
   } catch (error) {
     console.error('Error fetching student assignments:', error);
     throw error;

@@ -1,82 +1,89 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { BookOpen, Users, FileText, Calendar, BarChart3, Settings, Plus } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { getLecturerCourses, CourseWithStats } from '@/services/courseService';
+import { getLecturerAssignments } from '@/services/assignmentService';
 
 const LecturerCourses = () => {
-  const courses = [
-    {
-      id: 1,
-      code: 'CS 301',
-      name: 'Data Structures and Algorithms',
-      semester: 'Spring 2024',
-      credits: 3,
-      enrolledStudents: 45,
-      maxCapacity: 50,
-      schedule: 'Mon/Wed 9:00-10:30 AM',
-      room: 'Room 201, CS Building',
-      assignments: 8,
-      pendingGrades: 12,
-      averageGrade: 87,
-      status: 'active',
-      progress: 65
-    },
-    {
-      id: 2,
-      code: 'CS 205',
-      name: 'Database Management Systems',
-      semester: 'Spring 2024',
-      credits: 4,
-      enrolledStudents: 38,
-      maxCapacity: 40,
-      schedule: 'Tue/Thu 2:00-3:30 PM',
-      room: 'Room 305, Engineering Building',
-      assignments: 6,
-      pendingGrades: 8,
-      averageGrade: 82,
-      status: 'active',
-      progress: 55
-    },
-    {
-      id: 3,
-      code: 'CS 401',
-      name: 'Software Engineering',
-      semester: 'Spring 2024',
-      credits: 3,
-      enrolledStudents: 42,
-      maxCapacity: 45,
-      schedule: 'Mon/Wed/Fri 10:00-11:00 AM',
-      room: 'Online via Zoom',
-      assignments: 10,
-      pendingGrades: 15,
-      averageGrade: 89,
-      status: 'active',
-      progress: 70
-    },
-    {
-      id: 4,
-      code: 'CS 101',
-      name: 'Introduction to Programming',
-      semester: 'Fall 2023',
-      credits: 4,
-      enrolledStudents: 60,
-      maxCapacity: 60,
-      schedule: 'Completed',
-      room: 'Room 150, CS Building',
-      assignments: 12,
-      pendingGrades: 0,
-      averageGrade: 85,
-      status: 'completed',
-      progress: 100
-    }
-  ];
+  const { dbUser } = useAuth();
+  const [courses, setCourses] = useState<CourseWithStats[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      if (!dbUser?.auth_id) return;
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch courses and assignments in parallel
+        const [coursesData, assignmentsData] = await Promise.all([
+          getLecturerCourses(dbUser.auth_id),
+          getLecturerAssignments(dbUser.auth_id)
+        ]);
+
+        // Enhance courses with assignment data
+        const enhancedCourses = coursesData.map(course => {
+          const courseAssignments = assignmentsData.filter(a => a.course_id === course.id);
+          const pendingGrades = courseAssignments.reduce((sum, a) => sum + (a.total_submissions - a.graded_submissions), 0);
+
+          return {
+            ...course,
+            assignments: courseAssignments.length,
+            pendingGrades,
+            enrolledStudents: course.total_students,
+            maxCapacity: course.max_students || 50,
+            schedule: 'View Schedule', // This would come from class sessions
+            room: 'TBD', // This would come from class sessions
+            status: course.is_active ? 'active' : 'inactive',
+            progress: course.completion_rate || 0
+          };
+        });
+
+        setCourses(enhancedCourses);
+      } catch (error) {
+        console.error('Error fetching courses:', error);
+        setError('Failed to load courses. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourses();
+  }, [dbUser?.auth_id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="text-sm text-muted-foreground">Loading courses...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
+        </div>
+      </div>
+    );
+  }
 
   const activeCourses = courses.filter(course => course.status === 'active');
-  const totalStudents = activeCourses.reduce((sum, course) => sum + course.enrolledStudents, 0);
-  const totalPendingGrades = activeCourses.reduce((sum, course) => sum + course.pendingGrades, 0);
-  const averageClassSize = Math.round(totalStudents / activeCourses.length);
+  const totalStudents = activeCourses.reduce((sum, course) => sum + (course.enrolledStudents || 0), 0);
+  const totalPendingGrades = activeCourses.reduce((sum, course) => sum + (course.pendingGrades || 0), 0);
+  const averageClassSize = activeCourses.length > 0 ? Math.round(totalStudents / activeCourses.length) : 0;
 
   return (
     <div className="space-y-6">
@@ -144,98 +151,108 @@ const LecturerCourses = () => {
       </div>
 
       {/* Courses Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {courses.map((course) => (
-          <Card key={course.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-3 h-3 rounded-full ${
-                    course.status === 'active' ? 'bg-green-500' : 'bg-gray-500'
-                  }`} />
+      {courses.length === 0 ? (
+        <div className="text-center py-12">
+          <BookOpen className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No courses yet</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            You haven't been assigned any courses yet. Contact your administrator.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {courses.map((course) => (
+            <Card key={course.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                      course.status === 'active' ? 'bg-green-500' : 'bg-gray-500'
+                    }`} />
+                    <div>
+                      <CardTitle className="text-lg">{course.code}</CardTitle>
+                      <CardDescription className="font-medium">{course.title}</CardDescription>
+                    </div>
+                  </div>
+                  <Badge variant={course.status === 'active' ? 'default' : 'secondary'}>
+                    {course.status}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <CardTitle className="text-lg">{course.code}</CardTitle>
-                    <CardDescription className="font-medium">{course.name}</CardDescription>
+                    <span className="text-gray-600 dark:text-gray-400">Semester:</span>
+                    <p className="font-medium">{course.semester}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">Level:</span>
+                    <p className="font-medium">{course.level}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">Schedule:</span>
+                    <p className="font-medium">{course.schedule}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">Department:</span>
+                    <p className="font-medium">{course.department}</p>
                   </div>
                 </div>
-                <Badge variant={course.status === 'active' ? 'default' : 'secondary'}>
-                  {course.status}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">Semester:</span>
-                  <p className="font-medium">{course.semester}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">Credits:</span>
-                  <p className="font-medium">{course.credits}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">Schedule:</span>
-                  <p className="font-medium">{course.schedule}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">Location:</span>
-                  <p className="font-medium">{course.room}</p>
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Enrollment</span>
-                  <span>{course.enrolledStudents}/{course.maxCapacity}</span>
-                </div>
-                <Progress 
-                  value={(course.enrolledStudents / course.maxCapacity) * 100} 
-                  className="h-2" 
-                />
-              </div>
-
-              {course.status === 'active' && (
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Course Progress</span>
-                    <span>{course.progress}%</span>
+                    <span>Enrollment</span>
+                    <span>{course.enrolledStudents}/{course.maxCapacity}</span>
                   </div>
-                  <Progress value={course.progress} className="h-2" />
+                  <Progress
+                    value={course.maxCapacity > 0 ? (course.enrolledStudents / course.maxCapacity) * 100 : 0}
+                    className="h-2"
+                  />
                 </div>
-              )}
 
-              <div className="grid grid-cols-3 gap-4 text-center text-sm">
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
-                  <p className="font-bold text-blue-600">{course.assignments}</p>
-                  <p className="text-blue-600">Assignments</p>
-                </div>
-                <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded">
-                  <p className="font-bold text-orange-600">{course.pendingGrades}</p>
-                  <p className="text-orange-600">Pending</p>
-                </div>
-                <div className="bg-green-50 dark:bg-green-900/20 p-2 rounded">
-                  <p className="font-bold text-green-600">{course.averageGrade}%</p>
-                  <p className="text-green-600">Avg Grade</p>
-                </div>
-              </div>
+                {course.status === 'active' && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Course Progress</span>
+                      <span>{Math.round(course.progress)}%</span>
+                    </div>
+                    <Progress value={course.progress} className="h-2" />
+                  </div>
+                )}
 
-              <div className="flex space-x-2 pt-2">
-                <Button size="sm" className="flex-1">
-                  <BookOpen className="h-4 w-4 mr-2" />
-                  Manage Course
-                </Button>
-                <Button size="sm" variant="outline">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  Analytics
-                </Button>
-                <Button size="sm" variant="outline">
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                <div className="grid grid-cols-3 gap-4 text-center text-sm">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+                    <p className="font-bold text-blue-600">{course.assignments || 0}</p>
+                    <p className="text-blue-600">Assignments</p>
+                  </div>
+                  <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded">
+                    <p className="font-bold text-orange-600">{course.pendingGrades || 0}</p>
+                    <p className="text-orange-600">Pending</p>
+                  </div>
+                  <div className="bg-green-50 dark:bg-green-900/20 p-2 rounded">
+                    <p className="font-bold text-green-600">{Math.round(course.average_grade || 0)}%</p>
+                    <p className="text-green-600">Avg Grade</p>
+                  </div>
+                </div>
+
+                <div className="flex space-x-2 pt-2">
+                  <Button size="sm" className="flex-1">
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Manage Course
+                  </Button>
+                  <Button size="sm" variant="outline">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Analytics
+                  </Button>
+                  <Button size="sm" variant="outline">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

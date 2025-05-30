@@ -15,6 +15,8 @@ The MMU Learning Management System (LMS) is a comprehensive digital platform des
 - ✅ **Fee Management System** - Student fees, payment history, and balance tracking with M-Pesa integration
 - ✅ **Programme Management** - Academic programmes (Bachelor's, Master's) with proper MMU structure
 - ✅ **Academic Calendar** - Semester and academic year management with real dates
+- ✅ **Comprehensive Announcement System** - Public/internal announcements with priority levels and targeting
+- ✅ **Analytics Dashboards** - Real-time analytics for lecturers and deans with interactive charts
 - ✅ **Enhanced Security** - Row Level Security (RLS) policies for all data access
 - ✅ **Performance Optimized** - Database indexes and query optimization for production
 - ✅ **Frontend-Backend Integration** - All services updated and tested with new database structure
@@ -26,26 +28,31 @@ The MMU Learning Management System (LMS) is a comprehensive digital platform des
 ## ✨ Features
 
 ### For Students
-- **Dashboard**: Personalized overview with MMU-themed blue interface and subtle video background
+- **Dashboard**: Personalized overview with MMU-themed blue interface and real-time announcements
 - **Course Management**: Access to enrolled courses, learning materials, and lecture notes
 - **Assignment Submission**: Digital submission and tracking of assignments
 - **Grade Tracking**: Real-time access to grades and academic progress with visual analytics
 - **Class Sessions**: Schedule and information about upcoming and past classes
 - **AI Learning Assistant**: 24/7 "Comrade AI" tutor for academic support
+- **Announcements**: Priority-coded announcements with public/internal visibility
 - **Notifications**: Important alerts about deadlines, grades, and university announcements
 
 ### For Lecturers
 - **Course Administration**: Tools to manage course content, materials, and student enrollment
 - **Assignment Creation**: Create, distribute, and grade assignments
-- **Student Progress Tracking**: Monitor student performance and engagement
+- **Student Progress Tracking**: Monitor student performance and engagement with analytics dashboards
 - **Attendance Management**: Track and record student attendance
+- **Announcement Management**: Create targeted announcements for students and courses
+- **Analytics Dashboard**: Real-time insights into course performance and student engagement
 - **Communication Tools**: Direct messaging and announcement capabilities
 
 ### For Administrators
 - **User Management**: Comprehensive tools for managing student and staff accounts
 - **System Configuration**: Customization options for the LMS platform
 - **Analytics Dashboard**: Insights into system usage and academic metrics
+- **Announcement Management**: Create system-wide announcements with priority levels
 - **Department Management**: Tools for organizing courses by department and faculty
+- **System Monitoring**: Real-time system health and activity tracking
 
 ## 🛠️ Technology Stack
 
@@ -124,6 +131,43 @@ The MMU Learning Management System (LMS) is a comprehensive digital platform des
 
 5. **Open your browser**
    - Navigate to `http://localhost:8080` to see the application
+
+## 📢 Announcement System
+
+The MMU LMS features a comprehensive announcement system designed for effective communication:
+
+### Features
+- **Priority Levels**: Urgent, High, Normal, Low with color-coded visual hierarchy
+- **Public/Internal Visibility**: Announcements can be public (shown on landing page) or internal only
+- **Targeted Messaging**: Target specific audiences (all users, students, lecturers, faculty, specific courses)
+- **Rich Content**: Support for external links, expiry dates, and categorization
+- **Real-time Notifications**: Automatic notifications sent to target users
+- **Interactive Display**: Dismissible announcements with read-more functionality
+
+### Visual Design
+- **Urgent Announcements**: Red border and high visibility styling
+- **High Priority**: Orange border for important announcements
+- **Public Announcements**: Green border with globe icon
+- **Normal/Low Priority**: Blue/gray styling for standard announcements
+
+### Management
+- **Admin Control**: System-wide announcements with full targeting options
+- **Lecturer Control**: Course-specific and faculty-wide announcements
+- **Analytics Integration**: Track announcement engagement and effectiveness
+
+## 📊 Analytics Dashboard
+
+Real-time analytics provide insights into academic performance and system usage:
+
+### Lecturer Analytics
+- **Course Performance**: Student enrollment trends and grade distributions
+- **Engagement Metrics**: Assignment completion rates and student participation
+- **Interactive Charts**: Line charts, pie charts, and bar graphs for data visualization
+
+### Dean Analytics
+- **Faculty Overview**: Complete faculty statistics and performance metrics
+- **Department Distribution**: Student and lecturer distribution across departments
+- **Growth Tracking**: Enrollment trends and quarterly growth analysis
 
 ## 📱 Responsive Design
 

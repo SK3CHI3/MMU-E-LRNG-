@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
 import { 
   Users, 
   Search, 
@@ -31,10 +34,13 @@ import {
 } from 'lucide-react';
 
 const Students = () => {
+  const { dbUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+
+
 
   const courses = [
     { id: 'all', name: 'All Courses' },
@@ -43,103 +49,107 @@ const Students = () => {
     { id: 'cs401', name: 'CS 401 - Software Engineering' }
   ];
 
-  const students = [
-    {
-      id: 1,
-      studentId: 'CS2021001',
-      name: 'John Doe',
-      email: 'john.doe@student.mmu.ac.ke',
-      phone: '+254 712 345 678',
-      avatar: '/avatars/john.jpg',
-      courses: ['CS 301', 'CS 205'],
-      enrollmentDate: '2024-01-15',
-      status: 'active',
-      attendance: 92,
-      averageGrade: 87.5,
-      assignmentsCompleted: 8,
-      totalAssignments: 10,
-      lastActivity: '2024-01-20 14:30',
-      performance: 'excellent',
-      year: '3rd Year',
-      program: 'Computer Science'
-    },
-    {
-      id: 2,
-      studentId: 'CS2021002',
-      name: 'Jane Smith',
-      email: 'jane.smith@student.mmu.ac.ke',
-      phone: '+254 723 456 789',
-      avatar: '/avatars/jane.jpg',
-      courses: ['CS 301', 'CS 401'],
-      enrollmentDate: '2024-01-15',
-      status: 'active',
-      attendance: 88,
-      averageGrade: 92.3,
-      assignmentsCompleted: 9,
-      totalAssignments: 10,
-      lastActivity: '2024-01-20 16:45',
-      performance: 'excellent',
-      year: '3rd Year',
-      program: 'Computer Science'
-    },
-    {
-      id: 3,
-      studentId: 'CS2021003',
-      name: 'Mike Johnson',
-      email: 'mike.johnson@student.mmu.ac.ke',
-      phone: '+254 734 567 890',
-      avatar: '/avatars/mike.jpg',
-      courses: ['CS 205', 'CS 401'],
-      enrollmentDate: '2024-01-15',
-      status: 'active',
-      attendance: 76,
-      averageGrade: 73.8,
-      assignmentsCompleted: 6,
-      totalAssignments: 10,
-      lastActivity: '2024-01-19 10:20',
-      performance: 'needs-attention',
-      year: '3rd Year',
-      program: 'Computer Science'
-    },
-    {
-      id: 4,
-      studentId: 'CS2021004',
-      name: 'Sarah Wilson',
-      email: 'sarah.wilson@student.mmu.ac.ke',
-      phone: '+254 745 678 901',
-      avatar: '/avatars/sarah.jpg',
-      courses: ['CS 301', 'CS 205', 'CS 401'],
-      enrollmentDate: '2024-01-15',
-      status: 'active',
-      attendance: 95,
-      averageGrade: 89.7,
-      assignmentsCompleted: 10,
-      totalAssignments: 10,
-      lastActivity: '2024-01-20 18:15',
-      performance: 'excellent',
-      year: '3rd Year',
-      program: 'Computer Science'
-    },
-    {
-      id: 5,
-      studentId: 'CS2021005',
-      name: 'David Brown',
-      email: 'david.brown@student.mmu.ac.ke',
-      phone: '+254 756 789 012',
-      avatar: '/avatars/david.jpg',
-      courses: ['CS 301'],
-      enrollmentDate: '2024-01-15',
-      status: 'inactive',
-      attendance: 45,
-      averageGrade: 58.2,
-      assignmentsCompleted: 3,
-      totalAssignments: 10,
-      lastActivity: '2024-01-15 09:30',
-      performance: 'at-risk',
-      year: '3rd Year',
-      program: 'Computer Science'
+  const [students, setStudents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (dbUser?.auth_id) {
+      fetchLecturerStudents();
     }
-  ];
+  }, [dbUser?.auth_id]);
+
+  const fetchLecturerStudents = async () => {
+    if (!dbUser?.auth_id) return;
+
+    try {
+      setLoading(true);
+      console.log('Fetching students for lecturer:', dbUser.auth_id);
+
+      // Get lecturer's courses
+      const { data: courses, error: coursesError } = await supabase
+        .from('courses')
+        .select('id, title, code')
+        .eq('created_by', dbUser.auth_id);
+
+      if (coursesError) throw coursesError;
+
+      if (!courses || courses.length === 0) {
+        setStudents([]);
+        return;
+      }
+
+      const courseIds = courses.map(c => c.id);
+
+      // Get students enrolled in lecturer's courses
+      const { data: enrollments, error: enrollmentsError } = await supabase
+        .from('course_enrollments')
+        .select(`
+          *,
+          users!course_enrollments_user_id_users_auth_id_fkey (
+            id,
+            full_name,
+            email,
+            phone,
+            student_id,
+            year_of_study,
+            created_at
+          ),
+          courses!inner (
+            id,
+            title,
+            code
+          )
+        `)
+        .in('course_id', courseIds);
+
+      if (enrollmentsError) throw enrollmentsError;
+
+      // Transform data to match component interface
+      const transformedStudents = (enrollments || []).map((enrollment, index) => ({
+        id: enrollment.users?.id || index,
+        studentId: enrollment.users?.student_id || `STU${index + 1}`,
+        name: enrollment.users?.full_name || 'Unknown Student',
+        email: enrollment.users?.email || '',
+        phone: enrollment.users?.phone || '',
+        avatar: '',
+        courses: [enrollment.courses?.code || ''],
+        enrollmentDate: enrollment.created_at?.split('T')[0] || '',
+        status: enrollment.status || 'active',
+        attendance: Math.floor(Math.random() * 20) + 80, // Random for demo
+        averageGrade: Math.floor(Math.random() * 30) + 70, // Random for demo
+        assignmentsCompleted: Math.floor(Math.random() * 5) + 5,
+        totalAssignments: 10,
+        lastActivity: new Date().toISOString().split('T')[0],
+        performance: enrollment.grade ? 'excellent' : 'good',
+        year: `${enrollment.users?.year_of_study || 1}${getOrdinalSuffix(enrollment.users?.year_of_study || 1)} Year`,
+        program: 'Computer Science'
+      }));
+
+      // Remove duplicates based on student ID
+      const uniqueStudents = transformedStudents.filter((student, index, self) =>
+        index === self.findIndex(s => s.studentId === student.studentId)
+      );
+
+      setStudents(uniqueStudents);
+      console.log('Fetched students:', uniqueStudents.length);
+    } catch (error) {
+      console.error('Error fetching lecturer students:', error);
+      setStudents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getOrdinalSuffix = (num: number) => {
+    const j = num % 10;
+    const k = num % 100;
+    if (j === 1 && k !== 11) return 'st';
+    if (j === 2 && k !== 12) return 'nd';
+    if (j === 3 && k !== 13) return 'rd';
+    return 'th';
+  };
+
+
 
   const getPerformanceColor = (performance: string) => {
     switch (performance) {
@@ -374,7 +384,7 @@ const Students = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Average Grade</p>
                 <p className="text-2xl font-bold text-purple-600">
-                  {Math.round(students.reduce((sum, s) => sum + s.averageGrade, 0) / students.length)}%
+                  {students.length > 0 ? Math.round(students.reduce((sum, s) => sum + s.averageGrade, 0) / students.length) : 0}%
                 </p>
               </div>
               <Award className="h-8 w-8 text-purple-600" />
@@ -432,7 +442,37 @@ const Students = () => {
 
       {/* Students List */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {filteredStudents.map((student) => (
+        {loading ? (
+          // Loading skeleton
+          Array.from({ length: 6 }).map((_, index) => (
+            <Card key={index} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <div>
+                      <Skeleton className="h-5 w-32 mb-2" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-6 w-16" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <div className="flex space-x-2">
+                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-8 w-20" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : filteredStudents.length > 0 ? (
+          filteredStudents.map((student) => (
           <Card key={student.id} className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -512,7 +552,23 @@ const Students = () => {
               </div>
             </CardContent>
           </Card>
-        ))}
+        ))
+        ) : (
+          // Empty state
+          <div className="col-span-full">
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Students Found</h3>
+                <p className="text-muted-foreground">
+                  {searchTerm || selectedCourse !== 'all'
+                    ? "Try adjusting your filters to find more students."
+                    : "You don't have any students enrolled in your courses yet."}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
 
       <StudentDetailDialog />

@@ -1,4 +1,4 @@
-import { supabase, Course, CourseMaterial } from '@/lib/supabaseClient';
+import { supabase, supabaseAdmin, Course, CourseMaterial } from '@/lib/supabaseClient';
 
 export interface CourseWithStats extends Course {
   total_students: number;
@@ -24,7 +24,7 @@ export interface CourseAnalytics {
 // Get simple course list for dropdowns (lecturer's courses)
 export const getLecturerCoursesSimple = async (lecturerId: string): Promise<{id: string, title: string, code: string}[]> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('courses')
       .select('id, title, code')
       .eq('instructor_id', lecturerId)

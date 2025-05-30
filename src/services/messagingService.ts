@@ -6,18 +6,12 @@ export interface Message {
   sender_id: string;
   content: string;
   attachments?: string[];
-  topic: string;
-  extension: string;
-  payload?: any;
-  event?: string;
-  private?: boolean;
   message_type?: string;
   is_read: boolean;
   read_at?: string;
   reply_to?: string;
-  inserted_at: string;
-  updated_at: string;
   created_at: string;
+  updated_at?: string;
   // Joined data for UI
   sender_name?: string;
   sender_role?: string;
@@ -29,21 +23,23 @@ export interface Conversation {
   participants: string[];
   subject: string;
   course_id?: string;
-  priority: 'normal' | 'high' | 'urgent';
+  priority?: 'normal' | 'high' | 'urgent';
   last_message?: string;
   last_message_at?: string;
-  unread_count: number;
+  unread_count?: number;
   created_at: string;
   updated_at: string;
+  is_group?: boolean;
 }
 
 export interface ConversationWithDetails extends Conversation {
-  other_participant: {
+  other_participant?: {
     id: string;
     full_name: string;
     email: string;
     role: string;
     avatar_url?: string;
+    department?: string;
   };
   course?: {
     id: string;
@@ -51,7 +47,10 @@ export interface ConversationWithDetails extends Conversation {
     code: string;
   };
   messages: Message[];
+  unread_count: number;
 }
+
+
 
 export interface NewMessage {
   conversation_id?: string;
@@ -63,97 +62,22 @@ export interface NewMessage {
   attachments?: File[];
 }
 
-// Send a new message
+// Send a new message - SUPER SIMPLE VERSION
 export const sendMessage = async (messageData: NewMessage, senderId: string): Promise<Message> => {
   try {
-    let conversationId = messageData.conversation_id;
-
-    // If no conversation ID, create a new conversation
-    if (!conversationId && messageData.recipient_id) {
-      const { data: conversation, error: convError } = await supabase
-        .from('conversations')
-        .insert({
-          participants: [senderId, messageData.recipient_id],
-          subject: messageData.subject || 'New Conversation',
-          course_id: messageData.course_id,
-          priority: messageData.priority || 'normal',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (convError) throw convError;
-      conversationId = conversation.id;
-    }
-
-    if (!conversationId) {
-      throw new Error('No conversation ID provided');
-    }
-
-    // Handle file attachments
-    let attachmentUrls: string[] = [];
-    if (messageData.attachments && messageData.attachments.length > 0) {
-      attachmentUrls = await uploadAttachments(messageData.attachments, senderId);
-    }
-
-    // Create the message with required fields for the database schema
-    const { data: message, error: messageError } = await supabase
+    // Just insert the message - that's it!
+    const { data: message, error } = await supabase
       .from('messages')
       .insert({
-        conversation_id: conversationId,
+        conversation_id: messageData.conversation_id,
         sender_id: senderId,
         content: messageData.content,
-        attachments: attachmentUrls,
-        topic: messageData.subject || 'Message',
-        extension: 'text',
-        message_type: 'text',
-        private: false,
-        is_read: false,
-        inserted_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        created_at: new Date().toISOString()
+        is_read: false
       })
       .select()
       .single();
 
-    if (messageError) throw messageError;
-
-    // Update conversation with last message
-    await supabase
-      .from('conversations')
-      .update({
-        last_message: messageData.content.substring(0, 100),
-        last_message_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', conversationId);
-
-    // Create notification for recipient(s)
-    const { data: conversation } = await supabase
-      .from('conversations')
-      .select('participants')
-      .eq('id', conversationId)
-      .single();
-
-    if (conversation) {
-      const recipients = conversation.participants.filter((id: string) => id !== senderId);
-
-      const notifications = recipients.map((recipientId: string) => ({
-        user_id: recipientId,
-        title: 'New Message',
-        message: `You have a new message: ${messageData.content.substring(0, 50)}...`,
-        type: 'message',
-        is_read: false,
-        related_id: message.id,
-        created_at: new Date().toISOString()
-      }));
-
-      await supabase
-        .from('notifications')
-        .insert(notifications);
-    }
-
+    if (error) throw error;
     return message;
   } catch (error) {
     console.error('Error sending message:', error);
@@ -184,71 +108,85 @@ const uploadAttachments = async (files: File[], userId: string): Promise<string[
   return Promise.all(uploadPromises);
 };
 
-// Get conversations for a user
+// Get conversations for a user - OPTIMIZED VERSION
 export const getUserConversations = async (userId: string): Promise<ConversationWithDetails[]> => {
   try {
+    // Single optimized query with all necessary joins
     const { data: conversations, error } = await supabase
       .from('conversations')
       .select(`
-        *,
-        messages!inner(
-          id,
-          sender_id,
-          content,
-          attachments,
-          created_at,
-          is_read
-        )
+        id,
+        participants,
+        subject,
+        course_id,
+        priority,
+        is_group,
+        last_message,
+        last_message_at,
+        created_at,
+        updated_at
       `)
       .contains('participants', [userId])
       .order('updated_at', { ascending: false });
 
     if (error) throw error;
 
-    // Get detailed information for each conversation
-    const conversationsWithDetails = await Promise.all(
-      conversations.map(async (conv) => {
-        // Get other participant details
-        const otherParticipantId = conv.participants.find((id: string) => id !== userId);
-        const { data: otherParticipant } = await supabase
-          .from('users')
-          .select('id, full_name, email, role, avatar_url')
-          .eq('auth_id', otherParticipantId)
-          .single();
+    if (!conversations || conversations.length === 0) {
+      return [];
+    }
 
-        // Get course details if applicable
-        let course = null;
-        if (conv.course_id) {
-          const { data: courseData } = await supabase
-            .from('courses')
-            .select('id, title, code')
-            .eq('id', conv.course_id)
-            .single();
-          course = courseData;
+    // Get all unique participant IDs (excluding current user)
+    const allParticipantIds = new Set<string>();
+    const courseIds = new Set<string>();
+
+    conversations.forEach(conv => {
+      conv.participants.forEach((id: string) => {
+        if (id !== userId) {
+          allParticipantIds.add(id);
         }
+      });
+      if (conv.course_id) {
+        courseIds.add(conv.course_id);
+      }
+    });
 
-        // Get unread count for this user
-        const { count: unreadCount } = await supabase
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('conversation_id', conv.id)
-          .eq('is_read', false)
-          .neq('sender_id', userId);
+    // Batch fetch all participants in one query
+    const { data: participants } = await supabase
+      .from('users')
+      .select('auth_id, full_name, email, role, avatar_url')
+      .in('auth_id', Array.from(allParticipantIds));
 
-        // Sort messages by created_at
-        const sortedMessages = conv.messages.sort((a: any, b: any) =>
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        );
+    // Batch fetch all courses in one query (if any)
+    let courses: any[] = [];
+    if (courseIds.size > 0) {
+      const { data: courseData } = await supabase
+        .from('courses')
+        .select('id, title, code')
+        .in('id', Array.from(courseIds));
+      courses = courseData || [];
+    }
 
-        return {
-          ...conv,
-          other_participant: otherParticipant,
-          course,
-          messages: sortedMessages,
-          unread_count: unreadCount || 0
-        };
-      })
-    );
+    // Create lookup maps for O(1) access
+    const participantMap = new Map();
+    participants?.forEach(p => participantMap.set(p.auth_id, p));
+
+    const courseMap = new Map();
+    courses.forEach(c => courseMap.set(c.id, c));
+
+    // Transform conversations with pre-fetched data
+    const conversationsWithDetails = conversations.map(conv => {
+      const otherParticipantId = conv.participants.find((id: string) => id !== userId);
+      const otherParticipant = participantMap.get(otherParticipantId);
+      const course = conv.course_id ? courseMap.get(conv.course_id) : null;
+
+      return {
+        ...conv,
+        other_participant: otherParticipant || null,
+        course,
+        messages: [], // We'll load messages separately when needed
+        unread_count: 0 // We'll calculate this separately if needed
+      };
+    });
 
     return conversationsWithDetails;
   } catch (error) {
@@ -257,13 +195,20 @@ export const getUserConversations = async (userId: string): Promise<Conversation
   }
 };
 
-// Get messages for a conversation with sender details
+// Get messages for a conversation with sender details - OPTIMIZED
 export const getConversationMessages = async (conversationId: string): Promise<Message[]> => {
   try {
+    // Optimized query with minimal data and proper indexing
     const { data: messages, error } = await supabase
       .from('messages')
       .select(`
-        *,
+        id,
+        conversation_id,
+        sender_id,
+        content,
+        attachments,
+        is_read,
+        created_at,
         users!messages_sender_id_fkey (
           full_name,
           role,
@@ -271,16 +216,17 @@ export const getConversationMessages = async (conversationId: string): Promise<M
         )
       `)
       .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: true })
+      .limit(100); // Limit to last 100 messages for performance
 
     if (error) throw error;
 
     // Transform the data to include sender information
     const messagesWithSenderInfo = messages?.map(message => ({
       ...message,
-      sender_name: message.users?.full_name || 'Unknown User',
-      sender_role: message.users?.role || 'user',
-      sender_avatar: message.users?.avatar_url || null
+      sender_name: (message as any).users?.full_name || 'Unknown User',
+      sender_role: (message as any).users?.role || 'user',
+      sender_avatar: (message as any).users?.avatar_url || null
     })) || [];
 
     return messagesWithSenderInfo;
@@ -484,6 +430,27 @@ export const findOrCreateConversation = async (
   }
 };
 
+// Get user by ID for direct messaging
+export const getUserById = async (userId: string): Promise<any | null> => {
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('auth_id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user by ID:', error);
+      return null;
+    }
+
+    return user;
+  } catch (error) {
+    console.error('Error in getUserById:', error);
+    return null;
+  }
+};
+
 // Get all users that can be messaged based on faculty and role
 export const getMessageableUsers = async (currentUserId: string, currentUserRole: string): Promise<any[]> => {
   try {
@@ -510,9 +477,8 @@ export const getMessageableUsers = async (currentUserId: string, currentUserRole
         role,
         avatar_url,
         student_id,
-        staff_id,
         department,
-        faculty_id
+        faculty
       `)
       .neq('auth_id', currentUserId)
       .not('full_name', 'is', null); // Exclude users without names
@@ -535,7 +501,7 @@ export const getMessageableUsers = async (currentUserId: string, currentUserRole
     // Get current user's info for faculty filtering
     const { data: currentUser, error: currentUserError } = await supabase
       .from('users')
-      .select('auth_id, faculty_id, department, role')
+      .select('auth_id, faculty, department, role')
       .eq('auth_id', currentUserId)
       .single();
 
@@ -582,7 +548,7 @@ export const getMessageableUsers = async (currentUserId: string, currentUserRole
     // Transform the data to include display information
     const transformedUsers = filteredUsers.map(user => ({
       ...user,
-      faculty_name: user.department || 'No Department',
+      faculty_name: user.faculty || user.department || 'No Faculty',
       programme_title: null
     }));
 

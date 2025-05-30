@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, supabaseAdmin } from '@/lib/supabaseClient';
+import { mmuFaculties } from '@/data/mmuData';
 
 export interface StudentData {
   name: string;
@@ -280,7 +281,7 @@ export const getStudentData = async (userId: string): Promise<StudentData | null
     console.log('getStudentData: Starting data fetch for userId:', userId);
 
     // Get user info first - this is the most critical part
-    const { data: user, error: userError } = await supabase
+    const { data: user, error: userError } = await supabaseAdmin
       .from('users')
       .select('*')
       .eq('auth_id', userId)
@@ -346,7 +347,7 @@ export const getStudentData = async (userId: string): Promise<StudentData | null
 
       // Try to get enrollments
       try {
-        enrollments = await supabase
+        enrollments = await supabaseAdmin
           .from('course_enrollments')
           .select(`
             *,
@@ -504,20 +505,28 @@ export const getDeanData = async (userId: string): Promise<DeanData | null> => {
 
     if (userError) throw userError;
 
-    // Get faculty statistics
-    const { data: facultyUsers, error: facultyError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('department', user.department);
+    // Get faculty statistics (only if user has faculty assignment)
+    let facultyUsers = [];
+    let facultyCourses = [];
 
-    if (facultyError) throw facultyError;
+    if (user.faculty) {
+      const { data: users, error: facultyError } = await supabase
+        .from('users')
+        .select('role, faculty, department')
+        .eq('faculty', user.faculty)
+        .not('faculty', 'is', null);
 
-    const { data: facultyCourses, error: coursesError } = await supabase
-      .from('courses')
-      .select('id')
-      .eq('department', user.department);
+      if (facultyError) throw facultyError;
+      facultyUsers = users || [];
 
-    if (coursesError) throw coursesError;
+      const { data: courses, error: coursesError } = await supabase
+        .from('courses')
+        .select('id, department')
+        .eq('department', user.faculty);
+
+      if (coursesError) throw coursesError;
+      facultyCourses = courses || [];
+    }
 
     // Calculate faculty stats
     const roleCounts = facultyUsers?.reduce((acc, u) => {
@@ -525,11 +534,15 @@ export const getDeanData = async (userId: string): Promise<DeanData | null> => {
       return acc;
     }, {} as { [key: string]: number }) || {};
 
+    // Get programme count from faculty data
+    const facultyData = mmuFaculties.find(f => f.name === user.faculty);
+    const totalProgrammes = facultyData?.programmes.length || 0;
+
     const facultyStats: FacultyStatistics = {
       totalLecturers: roleCounts.lecturer || 0,
       totalStudents: roleCounts.student || 0,
       totalCourses: facultyCourses?.length || 0,
-      totalProgrammes: 9, // This should come from programme data
+      totalProgrammes: totalProgrammes,
       graduationRate: 87, // This should be calculated from graduation data
       employmentRate: 92, // This should come from alumni tracking
       researchProjects: 15, // This should come from research database

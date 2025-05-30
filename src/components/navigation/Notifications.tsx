@@ -14,12 +14,15 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getUnifiedNotifications, markNotificationAsRead, markAnnouncementAsRead, EnhancedNotification } from "@/services/notificationService";
 import { useNavigate } from "react-router-dom";
+import NotificationDetailModal from "@/components/notifications/NotificationDetailModal";
 
 export const Notifications = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<EnhancedNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedNotification, setSelectedNotification] = useState<EnhancedNotification | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
@@ -41,34 +44,50 @@ export const Notifications = () => {
     }
   };
 
-  const handleNotificationClick = async (notification: EnhancedNotification) => {
+  const handleNotificationClick = (notification: EnhancedNotification) => {
+    setSelectedNotification(notification);
+    setIsModalOpen(true);
+  };
+
+  const handleMarkAsRead = async (notificationId: string) => {
     if (!user?.id) return;
 
-    // Mark as read if not already read
-    if (!notification.isRead) {
-      try {
-        if (notification.type === 'notification') {
-          await markNotificationAsRead(user.id, notification.id);
-        } else {
-          await markAnnouncementAsRead(user.id, notification.id);
-        }
-        // Update local state
-        setNotifications(prev =>
-          prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n)
-        );
-      } catch (error) {
-        console.error('Error marking notification as read:', error);
-      }
-    }
+    const notification = notifications.find(n => n.id === notificationId);
+    if (!notification || notification.isRead) return;
 
-    // Handle navigation
-    if (notification.externalLink) {
-      if (notification.externalLink.startsWith('http')) {
-        window.open(notification.externalLink, '_blank');
+    try {
+      if (notification.type === 'notification') {
+        await markNotificationAsRead(user.id, notificationId);
       } else {
-        navigate(notification.externalLink);
+        await markAnnouncementAsRead(user.id, notificationId);
       }
+
+      // Update local state
+      setNotifications(prev =>
+        prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
+      );
+
+      // Update selected notification if it's the same one
+      if (selectedNotification?.id === notificationId) {
+        setSelectedNotification(prev => prev ? { ...prev, isRead: true } : null);
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
     }
+  };
+
+  const handleNavigateToLink = (link: string) => {
+    if (link.startsWith('http')) {
+      window.open(link, '_blank');
+    } else {
+      navigate(link);
+      setIsModalOpen(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedNotification(null);
   };
 
   const formatTime = (dateString: string) => {
@@ -91,18 +110,19 @@ export const Notifications = () => {
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell size={20} />
-          {unreadCount > 0 && (
-            <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0">
-              {unreadCount}
-            </Badge>
-          )}
-          <span className="sr-only">Notifications</span>
-        </Button>
-      </DropdownMenuTrigger>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="relative">
+            <Bell size={20} />
+            {unreadCount > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0">
+                {unreadCount}
+              </Badge>
+            )}
+            <span className="sr-only">Notifications</span>
+          </Button>
+        </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-96">
         <DropdownMenuLabel className="flex items-center justify-between">
           <span>Notifications</span>
@@ -177,5 +197,14 @@ export const Notifications = () => {
         )}
       </DropdownMenuContent>
     </DropdownMenu>
+
+    <NotificationDetailModal
+      notification={selectedNotification}
+      isOpen={isModalOpen}
+      onClose={handleCloseModal}
+      onMarkAsRead={handleMarkAsRead}
+      onNavigateToLink={handleNavigateToLink}
+    />
+  </>
   );
 };

@@ -137,8 +137,8 @@ CREATE TABLE IF NOT EXISTS assignments (
     instructions TEXT,
     due_date TIMESTAMP WITH TIME ZONE NOT NULL,
     total_points INTEGER NOT NULL DEFAULT 100,
-    assignment_type VARCHAR(50) DEFAULT 'homework' CHECK (assignment_type IN ('homework', 'quiz', 'exam', 'project', 'lab')),
-    submission_format VARCHAR(50) DEFAULT 'file' CHECK (submission_format IN ('file', 'text', 'url', 'code')),
+    assignment_type VARCHAR(50) DEFAULT 'homework' CHECK (assignment_type IN ('homework', 'quiz', 'exam', 'project', 'lab', 'cat')),
+    submission_format VARCHAR(50) DEFAULT 'file' CHECK (submission_format IN ('file', 'text', 'url', 'code', 'online_exam')),
     max_file_size INTEGER DEFAULT 10485760, -- 10MB in bytes
     allowed_file_types TEXT[], -- ['pdf', 'doc', 'docx', 'zip']
     is_group_assignment BOOLEAN DEFAULT false,
@@ -149,6 +149,23 @@ CREATE TABLE IF NOT EXISTS assignments (
     rubric JSONB, -- Grading rubric
     created_by UUID NOT NULL REFERENCES users(auth_id),
     is_published BOOLEAN DEFAULT false,
+
+    -- Exam/Quiz specific fields
+    duration_minutes INTEGER, -- Time limit for exams/quizzes in minutes
+    max_attempts INTEGER DEFAULT 1, -- Maximum number of attempts allowed
+    shuffle_questions BOOLEAN DEFAULT false, -- Randomize question order
+    shuffle_options BOOLEAN DEFAULT false, -- Randomize MCQ option order
+    show_results_immediately BOOLEAN DEFAULT false, -- Show results after submission
+    show_correct_answers BOOLEAN DEFAULT false, -- Show correct answers after submission
+    require_lockdown_browser BOOLEAN DEFAULT false, -- Require secure browser
+    allow_backtrack BOOLEAN DEFAULT true, -- Allow going back to previous questions
+    question_per_page INTEGER DEFAULT 1, -- Questions per page (1 = one question per page)
+    passing_score DECIMAL(5,2), -- Minimum score to pass (percentage)
+
+    -- Scheduling
+    available_from TIMESTAMP WITH TIME ZONE, -- When exam becomes available
+    available_until TIMESTAMP WITH TIME ZONE, -- When exam is no longer available
+
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -174,6 +191,110 @@ CREATE TABLE IF NOT EXISTS assignment_submissions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(assignment_id, user_id, attempt_number)
+);
+
+-- =============================================
+-- EXAM AND QUIZ SYSTEM
+-- =============================================
+
+-- Exam questions table
+CREATE TABLE IF NOT EXISTS exam_questions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    assignment_id UUID NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+    question_text TEXT NOT NULL,
+    question_type VARCHAR(20) NOT NULL CHECK (question_type IN ('mcq', 'essay', 'short_answer', 'true_false')),
+    question_order INTEGER NOT NULL DEFAULT 1,
+    points DECIMAL(5,2) NOT NULL DEFAULT 1,
+
+    -- MCQ specific fields
+    options JSONB, -- Array of option objects: [{"text": "Option A", "is_correct": true}, ...]
+    correct_answers JSONB, -- Array of correct option indices for multiple correct answers
+
+    -- Essay specific fields
+    max_words INTEGER, -- Maximum word count for essays
+    rubric JSONB, -- Grading rubric for essays
+
+    -- Short answer specific fields
+    expected_keywords JSONB, -- Array of expected keywords for auto-grading
+    case_sensitive BOOLEAN DEFAULT false,
+
+    -- General settings
+    explanation TEXT, -- Explanation shown after submission
+    time_limit INTEGER, -- Time limit in seconds for this question (optional)
+    is_required BOOLEAN DEFAULT true,
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Exam attempts table (for tracking student exam sessions)
+CREATE TABLE IF NOT EXISTS exam_attempts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    assignment_id UUID NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(auth_id),
+    attempt_number INTEGER NOT NULL DEFAULT 1,
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    submitted_at TIMESTAMP WITH TIME ZONE,
+    time_remaining INTEGER, -- Remaining time in seconds
+    is_completed BOOLEAN DEFAULT false,
+    auto_submitted BOOLEAN DEFAULT false, -- True if submitted due to time limit
+    ip_address INET,
+    user_agent TEXT,
+    status VARCHAR(20) DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'submitted', 'graded', 'abandoned')),
+
+    -- Proctoring fields (for future use)
+    browser_lock_enabled BOOLEAN DEFAULT false,
+    tab_switches INTEGER DEFAULT 0,
+    suspicious_activity JSONB,
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(assignment_id, user_id, attempt_number)
+);
+
+-- Exam answers table (student responses to questions)
+CREATE TABLE IF NOT EXISTS exam_answers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    attempt_id UUID NOT NULL REFERENCES exam_attempts(id) ON DELETE CASCADE,
+    question_id UUID NOT NULL REFERENCES exam_questions(id) ON DELETE CASCADE,
+
+    -- Answer content
+    answer_text TEXT, -- For essay and short answer questions
+    selected_options JSONB, -- Array of selected option indices for MCQ
+    answer_files JSONB, -- File attachments for answers
+
+    -- Grading
+    points_earned DECIMAL(5,2) DEFAULT 0,
+    is_correct BOOLEAN, -- For auto-gradable questions
+    auto_graded BOOLEAN DEFAULT false,
+    manual_feedback TEXT,
+    graded_by UUID REFERENCES users(auth_id),
+    graded_at TIMESTAMP WITH TIME ZONE,
+
+    -- Timing
+    time_spent INTEGER, -- Time spent on this question in seconds
+    answered_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(attempt_id, question_id)
+);
+
+-- Exam templates table (for reusable exam structures)
+CREATE TABLE IF NOT EXISTS exam_templates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_by UUID NOT NULL REFERENCES users(auth_id),
+    template_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    subject_area VARCHAR(255),
+    difficulty_level VARCHAR(20) CHECK (difficulty_level IN ('easy', 'medium', 'hard')),
+    estimated_duration INTEGER, -- In minutes
+    question_structure JSONB, -- Template structure for questions
+    is_public BOOLEAN DEFAULT false, -- Can other lecturers use this template
+    usage_count INTEGER DEFAULT 0,
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- =============================================
@@ -305,14 +426,15 @@ CREATE TABLE IF NOT EXISTS announcements (
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
     course_id UUID REFERENCES courses(id),
+    faculty VARCHAR(255), -- Faculty for targeting announcements
     priority VARCHAR(20) DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
     is_public BOOLEAN DEFAULT false, -- Public announcements visible to all
-    target_audience VARCHAR(50) DEFAULT 'all' CHECK (target_audience IN ('all', 'students', 'lecturers', 'specific')),
+    target_audience VARCHAR(50) DEFAULT 'all' CHECK (target_audience IN ('all', 'students', 'lecturers', 'faculty', 'course')),
     target_users UUID[], -- Specific users if target_audience is 'specific'
     expires_at TIMESTAMP WITH TIME ZONE,
     attachments JSONB, -- JSON array of attachment objects
     external_link TEXT, -- External link for clickable notifications
-    category VARCHAR(50) DEFAULT 'academic', -- Category for filtering
+    category VARCHAR(50) DEFAULT 'General', -- Category for filtering
     is_pinned BOOLEAN DEFAULT false,
     view_count INTEGER DEFAULT 0,
     created_by UUID NOT NULL REFERENCES users(auth_id),
@@ -337,6 +459,16 @@ CREATE TABLE IF NOT EXISTS notifications (
     expires_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Announcement reads table (for tracking which announcements users have read)
+CREATE TABLE IF NOT EXISTS announcement_reads (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(auth_id),
+    announcement_id UUID NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
+    read_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, announcement_id)
 );
 
 -- =============================================
@@ -409,6 +541,30 @@ CREATE TABLE IF NOT EXISTS analytics_data (
 -- - message-attachments: For message attachment files
 -- - user-avatars: For user profile pictures
 -- - announcement-attachments: For announcement files
+
+-- =============================================
+-- SYSTEM SETTINGS TABLE
+-- =============================================
+
+-- System settings table for global configuration
+CREATE TABLE IF NOT EXISTS system_settings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    setting_key VARCHAR(100) UNIQUE NOT NULL,
+    setting_value JSONB NOT NULL,
+    setting_type VARCHAR(50) NOT NULL CHECK (setting_type IN ('string', 'number', 'boolean', 'object', 'array')),
+    category VARCHAR(50) NOT NULL CHECK (category IN ('general', 'email', 'security', 'system', 'appearance', 'notifications')),
+    description TEXT,
+    is_public BOOLEAN DEFAULT false, -- Whether this setting can be read by non-admin users
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by UUID REFERENCES users(auth_id),
+    updated_by UUID REFERENCES users(auth_id)
+);
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_system_settings_category ON system_settings(category);
+CREATE INDEX IF NOT EXISTS idx_system_settings_key ON system_settings(setting_key);
+CREATE INDEX IF NOT EXISTS idx_system_settings_public ON system_settings(is_public);
 
 -- =============================================
 -- SESSION ATTACHMENTS TABLE
@@ -501,6 +657,33 @@ CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type);
 CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
 
+-- Announcement reads indexes
+CREATE INDEX IF NOT EXISTS idx_announcement_reads_user_id ON announcement_reads(user_id);
+CREATE INDEX IF NOT EXISTS idx_announcement_reads_announcement_id ON announcement_reads(announcement_id);
+CREATE INDEX IF NOT EXISTS idx_announcement_reads_read_at ON announcement_reads(read_at);
+
+-- Exam questions indexes
+CREATE INDEX IF NOT EXISTS idx_exam_questions_assignment_id ON exam_questions(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_exam_questions_type ON exam_questions(question_type);
+CREATE INDEX IF NOT EXISTS idx_exam_questions_order ON exam_questions(question_order);
+
+-- Exam attempts indexes
+CREATE INDEX IF NOT EXISTS idx_exam_attempts_assignment_id ON exam_attempts(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_exam_attempts_user_id ON exam_attempts(user_id);
+CREATE INDEX IF NOT EXISTS idx_exam_attempts_status ON exam_attempts(status);
+CREATE INDEX IF NOT EXISTS idx_exam_attempts_started_at ON exam_attempts(started_at);
+
+-- Exam answers indexes
+CREATE INDEX IF NOT EXISTS idx_exam_answers_attempt_id ON exam_answers(attempt_id);
+CREATE INDEX IF NOT EXISTS idx_exam_answers_question_id ON exam_answers(question_id);
+CREATE INDEX IF NOT EXISTS idx_exam_answers_graded_by ON exam_answers(graded_by);
+
+-- Exam templates indexes
+CREATE INDEX IF NOT EXISTS idx_exam_templates_created_by ON exam_templates(created_by);
+CREATE INDEX IF NOT EXISTS idx_exam_templates_subject_area ON exam_templates(subject_area);
+CREATE INDEX IF NOT EXISTS idx_exam_templates_difficulty ON exam_templates(difficulty_level);
+CREATE INDEX IF NOT EXISTS idx_exam_templates_public ON exam_templates(is_public);
+
 -- Analytics indexes
 CREATE INDEX IF NOT EXISTS idx_analytics_user_id ON analytics_data(user_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_course_id ON analytics_data(course_id);
@@ -515,6 +698,9 @@ CREATE INDEX IF NOT EXISTS idx_session_attachments_uploaded_by ON session_attach
 CREATE INDEX IF NOT EXISTS idx_announcements_course_id ON announcements(course_id);
 CREATE INDEX IF NOT EXISTS idx_announcements_created_by ON announcements(created_by);
 CREATE INDEX IF NOT EXISTS idx_announcements_is_public ON announcements(is_public);
+CREATE INDEX IF NOT EXISTS idx_announcements_faculty ON announcements(faculty);
+CREATE INDEX IF NOT EXISTS idx_announcements_target_audience ON announcements(target_audience);
+CREATE INDEX IF NOT EXISTS idx_announcements_priority ON announcements(priority);
 CREATE INDEX IF NOT EXISTS idx_announcements_created_at ON announcements(created_at);
 
 -- Class sessions indexes
@@ -554,8 +740,13 @@ ALTER TABLE session_materials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE announcement_reads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE analytics_data ENABLE ROW LEVEL SECURITY;
+ALTER TABLE exam_questions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE exam_attempts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE exam_answers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE exam_templates ENABLE ROW LEVEL SECURITY;
 
 -- =============================================
 -- USERS TABLE POLICIES
@@ -739,22 +930,42 @@ CREATE POLICY "System can create notifications" ON notifications
 -- ANNOUNCEMENTS POLICIES
 -- =============================================
 
--- Lecturers can manage announcements for their courses
-CREATE POLICY "Lecturers can manage course announcements" ON announcements
-    FOR ALL USING (created_by = auth.uid());
-
--- Students can read announcements for enrolled courses
-CREATE POLICY "Students can read course announcements" ON announcements
-    FOR SELECT USING (
-        course_id IN (
-            SELECT course_id FROM course_enrollments
-            WHERE user_id = auth.uid() AND status = 'enrolled'
-        ) OR is_public = true
+-- Admins and lecturers can create announcements
+CREATE POLICY "Admins and lecturers can create announcements" ON announcements
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE auth_id = auth.uid()
+            AND role IN ('admin', 'lecturer', 'dean')
+        )
     );
 
--- Public announcements can be read by anyone
-CREATE POLICY "Public announcements readable by all" ON announcements
-    FOR SELECT USING (is_public = true);
+-- Users can manage their own announcements
+CREATE POLICY "Users can manage own announcements" ON announcements
+    FOR ALL USING (created_by = auth.uid());
+
+-- Users can read announcements targeted to them
+CREATE POLICY "Users can read targeted announcements" ON announcements
+    FOR SELECT USING (
+        is_public = true OR
+        created_by = auth.uid() OR
+        (
+            target_audience = 'all' OR
+            (target_audience = 'students' AND EXISTS (
+                SELECT 1 FROM users WHERE auth_id = auth.uid() AND role = 'student'
+            )) OR
+            (target_audience = 'lecturers' AND EXISTS (
+                SELECT 1 FROM users WHERE auth_id = auth.uid() AND role = 'lecturer'
+            )) OR
+            (target_audience = 'faculty' AND EXISTS (
+                SELECT 1 FROM users WHERE auth_id = auth.uid() AND faculty = announcements.faculty
+            )) OR
+            (target_audience = 'course' AND course_id IN (
+                SELECT course_id FROM course_enrollments
+                WHERE user_id = auth.uid() AND status = 'enrolled'
+            ))
+        )
+    );
 
 -- =============================================
 -- CLASS SESSIONS POLICIES
@@ -945,3 +1156,69 @@ CREATE POLICY "Admins can read all payment history" ON payment_history
             AND role IN ('admin', 'dean')
         )
     );
+
+-- =============================================
+-- EXAM SYSTEM RLS POLICIES
+-- =============================================
+
+-- Exam questions policies
+CREATE POLICY "Lecturers can manage exam questions" ON exam_questions
+    FOR ALL USING (
+        assignment_id IN (
+            SELECT a.id FROM assignments a
+            JOIN courses c ON a.course_id = c.id
+            WHERE c.created_by = auth.uid()
+        )
+    );
+
+CREATE POLICY "Students can read exam questions during attempts" ON exam_questions
+    FOR SELECT USING (
+        assignment_id IN (
+            SELECT assignment_id FROM exam_attempts
+            WHERE user_id = auth.uid() AND status = 'in_progress'
+        )
+    );
+
+-- Exam attempts policies
+CREATE POLICY "Students can manage own exam attempts" ON exam_attempts
+    FOR ALL USING (user_id = auth.uid());
+
+CREATE POLICY "Lecturers can read exam attempts for their assignments" ON exam_attempts
+    FOR SELECT USING (
+        assignment_id IN (
+            SELECT a.id FROM assignments a
+            JOIN courses c ON a.course_id = c.id
+            WHERE c.created_by = auth.uid()
+        )
+    );
+
+-- Exam answers policies
+CREATE POLICY "Students can manage own exam answers" ON exam_answers
+    FOR ALL USING (
+        attempt_id IN (
+            SELECT id FROM exam_attempts WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Lecturers can read/grade exam answers" ON exam_answers
+    FOR ALL USING (
+        attempt_id IN (
+            SELECT ea.id FROM exam_attempts ea
+            JOIN assignments a ON ea.assignment_id = a.id
+            JOIN courses c ON a.course_id = c.id
+            WHERE c.created_by = auth.uid()
+        )
+    );
+
+-- Exam templates policies
+CREATE POLICY "Lecturers can manage own exam templates" ON exam_templates
+    FOR ALL USING (created_by = auth.uid());
+
+CREATE POLICY "Lecturers can read public exam templates" ON exam_templates
+    FOR SELECT USING (
+        is_public = true OR created_by = auth.uid()
+    );
+
+-- Announcement reads policies
+CREATE POLICY "Users can manage own announcement reads" ON announcement_reads
+    FOR ALL USING (user_id = auth.uid());

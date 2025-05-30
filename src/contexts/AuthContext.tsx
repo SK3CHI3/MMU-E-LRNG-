@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, supabaseAdmin, User as DbUser, getCurrentUser } from '@/lib/supabaseClient';
-import { showErrorToast } from '@/utils/toast';
+import { showErrorToast } from '@/utils/ui/toast';
+import { assignInitialSemester } from '@/services/academicService';
 
 interface AuthContextType {
   session: Session | null;
@@ -120,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Starting signup process with:', { email, userData });
 
       // First, check if email already exists in database
-      const { data: existingEmailUser } = await supabase
+      const { data: existingEmailUser } = await supabaseAdmin
         .from('users')
         .select('id, email')
         .eq('email', email)
@@ -133,6 +134,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           },
           data: null
         };
+      }
+
+      // Check if student ID already exists (for students)
+      if (userData.student_id) {
+        const { data: existingStudentId } = await supabaseAdmin
+          .from('users')
+          .select('auth_id, student_id')
+          .eq('student_id', userData.student_id)
+          .single();
+
+        if (existingStudentId) {
+          return {
+            error: {
+              message: `The admission number ${userData.student_id} is already registered. Please check your admission number or contact support if this is an error.`
+            },
+            data: null
+          };
+        }
       }
 
       // Create auth user
@@ -162,9 +181,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         try {
           // First, check if a user with this auth_id already exists
-          const { data: existingUser } = await supabase
+          const { data: existingUser } = await supabaseAdmin
             .from('users')
-            .select('id')
+            .select('auth_id')
             .eq('auth_id', data.user.id)
             .single();
 
@@ -173,10 +192,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return { data: { user: data.user, session: data.session }, error: null };
           }
 
-          // Insert user record into database
+          // Insert user record into database using admin client to bypass RLS
           console.log('Attempting to insert user into database...');
           console.log('Final userRecord before insert:', JSON.stringify(userRecord, null, 2));
-          const { error: dbError, data: insertedUser } = await supabase
+          const { error: dbError, data: insertedUser } = await supabaseAdmin
             .from('users')
             .insert(userRecord)
             .select()
@@ -190,9 +209,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             // If it's a duplicate key error, check if the user actually exists
             if (dbError.message?.includes('duplicate key value violates unique constraint')) {
-              const { data: duplicateUser } = await supabase
+              const { data: duplicateUser } = await supabaseAdmin
                 .from('users')
-                .select('id')
+                .select('auth_id')
                 .eq('auth_id', data.user.id)
                 .single();
 
@@ -210,10 +229,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.error('Failed to sign out user after DB error:', deleteError);
             }
 
-            // Return a user-friendly error message
+            // Return a more specific error message based on the error type
+            let errorMessage = 'Registration failed. Please try again.';
+
+            if (dbError.code === 'PGRST204') {
+              errorMessage = 'Database configuration error. Please contact support.';
+            } else if (dbError.code === '22P02') {
+              errorMessage = 'Invalid data format. Please check your input and try again.';
+            } else if (dbError.code === '23505') {
+              errorMessage = 'This email or student ID is already registered. Please use a different one.';
+            } else if (dbError.message?.includes('programme')) {
+              errorMessage = 'Programme selection error. Please try selecting a different programme.';
+            }
+
             return {
               error: {
-                message: 'Registration failed. Please try again with a different email address.'
+                message: errorMessage
               },
               data: null
             };
@@ -225,26 +256,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         console.log('User record created successfully');
 
-        // Create empty profile using admin client to bypass RLS
-        console.log('Creating user profile');
-        try {
-          const { error: profileError } = await supabaseAdmin
-            .from('profiles')
-            .insert({
-              id: userRecord.auth_id
-            });
-
-          if (profileError) {
-            console.error('Profile creation error:', profileError);
-            // We don't fail the signup if profile creation fails
-            // Just log the error
-          } else {
-            console.log('Profile created successfully');
+        // Auto-assign semester for new students
+        if (userData.role === 'student' && data.user) {
+          try {
+            console.log('Assigning initial semester to new student');
+            await assignInitialSemester(data.user.id);
+            console.log('Initial semester assigned successfully');
+          } catch (semesterError) {
+            console.error('Error assigning initial semester:', semesterError);
+            // Don't fail the registration if semester assignment fails
           }
-        } catch (profileCreateError) {
-          console.error('Unexpected error during profile creation:', profileCreateError);
-          // Continue anyway - we don't want to fail signup just because profile creation failed
         }
+
+        // Note: Profile creation removed to avoid foreign key constraint issues
+        // The users table contains all necessary user information
 
         return { data, error: null };
       }
@@ -272,7 +297,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('signIn: Input detected as admission number, looking up email');
 
         // Look up the user's email from the database using admission number
-        const { data: userData, error: lookupError } = await supabase
+        const { data: userData, error: lookupError } = await supabaseAdmin
           .from('users')
           .select('email')
           .eq('student_id', emailOrAdmissionNumber)
@@ -292,7 +317,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // For email login, check if the email exists in our system first
         console.log('signIn: Input detected as email, checking if user exists');
 
-        const { data: userData, error: lookupError } = await supabase
+        const { data: userData, error: lookupError } = await supabaseAdmin
           .from('users')
           .select('email')
           .eq('email', email.toLowerCase())

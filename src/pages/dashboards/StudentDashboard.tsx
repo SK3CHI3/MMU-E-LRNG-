@@ -5,6 +5,7 @@ import { CalendarDays, Clock, FileText, ArrowRight, BookOpen, GraduationCap } fr
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { getStudentData, StudentData } from "@/services/userDataService";
+import AnnouncementBanner from "@/components/announcements/AnnouncementBanner";
 
 const StudentDashboard = () => {
   const { user, dbUser } = useAuth();
@@ -127,6 +128,9 @@ const StudentDashboard = () => {
             <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Student</span>
           </div>
         </div>
+
+        {/* Announcements Banner */}
+        <AnnouncementBanner maxAnnouncements={2} compact={false} />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

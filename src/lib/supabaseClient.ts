@@ -122,10 +122,37 @@ export type Assignment = {
   id: string;
   course_id: string;
   title: string;
-  description: string;
+  description?: string;
+  instructions?: string;
   due_date: string;
   total_points: number;
+  assignment_type?: 'homework' | 'quiz' | 'exam' | 'project' | 'lab' | 'cat';
+  submission_format?: 'file' | 'text' | 'url' | 'code' | 'online_exam';
+  max_file_size?: number;
+  allowed_file_types?: string[];
+  is_group_assignment?: boolean;
+  max_group_size?: number;
+  late_submission_allowed?: boolean;
+  late_penalty_per_day?: number;
+  auto_grade?: boolean;
+  rubric?: any;
   created_by: string;
+  is_published?: boolean;
+
+  // Exam/Quiz specific fields
+  duration_minutes?: number;
+  max_attempts?: number;
+  shuffle_questions?: boolean;
+  shuffle_options?: boolean;
+  show_results_immediately?: boolean;
+  show_correct_answers?: boolean;
+  require_lockdown_browser?: boolean;
+  allow_backtrack?: boolean;
+  question_per_page?: number;
+  passing_score?: number;
+  available_from?: string;
+  available_until?: string;
+
   created_at: string;
   updated_at: string;
 };
@@ -194,11 +221,11 @@ export type AnalyticsData = {
 };
 
 // Helper functions for common database operations
-export const getUser = async (userId: string) => {
+export const getUser = async (authId: string) => {
   const { data, error } = await supabase
     .from('users')
     .select('*')
-    .eq('id', userId)
+    .eq('auth_id', authId)
     .single();
 
   if (error) throw error;

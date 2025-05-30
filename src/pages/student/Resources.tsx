@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStudentCourses } from "@/services/studentService";
+import { supabase } from "@/lib/supabaseClient";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface StudyResource {
@@ -58,119 +59,60 @@ const Resources = () => {
   }, [searchTerm, selectedCourse, selectedType, resources]);
 
   const loadResources = async () => {
+    if (!user?.id) return;
+
     try {
       setLoading(true);
 
-      // Mock courses data for immediate functionality
-      const mockCourses = [
-        { id: "cs205", title: "Database Management Systems", code: "CS 205" },
-        { id: "cs301", title: "Data Structures and Algorithms", code: "CS 301" },
-        { id: "cs401", title: "Software Engineering", code: "CS 401" },
-        { id: "cs350", title: "Computer Networks", code: "CS 350" }
-      ];
-      setCourses(mockCourses);
+      // Get student's enrolled courses
+      const enrolledCourses = await getStudentCourses(user.id);
+      setCourses(enrolledCourses);
 
-      // Mock resources data for immediate functionality
-      const mockResources: StudyResource[] = [
-        {
-          id: "1",
-          title: "Database Design Fundamentals",
-          description: "Comprehensive guide to database design principles and normalization techniques.",
-          type: "document",
-          url: "/mock-files/database-design.pdf",
-          course_id: "cs205",
-          course_name: "Database Management Systems",
-          course_code: "CS 205",
-          lecturer_name: "Prof. Michael Chen",
-          upload_date: "2025-01-15T10:00:00Z"
-        },
-        {
-          id: "2",
-          title: "SQL Query Optimization",
-          description: "Advanced techniques for optimizing SQL queries and improving database performance.",
-          type: "video",
-          url: "/mock-files/sql-optimization.mp4",
-          course_id: "cs205",
-          course_name: "Database Management Systems",
-          course_code: "CS 205",
-          lecturer_name: "Prof. Michael Chen",
-          upload_date: "2025-01-18T14:30:00Z"
-        },
-        {
-          id: "3",
-          title: "Data Structures Lecture Recording",
-          description: "Recorded lecture on binary trees and graph algorithms.",
-          type: "audio",
-          url: "/mock-files/data-structures-lecture.mp3",
-          course_id: "cs301",
-          course_name: "Data Structures and Algorithms",
-          course_code: "CS 301",
-          lecturer_name: "Dr. Sarah Johnson",
-          upload_date: "2025-01-20T09:00:00Z"
-        },
-        {
-          id: "4",
-          title: "Algorithm Visualization Tool",
-          description: "Interactive tool for visualizing sorting and searching algorithms.",
-          type: "link",
-          url: "https://algorithm-visualizer.org",
-          course_id: "cs301",
-          course_name: "Data Structures and Algorithms",
-          course_code: "CS 301",
-          lecturer_name: "Dr. Sarah Johnson",
-          upload_date: "2025-01-22T11:15:00Z"
-        },
-        {
-          id: "5",
-          title: "Software Engineering Best Practices",
-          description: "Guidelines for writing clean, maintainable code and following SOLID principles.",
-          type: "document",
-          url: "/mock-files/se-best-practices.pdf",
-          course_id: "cs401",
-          course_name: "Software Engineering",
-          course_code: "CS 401",
-          lecturer_name: "Dr. Emily Rodriguez",
-          upload_date: "2025-01-25T16:45:00Z"
-        },
-        {
-          id: "6",
-          title: "Agile Development Methodology",
-          description: "Introduction to Scrum and Kanban methodologies for project management.",
-          type: "video",
-          url: "/mock-files/agile-development.mp4",
-          course_id: "cs401",
-          course_name: "Software Engineering",
-          course_code: "CS 401",
-          lecturer_name: "Dr. Emily Rodriguez",
-          upload_date: "2025-01-28T13:20:00Z"
-        },
-        {
-          id: "7",
-          title: "Network Security Fundamentals",
-          description: "Essential concepts in network security, encryption, and threat prevention.",
-          type: "document",
-          url: "/mock-files/network-security.pdf",
-          course_id: "cs350",
-          course_name: "Computer Networks",
-          course_code: "CS 350",
-          lecturer_name: "Dr. James Wilson",
-          upload_date: "2025-01-30T08:30:00Z"
-        },
-        {
-          id: "8",
-          title: "TCP/IP Protocol Suite",
-          description: "Detailed explanation of TCP/IP layers and packet routing mechanisms.",
-          type: "video",
-          url: "/mock-files/tcpip-protocol.mp4",
-          course_id: "cs350",
-          course_name: "Computer Networks",
-          course_code: "CS 350",
-          lecturer_name: "Dr. James Wilson",
-          upload_date: "2025-02-02T15:10:00Z"
-        }
-      ];
+      // Get course materials for enrolled courses
+      const courseIds = enrolledCourses.map(course => course.id);
 
-      setResources(mockResources);
+      if (courseIds.length === 0) {
+        setResources([]);
+        return;
+      }
+
+      // Fetch course materials from database
+      const { data: materials, error } = await supabase
+        .from('course_materials')
+        .select(`
+          *,
+          courses!inner (
+            id,
+            code,
+            title,
+            users!courses_created_by_fkey (
+              full_name
+            )
+          )
+        `)
+        .in('course_id', courseIds)
+        .eq('is_public', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Transform materials to StudyResource format
+      const transformedResources: StudyResource[] = (materials || []).map(material => ({
+        id: material.id,
+        title: material.title,
+        description: material.description,
+        type: material.type as 'document' | 'video' | 'audio' | 'link',
+        url: material.url,
+        course_id: material.course_id,
+        course_name: material.courses.title,
+        course_code: material.courses.code,
+        lecturer_name: material.courses.users?.full_name || 'Unknown',
+        upload_date: material.created_at
+      }));
+
+      setResources(transformedResources);
+
+      // All resource data now comes from the database via course_materials table
     } catch (error) {
       console.error('Error loading resources:', error);
       // Fallback to empty array

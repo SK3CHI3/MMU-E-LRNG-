@@ -15,12 +15,12 @@ const Profile = () => {
   const [formData, setFormData] = useState({
     fullName: dbUser?.full_name || '',
     email: dbUser?.email || '',
-    phone: '+254 700 123 456',
+    phone: dbUser?.phone || '',
     department: dbUser?.department || '',
     faculty: dbUser?.faculty || '',
-    bio: 'Passionate about technology and education. Always eager to learn and share knowledge with others.',
-    address: 'Nairobi, Kenya',
-    joinDate: '2022-09-01'
+    bio: dbUser?.bio || '',
+    address: dbUser?.address || '',
+    joinDate: dbUser?.created_at?.split('T')[0] || ''
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -170,9 +170,12 @@ const Profile = () => {
                       id="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      disabled={!isEditing}
+                      disabled={true}
+                      className="bg-muted"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Email address is linked to your account and cannot be changed here
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
@@ -212,15 +215,15 @@ const Profile = () => {
                     <Input
                       id="department"
                       value={formData.department}
-                      onChange={(e) => handleInputChange('department', e.target.value)}
-                      disabled={!isEditing}
+                      disabled={true}
+                      className="bg-muted"
                     />
                     <p className="text-xs text-muted-foreground">
                       {dbUser?.role === 'dean'
-                        ? 'As a dean, this shows the faculty you head'
+                        ? 'As a dean, this shows the faculty you head (cannot be changed)'
                         : dbUser?.role === 'student' || dbUser?.role === 'lecturer'
-                        ? 'Department determined by your programme'
-                        : 'Your organizational department'
+                        ? 'Department determined by your programme (cannot be changed)'
+                        : 'Your organizational department (contact admin to change)'
                       }
                     </p>
                   </div>
@@ -229,9 +232,12 @@ const Profile = () => {
                     <Input
                       id="faculty"
                       value={formData.faculty}
-                      onChange={(e) => handleInputChange('faculty', e.target.value)}
-                      disabled={!isEditing}
+                      disabled={true}
+                      className="bg-muted"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Faculty assignment cannot be changed (contact admin if incorrect)
+                    </p>
                   </div>
                   {dbUser?.student_id && (
                     <div className="space-y-2">

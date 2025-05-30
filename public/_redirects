@@ -1,0 +1,15 @@
+# Netlify redirects for SPA (Single Page Application)
+# This ensures that all routes are handled by React Router
+
+# API routes (if any) - handle first
+/api/*  /api/:splat  200
+
+# Static assets - serve directly
+/assets/*  /assets/:splat  200
+/favicon.svg  /favicon.svg  200
+/manifest.json  /manifest.json  200
+/robots.txt  /robots.txt  200
+/sitemap.xml  /sitemap.xml  200
+
+# All other routes - serve index.html for React Router
+/*  /index.html  200

@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   MessageSquare,
   Send,
@@ -11,18 +15,27 @@ import {
   Plus,
   ArrowLeft,
   Users,
-  RefreshCw
+  RefreshCw,
+  GraduationCap,
+  UserCheck,
+  Shield,
+  Settings,
+  Clock,
+  CheckCheck,
+  User
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { 
-  getUserConversations, 
-  getConversationMessages, 
-  sendMessage, 
+import { supabase } from "@/lib/supabaseClient";
+import {
+  getUserConversations,
+  getConversationMessages,
+  sendMessage,
   markMessagesAsRead,
   subscribeToConversationMessages,
   subscribeToUserConversations,
   findOrCreateConversation,
   getMessageableUsers,
+  getUserById,
   Message,
   Conversation as ConversationType
 } from "@/services/messagingService";
@@ -40,8 +53,132 @@ interface ConversationUI extends ConversationType {
   participant_roles?: string[];
 }
 
+// Helper function to get role icon
+const getRoleIcon = (role: string) => {
+  switch (role) {
+    case 'student':
+      return <GraduationCap className="h-4 w-4" />;
+    case 'lecturer':
+      return <UserCheck className="h-4 w-4" />;
+    case 'dean':
+      return <Shield className="h-4 w-4" />;
+    case 'admin':
+      return <Settings className="h-4 w-4" />;
+    default:
+      return <User className="h-4 w-4" />;
+  }
+};
+
+// Helper function to get role color
+const getRoleColor = (role: string) => {
+  switch (role) {
+    case 'student':
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+    case 'lecturer':
+      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+    case 'dean':
+      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+    case 'admin':
+      return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+    default:
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+  }
+};
+
+// Helper function to group users by role
+const groupUsersByRole = (users: any[]) => {
+  const grouped = users.reduce((acc, user) => {
+    const role = user.role || 'other';
+    if (!acc[role]) {
+      acc[role] = [];
+    }
+    acc[role].push(user);
+    return acc;
+  }, {} as Record<string, any[]>);
+
+  // Sort users within each group by name
+  Object.keys(grouped).forEach(role => {
+    grouped[role].sort((a, b) => a.full_name.localeCompare(b.full_name));
+  });
+
+  return grouped;
+};
+
+// Helper function to get role display name and count
+const getRoleDisplayInfo = (role: string, count: number) => {
+  const roleNames = {
+    student: 'Students',
+    lecturer: 'Lecturers',
+    dean: 'Deans',
+    admin: 'Administrators'
+  };
+
+  return {
+    name: roleNames[role as keyof typeof roleNames] || 'Others',
+    count,
+    icon: getRoleIcon(role)
+  };
+};
+
+// Message status component
+const MessageStatus = ({ message, isOwnMessage }: { message: any, isOwnMessage: boolean }) => {
+  if (!isOwnMessage) return null;
+
+  const getStatusIcon = () => {
+    // Check if message was just sent (very recent)
+    const messageTime = new Date(message.created_at).getTime();
+    const now = new Date().getTime();
+    const timeDiff = now - messageTime;
+
+    // If message is less than 5 seconds old, show sending status
+    if (timeDiff < 5000) {
+      return (
+        <div className="flex items-center" title="Sending...">
+          <div className="h-3 w-3 rounded-full border-2 border-blue-300 border-t-transparent animate-spin" />
+        </div>
+      );
+    }
+
+    // If message is read, show double check
+    if (message.is_read) {
+      return (
+        <div className="flex items-center" title="Read">
+          <CheckCheck className="h-3 w-3 text-blue-200" />
+        </div>
+      );
+    }
+
+    // Default: show single check (delivered)
+    return (
+      <div className="flex items-center" title="Delivered">
+        <svg
+          className="h-3 w-3 text-blue-300"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M5 13l4 4L19 7"
+          />
+        </svg>
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex items-center ml-1">
+      {getStatusIcon()}
+    </div>
+  );
+};
+
 const SharedMessages = () => {
   const { user, dbUser } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [conversations, setConversations] = useState<ConversationUI[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -53,6 +190,13 @@ const SharedMessages = () => {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [viewMode, setViewMode] = useState<'conversations' | 'users' | 'chat'>('conversations');
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [currentMessageSubscription, setCurrentMessageSubscription] = useState<any>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new messages arrive
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   // Helper function to format time
   const formatTime = (timestamp: string) => {
@@ -83,53 +227,100 @@ const SharedMessages = () => {
       loadConversations();
       loadMessageableUsers();
       setupRealtimeSubscriptions();
+
+      // Check for URL parameters for direct messaging
+      const userId = searchParams.get('user');
+      if (userId) {
+        handleDirectMessage(userId);
+      }
     }
 
     return () => {
       // Cleanup subscriptions
       subscriptions.forEach(sub => sub.unsubscribe());
+      if (currentMessageSubscription) {
+        currentMessageSubscription.unsubscribe();
+      }
     };
-  }, [user?.id, dbUser?.role]);
+  }, [user?.id, dbUser?.role, searchParams]);
 
   const loadConversations = async () => {
     if (!user?.id) return;
-    
+
     try {
       setLoading(true);
-      
-      // Get user conversations from the database
-      const userConversations = await getUserConversations(user.id);
-      
-      // Transform conversations to include UI-specific data
-      const conversationsWithMessages = await Promise.all(
-        userConversations.map(async (conv) => {
-          // Get messages for this conversation
-          const messages = await getConversationMessages(conv.id);
-          
-          return {
-            ...conv,
-            participantName: conv.participant_names?.[0] || 'Unknown User',
-            participantRole: conv.participant_roles?.[0] || 'User',
-            participantAvatar: '', // Will be populated from user data
-            messages: messages || [],
-            lastMessage: messages && messages.length > 0 ? messages[messages.length - 1].content : 'No messages yet',
-            lastMessageTime: messages && messages.length > 0 ? messages[messages.length - 1].created_at : conv.created_at,
-            unreadCount: 0, // TODO: Calculate actual unread count
-            courseName: undefined
-          } as ConversationUI;
-        })
-      );
 
-      setConversations(conversationsWithMessages);
-      if (conversationsWithMessages.length > 0) {
-        setSelectedConversation(conversationsWithMessages[0].id);
+      // Get user conversations from the database (WITHOUT messages for speed)
+      const userConversations = await getUserConversations(user.id);
+
+      // Transform conversations to include UI-specific data (NO message loading)
+      const conversationsWithoutMessages = userConversations.map((conv) => {
+        // Extract participant information from the conversation data
+        const otherParticipant = conv.other_participant;
+
+        return {
+          ...conv,
+          participantName: otherParticipant?.full_name || 'Unknown User',
+          participantRole: otherParticipant?.role || 'User',
+          participantAvatar: otherParticipant?.avatar_url || '',
+          messages: [], // Empty - will load when conversation is selected
+          lastMessage: conv.last_message || 'No messages yet',
+          lastMessageTime: conv.last_message_at || conv.created_at,
+          unreadCount: conv.unread_count || 0,
+          courseName: conv.course?.title || undefined,
+          participant_names: [otherParticipant?.full_name || 'Unknown User'],
+          participant_roles: [otherParticipant?.role || 'User']
+        } as ConversationUI;
+      });
+
+      setConversations(conversationsWithoutMessages);
+
+      // Auto-select first conversation but don't load messages yet
+      if (conversationsWithoutMessages.length > 0) {
+        const firstConversation = conversationsWithoutMessages[0];
+        setSelectedConversation(firstConversation.id);
+        setSelectedUser({
+          auth_id: firstConversation.other_participant?.id || '',
+          full_name: firstConversation.participantName,
+          role: firstConversation.participantRole,
+          avatar_url: firstConversation.participantAvatar,
+          department: firstConversation.other_participant?.department || '',
+          email: firstConversation.other_participant?.email || ''
+        });
+
+        // Load messages for the selected conversation only
+        loadMessagesForConversation(firstConversation.id);
+        // Set up realtime subscription for instant messages
+        setupMessageSubscription(firstConversation.id);
       }
     } catch (error) {
       console.error('Error loading conversations:', error);
-      // Show empty state instead of mock data
       setConversations([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load messages for a specific conversation (lazy loading)
+  const loadMessagesForConversation = async (conversationId: string) => {
+    try {
+      const messages = await getConversationMessages(conversationId);
+
+      // Update the specific conversation with its messages
+      setConversations(prev => prev.map(conv => {
+        if (conv.id === conversationId) {
+          return {
+            ...conv,
+            messages: messages || []
+          };
+        }
+        return conv;
+      }));
+
+      // Auto-scroll to bottom after loading messages
+      setTimeout(scrollToBottom, 200);
+    } catch (error) {
+      console.error('Error loading messages for conversation:', error);
     }
   };
 
@@ -175,25 +366,175 @@ const SharedMessages = () => {
     setSubscriptions(prev => [...prev, conversationSub]);
   };
 
+  // Set up realtime subscription for current conversation messages
+  const setupMessageSubscription = (conversationId: string) => {
+    if (!conversationId) return;
+
+    // Clean up existing message subscription
+    if (currentMessageSubscription) {
+      currentMessageSubscription.unsubscribe();
+      setCurrentMessageSubscription(null);
+    }
+
+    // Subscribe to new messages in this conversation
+    const messageSubscription = supabase
+      .channel(`messages:${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`
+        },
+        async (payload) => {
+          console.log('New message received via realtime:', payload);
+
+          // Get sender details for the new message
+          const { data: senderData } = await supabase
+            .from('users')
+            .select('full_name, role, avatar_url')
+            .eq('auth_id', payload.new.sender_id)
+            .single();
+
+          const newMessage = {
+            ...payload.new,
+            sender_name: senderData?.full_name || 'Unknown User',
+            sender_role: senderData?.role || 'user',
+            sender_avatar: senderData?.avatar_url || null
+          };
+
+          // Add message to conversation instantly (avoid duplicates)
+          setConversations(prev => prev.map(conv => {
+            if (conv.id === conversationId) {
+              // Check if message already exists (avoid duplicates from optimistic updates)
+              const messageExists = conv.messages.some(msg =>
+                msg.id === newMessage.id ||
+                (msg.content === newMessage.content && msg.sender_id === newMessage.sender_id)
+              );
+
+              if (!messageExists) {
+                return {
+                  ...conv,
+                  messages: [...conv.messages, newMessage],
+                  lastMessage: newMessage.content,
+                  lastMessageTime: newMessage.created_at
+                };
+              }
+            }
+            return conv;
+          }));
+
+          // Auto-scroll to bottom when new message arrives
+          setTimeout(scrollToBottom, 100);
+        }
+      )
+      .subscribe();
+
+    setCurrentMessageSubscription(messageSubscription);
+  };
+
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation || !user?.id) return;
 
+    const messageContent = newMessage.trim();
+    setNewMessage(""); // Clear input immediately - instant feedback
+
+    // Create optimistic message for instant UI feedback
+    const optimisticMessage = {
+      id: `temp-${Date.now()}`,
+      conversation_id: selectedConversation,
+      sender_id: user.id,
+      content: messageContent,
+      created_at: new Date().toISOString(),
+      is_read: false,
+      sender_name: user.user_metadata?.full_name || 'You',
+      sender_role: dbUser?.role || 'user',
+      sender_avatar: user.user_metadata?.avatar_url || null,
+      sending: true
+    };
+
+    // Add optimistic message immediately
+    setConversations(prev => prev.map(conv => {
+      if (conv.id === selectedConversation) {
+        return {
+          ...conv,
+          messages: [...conv.messages, optimisticMessage],
+          lastMessage: messageContent,
+          lastMessageTime: new Date().toISOString()
+        };
+      }
+      return conv;
+    }));
+
+    // Auto-scroll to show the new message
+    setTimeout(scrollToBottom, 100);
+
+    // Send message in background
     try {
-      setSendingMessage(true);
-      
-      await sendMessage({
+      const result = await sendMessage({
         conversation_id: selectedConversation,
-        content: newMessage.trim(),
+        content: messageContent,
         subject: 'Message'
       }, user.id);
 
-      setNewMessage("");
-      
-      // The message will be added via real-time subscription
+      // Replace optimistic message with real message when it comes back
+      setConversations(prev => prev.map(conv => {
+        if (conv.id === selectedConversation) {
+          return {
+            ...conv,
+            messages: conv.messages.map(msg =>
+              msg.id === optimisticMessage.id ? {
+                ...result,
+                sender_name: user.user_metadata?.full_name || 'You',
+                sender_role: dbUser?.role || 'user',
+                sender_avatar: user.user_metadata?.avatar_url || null
+              } : msg
+            )
+          };
+        }
+        return conv;
+      }));
     } catch (error) {
       console.error('Error sending message:', error);
-    } finally {
-      setSendingMessage(false);
+      // Remove optimistic message on error
+      setConversations(prev => prev.map(conv => {
+        if (conv.id === selectedConversation) {
+          return {
+            ...conv,
+            messages: conv.messages.filter(msg => msg.id !== optimisticMessage.id)
+          };
+        }
+        return conv;
+      }));
+      alert('Failed to send message. Please try again.');
+    }
+  };
+
+  const handleDirectMessage = async (userId: string) => {
+    try {
+      console.log('Handling direct message for user ID:', userId);
+
+      // Get user information
+      const targetUser = await getUserById(userId);
+      if (!targetUser) {
+        console.error('User not found:', userId);
+        // Clear the URL parameter
+        setSearchParams({});
+        return;
+      }
+
+      console.log('Found target user:', targetUser);
+
+      // Start conversation with this user
+      await handleStartConversationWithUser(targetUser);
+
+      // Clear the URL parameter
+      setSearchParams({});
+    } catch (error) {
+      console.error('Error handling direct message:', error);
+      // Clear the URL parameter
+      setSearchParams({});
     }
   };
 
@@ -202,7 +543,7 @@ const SharedMessages = () => {
 
     try {
       console.log('Starting conversation with user:', selectedUser);
-      
+
       // Find or create conversation with this user
       const conversationId = await findOrCreateConversation(
         user.id,
@@ -216,7 +557,7 @@ const SharedMessages = () => {
       // Load the conversation messages
       const messages = await getConversationMessages(conversationId);
       console.log('Loaded messages:', messages);
-      
+
       // Set up the conversation in state with proper structure
       const conversation: ConversationUI = {
         id: conversationId,
@@ -249,10 +590,10 @@ const SharedMessages = () => {
       // Set the selected user and conversation
       setSelectedUser(selectedUser);
       setSelectedConversation(conversationId);
-      
+
       // Switch to chat view
       setViewMode('chat');
-      
+
       console.log('Successfully switched to chat view');
     } catch (error) {
       console.error('Error starting conversation with user:', error);
@@ -329,57 +670,144 @@ const SharedMessages = () => {
           </div>
         </div>
 
-        {/* Chat Messages */}
-        <Card className="h-[600px] flex flex-col">
-          <CardContent className="flex-1 p-4 overflow-y-auto">
-            <div className="space-y-4">
-              {conversation?.messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[70%] rounded-lg p-3 ${
-                      message.sender_id === user?.id
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-muted'
-                    }`}
-                  >
-                    <p className="text-sm">{message.content}</p>
-                    <p className={`text-xs mt-1 ${
-                      message.sender_id === user?.id ? 'text-blue-100' : 'text-muted-foreground'
-                    }`}>
-                      {formatTime(message.created_at)}
-                    </p>
-                  </div>
-                </div>
-              ))}
+        {/* Modern Chat Interface */}
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 h-[70vh] flex flex-col overflow-hidden">
+          {/* Chat Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex items-center gap-3">
+            <Avatar className="h-10 w-10 border-2 border-white/20">
+              <AvatarImage src={selectedUser?.avatar_url} />
+              <AvatarFallback className="bg-white/20 text-white">
+                {selectedUser?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <h3 className="font-semibold text-lg">{selectedUser?.full_name}</h3>
+              <p className="text-blue-100 text-sm">
+                {selectedUser?.role} • {selectedUser?.department || 'MMU'}
+              </p>
             </div>
-          </CardContent>
-          
-          {/* Message Input */}
-          <div className="border-t p-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Type your message..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                className="flex-1"
-              />
-              <Button 
-                onClick={handleSendMessage} 
-                disabled={!newMessage.trim() || sendingMessage}
-              >
-                {sendingMessage ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="text-xs text-blue-100">Online</span>
             </div>
           </div>
-        </Card>
+
+          {/* Messages Area */}
+          <div className="flex-1 overflow-hidden bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
+            <ScrollArea className="h-full">
+              <div className="p-4 space-y-3">
+                {conversation?.messages.length === 0 ? (
+                  <div className="text-center py-16">
+                    <div className="bg-blue-100 dark:bg-blue-900/30 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                      <MessageSquare className="h-10 w-10 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Start the conversation</h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Send a message to {selectedUser?.full_name} to get started
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {conversation?.messages.map((message, index) => {
+                      const isOwn = message.sender_id === user?.id;
+                      const prevMessage = index > 0 ? conversation.messages[index - 1] : null;
+                      const isGrouped = prevMessage && prevMessage.sender_id === message.sender_id;
+
+                      return (
+                        <div
+                          key={message.id}
+                          className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${
+                            isGrouped ? 'mt-1' : 'mt-4'
+                          }`}
+                        >
+                          <div className={`flex items-end gap-2 max-w-[75%] ${
+                            isOwn ? 'flex-row-reverse' : 'flex-row'
+                          }`}>
+                            {!isOwn && !isGrouped && (
+                              <Avatar className="h-7 w-7 mb-1">
+                                <AvatarImage src={selectedUser?.avatar_url} />
+                                <AvatarFallback className="text-xs bg-gray-200 dark:bg-gray-700">
+                                  {selectedUser?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
+                            {!isOwn && isGrouped && <div className="w-7"></div>}
+
+                            <div
+                              className={`rounded-2xl px-4 py-2 shadow-sm max-w-full ${
+                                isOwn
+                                  ? `bg-blue-600 text-white rounded-br-md ${(message as any).sending ? 'opacity-70' : ''}`
+                                  : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-bl-md'
+                              }`}
+                            >
+                              <p className="text-sm leading-relaxed break-words">{message.content}</p>
+                              <div className={`flex items-center gap-1 mt-1 ${
+                                isOwn ? 'justify-end' : 'justify-start'
+                              }`}>
+                                <span className={`text-xs ${
+                                  isOwn ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
+                                }`}>
+                                  {new Date(message.created_at).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+                                {isOwn && (
+                                  (message as any).sending ? (
+                                    <div className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />
+                                  ) : (
+                                    <MessageStatus
+                                      message={message}
+                                      isOwnMessage={true}
+                                    />
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div ref={messagesEndRef} />
+                  </>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+
+          {/* Message Input */}
+          <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
+            <div className="flex gap-3 items-end">
+              <div className="flex-1">
+                <Textarea
+                  placeholder={`Type a message to ${selectedUser?.full_name}...`}
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  className="min-h-[44px] max-h-32 resize-none border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
+                  disabled={sendingMessage}
+                  rows={1}
+                />
+              </div>
+              <Button
+                onClick={handleSendMessage}
+                disabled={!newMessage.trim()}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-11 w-11 p-0 shadow-lg hover:shadow-xl transition-all duration-200"
+                size="sm"
+              >
+                <Send className="h-5 w-5" />
+              </Button>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+              Press Enter to send • Shift+Enter for new line
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -442,74 +870,101 @@ const SharedMessages = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {['lecturer', 'student', 'dean', 'admin'].map(role => {
-              const usersInRole = messageableUsers.filter(user => 
-                user.role === role && 
-                (searchTerm === '' || 
-                 user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                 user.department?.toLowerCase().includes(searchTerm.toLowerCase())
-                )
-              );
-              
-              if (usersInRole.length === 0) return null;
-              
-              return (
-                <div key={role}>
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    {role === 'lecturer' ? '👨‍🏫 Lecturers' : 
-                     role === 'student' ? '👨‍🎓 Students' :
-                     role === 'dean' ? '👔 Deans' : '⚙️ Administration'}
-                    <Badge variant="outline">{usersInRole.length}</Badge>
-                  </h3>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {usersInRole.map((user) => (
-                      <Card 
-                        key={user.auth_id} 
-                        className="cursor-pointer hover:shadow-md transition-shadow"
-                        onClick={() => handleStartConversationWithUser(user)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarImage src={user.avatar_url} />
-                              <AvatarFallback>
-                                {user.full_name.split(' ').map((n: string) => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium truncate">{user.full_name}</h4>
-                              <p className="text-sm text-muted-foreground truncate">
-                                {user.department || user.faculty_name}
-                              </p>
-                              {user.student_id && (
-                                <p className="text-xs text-muted-foreground">ID: {user.student_id}</p>
-                              )}
-                              {user.staff_id && (
-                                <p className="text-xs text-muted-foreground">Staff: {user.staff_id}</p>
-                              )}
-                            </div>
-                            <MessageSquare className="h-5 w-5 text-muted-foreground" />
+            {/* Group users by role */}
+            {(() => {
+              const groupedUsers = groupUsersByRole(messageableUsers.filter(user =>
+                searchTerm === '' ||
+                user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                user.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                user.faculty?.toLowerCase().includes(searchTerm.toLowerCase())
+              ));
+
+              const roleOrder = ['lecturer', 'student', 'dean', 'admin'];
+
+              return roleOrder.map(role => {
+                const usersInRole = groupedUsers[role] || [];
+                if (usersInRole.length === 0) return null;
+
+                const roleInfo = getRoleDisplayInfo(role, usersInRole.length);
+
+                return (
+                  <Card key={role} className="overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${getRoleColor(role)}`}>
+                            {roleInfo.icon}
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-            
+                          <div>
+                            <CardTitle className="text-lg">{roleInfo.name}</CardTitle>
+                            <CardDescription>
+                              {roleInfo.count} {roleInfo.count === 1 ? 'person' : 'people'} available
+                            </CardDescription>
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="text-sm">
+                          {roleInfo.count}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <ScrollArea className="h-64">
+                        <div className="space-y-2">
+                          {usersInRole.map((user) => (
+                            <div
+                              key={user.auth_id}
+                              className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors group"
+                              onClick={() => handleStartConversationWithUser(user)}
+                            >
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage src={user.avatar_url} />
+                                <AvatarFallback className="text-sm">
+                                  {user.full_name.split(' ').map((n: string) => n[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="font-medium text-sm truncate">{user.full_name}</h4>
+                                  <MessageSquare className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {user.faculty || user.department || 'No Department'}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="outline" className="text-xs px-2 py-0">
+                                    {user.role}
+                                  </Badge>
+                                  {user.student_id && (
+                                    <span className="text-xs text-muted-foreground">
+                                      ID: {user.student_id}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                );
+              });
+            })()}
+
             {messageableUsers.length === 0 && (
-              <div className="text-center py-12">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No People Found</h3>
-                <p className="text-muted-foreground mb-4">
-                  No users available to message in your faculty
-                </p>
-                <Button onClick={loadMessageableUsers}>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Retry
-                </Button>
-              </div>
+              <Card>
+                <CardContent className="text-center py-12">
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No People Found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    No users available to message in your faculty
+                  </p>
+                  <Button onClick={loadMessageableUsers}>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Retry
+                  </Button>
+                </CardContent>
+              </Card>
             )}
           </div>
         )}
@@ -573,6 +1028,21 @@ const SharedMessages = () => {
                 }`}
                 onClick={() => {
                   setSelectedConversation(conversation.id);
+                  // Set the selected user from the conversation data
+                  setSelectedUser({
+                    auth_id: conversation.other_participant?.id || '',
+                    full_name: conversation.participantName,
+                    role: conversation.participantRole,
+                    avatar_url: conversation.participantAvatar,
+                    department: conversation.other_participant?.department || '',
+                    email: conversation.other_participant?.email || ''
+                  });
+                  // Load messages for this conversation if not already loaded
+                  if (conversation.messages.length === 0) {
+                    loadMessagesForConversation(conversation.id);
+                  }
+                  // Set up realtime subscription for instant messages
+                  setupMessageSubscription(conversation.id);
                   setViewMode('chat');
                 }}
               >

@@ -40,8 +40,6 @@ export const DashboardRouter: React.FC = () => {
   }
 
   console.log('DashboardRouter: User role:', dbUser.role, 'Current path:', location.pathname);
-  console.log('DashboardRouter: Available routes:', dashboardRoutes);
-  console.log('DashboardRouter: User role type:', typeof dbUser.role);
 
   // If user is on base dashboard route, redirect to role-specific dashboard
   if (location.pathname === '/dashboard' || location.pathname === '/dashboard/') {
