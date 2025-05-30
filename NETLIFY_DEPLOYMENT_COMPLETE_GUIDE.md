@@ -146,21 +146,30 @@ Test these URLs directly:
 **Cause**: Same as Issue 1
 **Solution**: Same as Issue 1
 
-### **Issue 3: Build Fails**
+### **Issue 3: Build Fails - "vite: command not found" (Exit Code 127)**
+**Cause**: Vite dependency not found during build
+**Solution**:
+1. ✅ **FIXED**: Updated `netlify.toml` with `npm install && npm run build`
+2. ✅ **FIXED**: Added `.nvmrc` file with Node.js version 18
+3. ✅ **VERIFIED**: Vite is in devDependencies and build works locally
+4. Verify `NODE_VERSION=18` in Netlify environment variables
+5. Check build logs for dependency installation errors
+
+### **Issue 4: Build Fails - General**
 **Cause**: Missing dependencies or wrong Node version
 **Solution**:
 1. Check build logs in Netlify dashboard
 2. Verify `NODE_VERSION=18` in environment variables
 3. Check `package.json` for correct dependencies
 
-### **Issue 4: Environment Variables Not Working**
+### **Issue 5: Environment Variables Not Working**
 **Cause**: Variables not prefixed with `VITE_` or not set in Netlify
 **Solution**:
 1. Prefix client-side variables with `VITE_`
 2. Set variables in Netlify dashboard (not in code)
 3. Redeploy after setting variables
 
-### **Issue 5: Assets Not Loading**
+### **Issue 6: Assets Not Loading**
 **Cause**: Incorrect asset paths
 **Solution**:
 1. Check Vite configuration
