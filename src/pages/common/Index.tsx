@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -104,8 +103,6 @@ const Index = () => {
     if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
     return date.toLocaleDateString();
   };
-
-
 
   // Helper function to handle notification click
   const handleNotificationClick = (notification: PublicNotification) => {
