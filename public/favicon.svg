@@ -1,20 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background Square -->
-  <rect x="1" y="1" width="30" height="30" rx="4" fill="#ffffff" stroke="#1e40af" stroke-width="1"/>
+  <!-- Modern Background with Gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="capGradient" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1e40af"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
+    </linearGradient>
+  </defs>
   
-  <!-- Graduation Cap -->
-  <path d="M16 4L4 10L16 16L28 10L16 4Z" fill="#1e40af"/>
-  <path d="M8 12.5V20C8 20 12 24 16 24C20 24 24 20 24 20V12.5" fill="#1e40af"/>
+  <!-- Background Square with Subtle Shadow -->
+  <rect x="1" y="1" width="30" height="30" rx="6" fill="url(#bgGradient)" stroke="#1e40af" stroke-width="1"/>
   
-  <!-- Red Accent Line -->
-  <path d="M16 4L4 10L16 16L28 10L16 4Z" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Graduation Cap with Gradient -->
+  <path d="M16 5L5 11L16 17L27 11L16 5Z" fill="url(#capGradient)"/>
+  <path d="M9 13.5V21C9 21 13 25 16 25C19 25 23 21 23 21V13.5" fill="url(#capGradient)"/>
   
-  <!-- Tassel with Red Accent -->
-  <path d="M24 12V22L26 26" stroke="#1e40af" stroke-width="2" stroke-linecap="round"/>
-  <circle cx="24" cy="22" r="1.5" fill="#dc2626"/>
+  <!-- Red Accent Line with Gradient -->
+  <path d="M16 5L5 11L16 17L27 11L16 5Z" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Modern Tassel Design -->
+  <path d="M23 13V23L25 27" stroke="#1e40af" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="23" cy="23" r="2" fill="#dc2626"/>
   
   <!-- Decorative Elements -->
-  <path d="M12 8L14 9" stroke="#dc2626" stroke-width="1" stroke-linecap="round"/>
-  <path d="M20 8L18 9" stroke="#dc2626" stroke-width="1" stroke-linecap="round"/>
+  <path d="M11 9L13 10" stroke="#dc2626" stroke-width="1" stroke-linecap="round"/>
+  <path d="M21 9L19 10" stroke="#dc2626" stroke-width="1" stroke-linecap="round"/>
+  
+  <!-- Subtle Highlight -->
+  <path d="M16 5L5 11L16 17" stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.3"/>
 </svg> 
