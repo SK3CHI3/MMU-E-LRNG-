@@ -1,6 +1,6 @@
 [build]
-  # Build command with explicit dependency installation
-  command = "npm install && npm run build"
+  # Build command (Vite moved to dependencies for Netlify compatibility)
+  command = "npm run build"
 
   # Directory to publish (Vite builds to 'dist' by default)
   publish = "dist"
