@@ -1,6 +1,7 @@
-# MMU Learning Management System (LMS)
-
 <div align="center">
+  # MMU Learning Management System (LMS)
+
+
   <h3 align="center">Multimedia University of Kenya's Digital Learning Platform</h3>
   <p align="center">Elevating Learning, Empowering Futures</p>
 </div>
