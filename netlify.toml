@@ -56,8 +56,8 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    # Content Security Policy
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://eekajmfvqntbloqgizwk.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://eekajmfvqntbloqgizwk.supabase.co wss://eekajmfvqntbloqgizwk.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+    # Content Security Policy (simplified for deployment)
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' *.supabase.co; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' *.supabase.co wss://*.supabase.co; frame-ancestors 'none';"
 
     # Security headers
     X-Frame-Options = "DENY"
@@ -71,10 +71,8 @@
     # Permissions Policy
     Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
 
-    # Additional security
-    Cross-Origin-Embedder-Policy = "require-corp"
+    # Additional security (simplified)
     Cross-Origin-Opener-Policy = "same-origin"
-    Cross-Origin-Resource-Policy = "same-origin"
 
 # Optimized Caching Strategy
 
@@ -107,12 +105,12 @@
 [[headers]]
   for = "/*.woff2"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable, cross-origin"
+    Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
   for = "/*.woff"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable, cross-origin"
+    Cache-Control = "public, max-age=31536000, immutable"
 
 # Images - long cache
 [[headers]]
@@ -172,10 +170,6 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# Edge Functions (if needed)
-[edge_functions]
-  directory = "netlify/edge-functions"
-
 # Dev server settings
 [dev]
   command = "npm run dev"
@@ -187,20 +181,20 @@
   [dev.env]
     NODE_ENV = "development"
 
-# Build plugins
-[[plugins]]
-  package = "@netlify/plugin-lighthouse"
-
-  [plugins.inputs]
-    output_path = "lighthouse"
-
-[[plugins]]
-  package = "netlify-plugin-submit-sitemap"
-
-  [plugins.inputs]
-    baseUrl = "https://mmu-digital-campus.netlify.app"
-    sitemapPath = "/sitemap.xml"
-    providers = [
-      "google",
-      "bing"
-    ]
+# Build plugins (commented out - install manually if needed)
+# [[plugins]]
+#   package = "@netlify/plugin-lighthouse"
+#
+#   [plugins.inputs]
+#     output_path = "lighthouse"
+#
+# [[plugins]]
+#   package = "netlify-plugin-submit-sitemap"
+#
+#   [plugins.inputs]
+#     baseUrl = "https://mmu-digital-campus.netlify.app"
+#     sitemapPath = "/sitemap.xml"
+#     providers = [
+#       "google",
+#       "bing"
+#     ]
