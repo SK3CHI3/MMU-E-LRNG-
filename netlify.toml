@@ -22,9 +22,9 @@
   # Memory optimization for large builds
   NODE_OPTIONS = "--max-old-space-size=4096"
 
-  # Supabase configuration (set these in Netlify dashboard)
-  # VITE_SUPABASE_URL = "https://eekajmfvqntbloqgizwk.supabase.co"
-  # VITE_SUPABASE_ANON_KEY = "your_anon_key_here"
+  # Supabase configuration (temporary - move to dashboard for security)
+  VITE_SUPABASE_URL = "https://eekajmfvqntbloqgizwk.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVla2FqbWZ2cW50YmxvcWdpendrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyMjk5NTIsImV4cCI6MjA2MTgwNTk1Mn0.HfR6KwhaWCRcrlavKiY0XUo_SXX2epQNrCV4sya2kl4"
 
 # Context-specific builds
 [context.production]
