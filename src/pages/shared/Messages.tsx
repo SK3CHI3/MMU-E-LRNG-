@@ -643,26 +643,31 @@ const SharedMessages = () => {
   // Show chat interface when a conversation is selected
   if (viewMode === 'chat' && selectedConversation) {
     const conversation = conversations.find(conv => conv.id === selectedConversation);
-    
+
     return (
-      <div className="space-y-6">
-        {/* Chat Header */}
+      <div className="space-y-4 md:space-y-6">
+        {/* Mobile Chat Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => setViewMode('conversations')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+          <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode('conversations')}
+              className="mobile-touch-target shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Back</span>
             </Button>
-            <div className="flex items-center gap-3">
-              <Avatar>
+            <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+              <Avatar className="h-8 w-8 md:h-10 md:w-10 shrink-0">
                 <AvatarImage src={selectedUser?.avatar_url} />
-                <AvatarFallback>
+                <AvatarFallback className="text-xs md:text-sm">
                   {selectedUser?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <h2 className="text-xl font-semibold">{selectedUser?.full_name}</h2>
-                <p className="text-sm text-muted-foreground">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg md:text-xl font-semibold truncate">{selectedUser?.full_name}</h2>
+                <p className="text-xs md:text-sm text-muted-foreground truncate">
                   {selectedUser?.role} • {selectedUser?.department}
                 </p>
               </div>
@@ -671,38 +676,38 @@ const SharedMessages = () => {
         </div>
 
         {/* Modern Chat Interface */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 h-[70vh] flex flex-col overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 mobile-chat-container md:h-[70vh] flex flex-col overflow-hidden">
           {/* Chat Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex items-center gap-3">
-            <Avatar className="h-10 w-10 border-2 border-white/20">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 md:p-4 flex items-center gap-2 md:gap-3">
+            <Avatar className="h-8 w-8 md:h-10 md:w-10 border-2 border-white/20 shrink-0">
               <AvatarImage src={selectedUser?.avatar_url} />
-              <AvatarFallback className="bg-white/20 text-white">
+              <AvatarFallback className="bg-white/20 text-white text-xs md:text-sm">
                 {selectedUser?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1">
-              <h3 className="font-semibold text-lg">{selectedUser?.full_name}</h3>
-              <p className="text-blue-100 text-sm">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-base md:text-lg truncate">{selectedUser?.full_name}</h3>
+              <p className="text-blue-100 text-xs md:text-sm truncate">
                 {selectedUser?.role} • {selectedUser?.department || 'MMU'}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-xs text-blue-100">Online</span>
+              <span className="text-xs text-blue-100 hidden sm:inline">Online</span>
             </div>
           </div>
 
           {/* Messages Area */}
           <div className="flex-1 overflow-hidden bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
-            <ScrollArea className="h-full">
-              <div className="p-4 space-y-3">
+            <ScrollArea className="h-full mobile-scroll">
+              <div className="p-3 md:p-4 space-y-2 md:space-y-3">
                 {conversation?.messages.length === 0 ? (
-                  <div className="text-center py-16">
-                    <div className="bg-blue-100 dark:bg-blue-900/30 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-                      <MessageSquare className="h-10 w-10 text-blue-600 dark:text-blue-400" />
+                  <div className="text-center py-8 md:py-16">
+                    <div className="bg-blue-100 dark:bg-blue-900/30 rounded-full w-16 h-16 md:w-20 md:h-20 flex items-center justify-center mx-auto mb-4">
+                      <MessageSquare className="h-8 w-8 md:h-10 md:w-10 text-blue-600 dark:text-blue-400" />
                     </div>
-                    <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Start the conversation</h3>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <h3 className="text-lg md:text-xl font-semibold mb-2 text-gray-900 dark:text-white">Start the conversation</h3>
+                    <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 px-4">
                       Send a message to {selectedUser?.full_name} to get started
                     </p>
                   </div>
@@ -717,24 +722,24 @@ const SharedMessages = () => {
                         <div
                           key={message.id}
                           className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${
-                            isGrouped ? 'mt-1' : 'mt-4'
+                            isGrouped ? 'mt-1' : 'mt-3 md:mt-4'
                           }`}
                         >
-                          <div className={`flex items-end gap-2 max-w-[75%] ${
+                          <div className={`flex items-end gap-1 md:gap-2 max-w-[85%] md:max-w-[75%] ${
                             isOwn ? 'flex-row-reverse' : 'flex-row'
                           }`}>
                             {!isOwn && !isGrouped && (
-                              <Avatar className="h-7 w-7 mb-1">
+                              <Avatar className="h-6 w-6 md:h-7 md:w-7 mb-1 shrink-0">
                                 <AvatarImage src={selectedUser?.avatar_url} />
                                 <AvatarFallback className="text-xs bg-gray-200 dark:bg-gray-700">
                                   {selectedUser?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
                                 </AvatarFallback>
                               </Avatar>
                             )}
-                            {!isOwn && isGrouped && <div className="w-7"></div>}
+                            {!isOwn && isGrouped && <div className="w-6 md:w-7"></div>}
 
                             <div
-                              className={`rounded-2xl px-4 py-2 shadow-sm max-w-full ${
+                              className={`rounded-2xl px-3 py-2 md:px-4 md:py-2 shadow-sm max-w-full ${
                                 isOwn
                                   ? `bg-blue-600 text-white rounded-br-md ${(message as any).sending ? 'opacity-70' : ''}`
                                   : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-bl-md'
@@ -776,8 +781,8 @@ const SharedMessages = () => {
           </div>
 
           {/* Message Input */}
-          <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
-            <div className="flex gap-3 items-end">
+          <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 md:p-4">
+            <div className="flex gap-2 md:gap-3 items-end">
               <div className="flex-1">
                 <Textarea
                   placeholder={`Type a message to ${selectedUser?.full_name}...`}
@@ -789,7 +794,7 @@ const SharedMessages = () => {
                       handleSendMessage();
                     }
                   }}
-                  className="min-h-[44px] max-h-32 resize-none border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
+                  className="mobile-chat-input min-h-[44px] max-h-32 resize-none border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
                   disabled={sendingMessage}
                   rows={1}
                 />
@@ -797,13 +802,13 @@ const SharedMessages = () => {
               <Button
                 onClick={handleSendMessage}
                 disabled={!newMessage.trim()}
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-11 w-11 p-0 shadow-lg hover:shadow-xl transition-all duration-200"
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-11 w-11 p-0 shadow-lg hover:shadow-xl transition-all duration-200 mobile-touch-target"
                 size="sm"
               >
-                <Send className="h-5 w-5" />
+                <Send className="h-4 w-4 md:h-5 md:w-5" />
               </Button>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center hidden md:block">
               Press Enter to send • Shift+Enter for new line
             </p>
           </div>
@@ -851,16 +856,7 @@ const SharedMessages = () => {
           </Button>
         </div>
 
-        {/* Debug Info */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="bg-muted p-4 rounded-lg text-sm">
-            <p><strong>Debug Info:</strong></p>
-            <p>User ID: {user?.id}</p>
-            <p>User Role: {dbUser?.role}</p>
-            <p>Users Found: {messageableUsers.length}</p>
-            <p>Loading: {loadingUsers ? 'Yes' : 'No'}</p>
-          </div>
-        )}
+
 
         {/* Users List */}
         {loadingUsers ? (

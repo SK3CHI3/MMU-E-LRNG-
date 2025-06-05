@@ -1,45 +1,120 @@
 [build]
-  # Build command (Vite moved to dependencies for Netlify compatibility)
+  # Build command with optimization
   command = "npm run build"
 
   # Directory to publish (Vite builds to 'dist' by default)
   publish = "dist"
 
-[build.environment]
-  # Environment variables for build
-  NODE_VERSION = "18"
-  NODE_ENV = "production"
-  GENERATE_SOURCEMAP = "false"
+  # Build processing settings
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':!README.md' ':!docs/'"
 
-# SPA redirect rules for React Router
+[build.environment]
+  # Node.js version (LTS)
+  NODE_VERSION = "20"
+
+  # Production environment
+  NODE_ENV = "production"
+
+  # Build optimizations
+  GENERATE_SOURCEMAP = "false"
+  CI = "true"
+
+  # Memory optimization for large builds
+  NODE_OPTIONS = "--max-old-space-size=4096"
+
+# Context-specific builds
+[context.production]
+  command = "npm run build"
+
+[context.deploy-preview]
+  command = "npm run build:dev"
+
+[context.branch-deploy]
+  command = "npm run build"
+
+# Redirects and rewrites
 [[redirects]]
+  # API routes (if using Netlify Functions)
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
+  # Redirect old URLs to new structure
+  from = "/dashboard/*"
+  to = "/student/:splat"
+  status = 301
+  force = false
+
+[[redirects]]
+  # SPA fallback - must be last
   from = "/*"
   to = "/index.html"
   status = 200
 
-# Security headers
+# Enhanced Security Headers
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Frame-Options = "DENY"
-    X-XSS-Protection = "1; mode=block"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    # Content Security Policy
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://eekajmfvqntbloqgizwk.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://eekajmfvqntbloqgizwk.supabase.co wss://eekajmfvqntbloqgizwk.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
 
-# Cache static assets
+    # Security headers
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+    # HSTS (HTTP Strict Transport Security)
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+
+    # Permissions Policy
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+
+    # Additional security
+    Cross-Origin-Embedder-Policy = "require-corp"
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Resource-Policy = "same-origin"
+
+# Optimized Caching Strategy
+
+# HTML files - no cache (always fresh)
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
+
+# JavaScript and CSS assets (with hash) - long cache
+[[headers]]
+  for = "/assets/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/assets/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Static assets - long cache
 [[headers]]
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Cache fonts
+# Fonts - long cache
 [[headers]]
   for = "/*.woff2"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=31536000, immutable, cross-origin"
 
-# Cache images
+[[headers]]
+  for = "/*.woff"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable, cross-origin"
+
+# Images - long cache
 [[headers]]
   for = "/*.svg"
   [headers.values]
@@ -55,15 +130,51 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Preload critical resources
+[[headers]]
+  for = "/*.jpeg"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.webp"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# PWA files - short cache
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/workbox-*.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# Performance optimizations
 [[headers]]
   for = "/index.html"
   [headers.values]
-    Link = "</assets/index.css>; rel=preload; as=style"
+    # Preload critical resources
+    Link = '''</assets/index.css>; rel=preload; as=style,
+              </assets/index.js>; rel=preload; as=script,
+              <https://fonts.googleapis.com>; rel=preconnect,
+              <https://fonts.gstatic.com>; rel=preconnect; crossorigin,
+              <https://eekajmfvqntbloqgizwk.supabase.co>; rel=preconnect'''
 
-# Functions (if using Netlify Functions)
+# Functions configuration
 [functions]
   directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Edge Functions (if needed)
+[edge_functions]
+  directory = "netlify/edge-functions"
 
 # Dev server settings
 [dev]
@@ -71,3 +182,25 @@
   port = 5173
   publish = "dist"
   autoLaunch = false
+
+  # Environment variables for development
+  [dev.env]
+    NODE_ENV = "development"
+
+# Build plugins
+[[plugins]]
+  package = "@netlify/plugin-lighthouse"
+
+  [plugins.inputs]
+    output_path = "lighthouse"
+
+[[plugins]]
+  package = "netlify-plugin-submit-sitemap"
+
+  [plugins.inputs]
+    baseUrl = "https://mmu-digital-campus.netlify.app"
+    sitemapPath = "/sitemap.xml"
+    providers = [
+      "google",
+      "bing"
+    ]

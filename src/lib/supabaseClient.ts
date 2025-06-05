@@ -4,10 +4,6 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Log the environment variables (without exposing full key)
-console.log('Supabase URL:', supabaseUrl);
-console.log('Supabase Key available:', supabaseAnonKey ? 'Yes (length: ' + supabaseAnonKey.length + ')' : 'No');
-
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables. Please check your .env file.');
 }
@@ -22,29 +18,31 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Service role key for admin operations (only used in secure server contexts)
-const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVla2FqbWZ2cW50YmxvcWdpendrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NjIyOTk1MiwiZXhwIjoyMDYxODA1OTUyfQ.IQgAFxPi-0Oy9KX4MVFXsoTymxSVCzgPNIw76Um9UCQ';
+const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
 // Create a separate admin client with service role key
 // WARNING: This should only be used for operations that require admin privileges
 // and should never be exposed to the client
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-  },
-});
+export const supabaseAdmin = supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    })
+  : null;
 
-// Test the connection
-supabase.auth.getSession().then(({ data }) => {
-  console.log('Supabase client initialized and connected successfully');
-  if (data.session) {
-    console.log('User is authenticated:', data.session.user.email);
-  } else {
-    console.log('No active session found');
-  }
-}).catch(error => {
-  console.error('Error connecting to Supabase:', error);
-});
+// Test the connection (only in development)
+if (import.meta.env.DEV) {
+  supabase.auth.getSession().then(({ data }) => {
+    console.log('Supabase client initialized successfully');
+    if (data.session) {
+      console.log('User session active');
+    }
+  }).catch(error => {
+    console.error('Error connecting to Supabase:', error);
+  });
+}
 
 // Types for database tables
 export type User = {

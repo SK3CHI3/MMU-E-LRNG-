@@ -161,11 +161,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
-        console.error('Auth signup error:', error);
+        console.error('Auth signup error:', error.message);
         return { error, data: null };
       }
-
-      console.log('Auth signup successful:', data);
 
       if (data.user) {
         // Create user record in the database
@@ -286,7 +284,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Sign in an existing user
   const signIn = async (emailOrAdmissionNumber: string, password: string) => {
-    console.log('signIn: Attempting to sign in with:', emailOrAdmissionNumber);
 
     try {
       let email = emailOrAdmissionNumber;
@@ -294,7 +291,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Check if input looks like an admission number (format: ABC-123-456/2024)
       const admissionNumberRegex = /^[A-Z]{2,4}-\d{3}-\d{3}\/\d{4}$/;
       if (admissionNumberRegex.test(emailOrAdmissionNumber)) {
-        console.log('signIn: Input detected as admission number, looking up email');
 
         // Look up the user's email from the database using admission number
         const { data: userData, error: lookupError } = await supabaseAdmin
@@ -304,7 +300,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .single();
 
         if (lookupError || !userData) {
-          console.error('signIn: Failed to find user with admission number:', lookupError);
           return {
             data: null,
             error: { message: 'Invalid admission number. Please check your admission number and try again.' }
@@ -340,18 +335,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
-        console.error('signIn: Authentication error:', error);
+        console.error('signIn: Authentication error:', error.message);
         return { data: null, error };
       }
 
-      console.log('signIn: Authentication successful', data);
-
       // We'll fetch the user data in the auth state change handler
       // This allows the login to complete faster
-      if (data.user) {
-        console.log('signIn: Authentication successful, user data will be fetched asynchronously');
-        // The fetchDbUser will be called by the auth state change handler
-      }
 
       return { data, error: null };
     } catch (error) {

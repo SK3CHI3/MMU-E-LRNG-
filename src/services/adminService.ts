@@ -58,7 +58,6 @@ export interface User {
 // Get all users for admin management
 export const getAllUsers = async (): Promise<User[]> => {
   try {
-    console.log('getAllUsers: Fetching all users for admin management');
 
     const { data: users, error } = await supabase
       .from('users')
@@ -78,7 +77,7 @@ export const getAllUsers = async (): Promise<User[]> => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('getAllUsers: Error fetching users:', error);
+      console.error('Error fetching users:', error.message);
       throw error;
     }
 
@@ -111,7 +110,6 @@ export const getAllUsers = async (): Promise<User[]> => {
 // Get comprehensive system metrics
 export const getSystemMetrics = async (): Promise<SystemMetrics> => {
   try {
-    console.log('getSystemMetrics: Fetching system-wide metrics');
 
     // Get user counts by role
     const { data: users, error: usersError } = await supabase
@@ -119,11 +117,9 @@ export const getSystemMetrics = async (): Promise<SystemMetrics> => {
       .select('role, faculty, department');
 
     if (usersError) {
-      console.error('getSystemMetrics: Error fetching users:', usersError);
+      console.error('Error fetching users:', usersError.message);
       throw usersError;
     }
-
-    console.log('getSystemMetrics: Found total users:', users?.length || 0);
 
     const roleCounts = users?.reduce((acc, user) => {
       acc[user.role] = (acc[user.role] || 0) + 1;
@@ -184,7 +180,6 @@ export const getSystemMetrics = async (): Promise<SystemMetrics> => {
       activeUsers: activeUsers?.length || 0
     };
 
-    console.log('getSystemMetrics: Returning metrics:', result);
     return result;
   } catch (error) {
     console.error('Error fetching system metrics:', error);

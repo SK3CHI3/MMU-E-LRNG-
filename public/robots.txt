@@ -1,5 +1,6 @@
 # MMU Digital Campus - Robots.txt
 # Official e-learning platform for Multimedia University of Kenya
+# Optimized for Netlify deployment
 
 User-agent: Googlebot
 Allow: /
@@ -25,6 +26,7 @@ Crawl-delay: 2
 # Disallow sensitive areas
 Disallow: /admin/
 Disallow: /api/
+Disallow: /.netlify/
 Disallow: /dashboard/
 Disallow: /student/
 Disallow: /lecturer/
@@ -34,6 +36,12 @@ Disallow: /register
 Disallow: /reset-password
 Disallow: /forgot-password
 
+# Disallow build artifacts
+Disallow: /assets/
+Disallow: /dev-dist/
+Disallow: /_redirects
+Disallow: /_headers
+
 # Allow public pages
 Allow: /
 Allow: /guest/
@@ -41,4 +49,4 @@ Allow: /about
 Allow: /contact
 
 # Sitemap location
-Sitemap: https://mmu-digital-campus.vercel.app/sitemap.xml
+Sitemap: https://mmu-digital-campus.netlify.app/sitemap.xml
