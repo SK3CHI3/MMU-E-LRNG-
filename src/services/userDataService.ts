@@ -290,7 +290,9 @@ export const getStudentData = async (userId: string): Promise<StudentData | null
     if (userError) {
       console.error('getStudentData: User fetch error:', userError);
       // If user doesn't exist in database, return basic info from auth
-      console.log('getStudentData: User not found in database, creating basic profile');
+      if (import.meta.env.DEV) {
+        console.log('getStudentData: User not found in database, creating basic profile');
+      }
       return {
         name: 'Student User',
         admissionNumber: 'Not Set',
@@ -314,7 +316,9 @@ export const getStudentData = async (userId: string): Promise<StudentData | null
       };
     }
 
-    console.log('getStudentData: User data fetched successfully:', user);
+    if (import.meta.env.DEV) {
+      console.log('getStudentData: User data fetched successfully');
+    }
 
     // Try to get additional data, but don't fail if it's not available
     let academicCalendar = { semester: 'Current Semester', academicYear: '2024/2025' };
@@ -359,13 +363,19 @@ export const getStudentData = async (userId: string): Promise<StudentData | null
           `)
           .eq('user_id', user.id)
           .eq('status', 'enrolled');
-        console.log('getStudentData: Enrollments fetched:', enrollments);
+        if (import.meta.env.DEV) {
+          console.log('getStudentData: Enrollments fetched');
+        }
       } catch (error) {
-        console.log('getStudentData: Enrollments not available, using defaults');
+        if (import.meta.env.DEV) {
+          console.log('getStudentData: Enrollments not available, using defaults');
+        }
       }
 
     } catch (error) {
-      console.log('getStudentData: Some additional data not available, continuing with basic info');
+      if (import.meta.env.DEV) {
+        console.log('getStudentData: Some additional data not available, continuing with basic info');
+      }
     }
 
     // Calculate basic statistics from available data
@@ -381,12 +391,9 @@ export const getStudentData = async (userId: string): Promise<StudentData | null
     // Create empty assignments array for now
     const pendingAssignments: PendingAssignment[] = [];
 
-    console.log('getStudentData: Returning student data with user info:', {
-      name: user.full_name,
-      email: user.email,
-      role: user.role,
-      department: user.department
-    });
+    if (import.meta.env.DEV) {
+      console.log('getStudentData: Returning student data');
+    }
 
     return {
       name: user.full_name || user.email || 'Student',
@@ -569,7 +576,9 @@ export const createSampleStudentData = async (userId: string): Promise<boolean> 
     // This function would create sample data in the database for testing
     // In a real application, this data would come from actual academic operations
 
-    console.log('Sample data creation would happen here for user:', userId);
+    if (import.meta.env.DEV) {
+      console.log('Sample data creation would happen here');
+    }
 
     // You could implement actual database insertions here for testing
     // For example:

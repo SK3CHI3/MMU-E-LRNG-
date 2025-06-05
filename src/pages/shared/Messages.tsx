@@ -332,15 +332,19 @@ const SharedMessages = () => {
 
     try {
       setLoadingUsers(true);
-      console.log('Loading messageable users for:', { userId: user.id, role: dbUser.role });
+      if (import.meta.env.DEV) {
+        console.log('Loading messageable users');
+      }
 
       const users = await getMessageableUsers(user.id, dbUser.role);
-      console.log('Loaded messageable users:', users);
+      if (import.meta.env.DEV) {
+        console.log('Loaded messageable users:', users?.length || 0);
+      }
 
       // Always use real data from database - no test data fallback
       setMessageableUsers(users || []);
       
-      if (users.length === 0) {
+      if (users.length === 0 && import.meta.env.DEV) {
         console.log('No users found in database - this could mean:');
         console.log('1. User has no faculty assignment');
         console.log('2. No other users exist in the same faculty');
@@ -388,7 +392,9 @@ const SharedMessages = () => {
           filter: `conversation_id=eq.${conversationId}`
         },
         async (payload) => {
-          console.log('New message received via realtime:', payload);
+          if (import.meta.env.DEV) {
+            console.log('New message received via realtime');
+          }
 
           // Get sender details for the new message
           const { data: senderData } = await supabase
@@ -542,7 +548,9 @@ const SharedMessages = () => {
     if (!user?.id) return;
 
     try {
-      console.log('Starting conversation with user:', selectedUser);
+      if (import.meta.env.DEV) {
+        console.log('Starting conversation with user');
+      }
 
       // Find or create conversation with this user
       const conversationId = await findOrCreateConversation(
@@ -552,11 +560,15 @@ const SharedMessages = () => {
         undefined
       );
 
-      console.log('Conversation ID:', conversationId);
+      if (import.meta.env.DEV) {
+        console.log('Conversation created/found');
+      }
 
       // Load the conversation messages
       const messages = await getConversationMessages(conversationId);
-      console.log('Loaded messages:', messages);
+      if (import.meta.env.DEV) {
+        console.log('Loaded messages:', messages?.length || 0);
+      }
 
       // Set up the conversation in state with proper structure
       const conversation: ConversationUI = {
@@ -594,9 +606,11 @@ const SharedMessages = () => {
       // Switch to chat view
       setViewMode('chat');
 
-      console.log('Successfully switched to chat view');
+      if (import.meta.env.DEV) {
+        console.log('Successfully switched to chat view');
+      }
     } catch (error) {
-      console.error('Error starting conversation with user:', error);
+      console.error('Error starting conversation');
       // Show user-friendly error
       alert('Failed to start conversation. Please try again.');
     }

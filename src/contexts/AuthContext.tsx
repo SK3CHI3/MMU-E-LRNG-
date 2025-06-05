@@ -28,44 +28,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Set loading state
     setIsLoading(true);
 
-    console.log('AuthContext: Initializing auth state');
+    if (import.meta.env.DEV) {
+      console.log('AuthContext: Initializing auth state');
+    }
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('AuthContext: Initial session check', session ? 'Session found' : 'No session');
+      if (import.meta.env.DEV) {
+        console.log('AuthContext: Initial session check', session ? 'Session found' : 'No session');
+      }
 
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        console.log('AuthContext: User found in session, fetching DB user immediately');
+        if (import.meta.env.DEV) {
+          console.log('AuthContext: User found in session, fetching DB user');
+        }
         // Fetch DB user immediately without timeout for faster loading
         fetchDbUser(session.user.id);
       } else {
-        console.log('AuthContext: No user in session');
+        if (import.meta.env.DEV) {
+          console.log('AuthContext: No user in session');
+        }
         setIsLoading(false);
       }
     }).catch(error => {
-      console.error('AuthContext: Error getting session', error);
+      console.error('AuthContext: Error getting session');
       setIsLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('AuthContext: Auth state changed', event, session ? 'Session exists' : 'No session');
+        if (import.meta.env.DEV) {
+          console.log('AuthContext: Auth state changed', event, session ? 'Session exists' : 'No session');
+        }
 
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          console.log('AuthContext: User found in auth change, fetching DB user');
+          if (import.meta.env.DEV) {
+            console.log('AuthContext: User found in auth change, fetching DB user');
+          }
 
           // For all events with a user, fetch the database user immediately
           // This ensures we have the correct user data regardless of the event type
           await fetchDbUser(session.user.id);
         } else {
-          console.log('AuthContext: No user in auth change');
+          if (import.meta.env.DEV) {
+            console.log('AuthContext: No user in auth change');
+          }
           setDbUser(null);
           setIsLoading(false);
         }
@@ -73,7 +87,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => {
-      console.log('AuthContext: Cleaning up auth subscription');
+      if (import.meta.env.DEV) {
+        console.log('AuthContext: Cleaning up auth subscription');
+      }
       subscription.unsubscribe();
     };
   }, []);
@@ -81,7 +97,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Fetch the database user record
   const fetchDbUser = async (authId: string) => {
     setIsLoading(true);
-    console.log('fetchDbUser: Fetching user with authId', authId);
+    if (import.meta.env.DEV) {
+      console.log('fetchDbUser: Fetching user data');
+    }
 
     try {
       // Check if admin client is available
@@ -104,15 +122,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // If the user doesn't exist in the database, this is an error
         if (error.code === 'PGRST116') { // No rows returned
-          console.error('fetchDbUser: User not found in database. This should not happen for registered users.');
+          console.error('fetchDbUser: User not found in database');
           setDbUser(null);
         } else {
           setDbUser(null);
         }
       } else {
-        console.log('fetchDbUser: User found in database', data);
-        console.log('fetchDbUser: User role:', data.role);
-        console.log('fetchDbUser: User role type:', typeof data.role);
+        // Only log in development mode and without sensitive data
+        if (import.meta.env.DEV) {
+          console.log('fetchDbUser: User found in database');
+          console.log('fetchDbUser: User role verified');
+        }
         setDbUser(data as DbUser);
       }
     } catch (error) {
@@ -126,7 +146,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Sign up a new user
   const signUp = async (email: string, password: string, userData: Partial<DbUser>) => {
     try {
-      console.log('Starting signup process with:', { email, userData });
+      if (import.meta.env.DEV) {
+        console.log('Starting signup process');
+      }
 
       // First, check if email already exists in database
       const { data: existingEmailUser } = await supabaseAdmin
@@ -181,9 +203,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           ...userData
         };
 
-        console.log('Creating user record:', userRecord);
-        console.log('User record role:', userRecord.role);
-        console.log('User record type:', typeof userRecord.role);
+        if (import.meta.env.DEV) {
+          console.log('Creating user record in database');
+        }
 
         try {
           // First, check if a user with this auth_id already exists
@@ -199,19 +221,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           // Insert user record into database using admin client to bypass RLS
-          console.log('Attempting to insert user into database...');
-          console.log('Final userRecord before insert:', JSON.stringify(userRecord, null, 2));
+          if (import.meta.env.DEV) {
+            console.log('Attempting to insert user into database');
+          }
           const { error: dbError, data: insertedUser } = await supabaseAdmin
             .from('users')
             .insert(userRecord)
             .select()
             .single();
 
-          console.log('Database insert result:', { dbError, insertedUser });
+          if (import.meta.env.DEV) {
+            console.log('Database insert completed');
+          }
 
           if (dbError) {
-            console.error('Database user creation error:', dbError);
-            console.error('Full error details:', JSON.stringify(dbError, null, 2));
+            console.error('Database user creation error:', dbError.message);
 
             // If it's a duplicate key error, check if the user actually exists
             if (dbError.message?.includes('duplicate key value violates unique constraint')) {
@@ -222,7 +246,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .single();
 
               if (duplicateUser) {
-                console.log('User was created successfully despite error message');
+                if (import.meta.env.DEV) {
+                  console.log('User was created successfully despite error message');
+                }
                 return { data: { user: data.user, session: data.session }, error: null };
               }
             }
@@ -230,9 +256,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Clean up the auth user if database creation fails
             try {
               await supabase.auth.signOut();
-              console.log('Signed out user after DB error');
+              if (import.meta.env.DEV) {
+                console.log('Signed out user after DB error');
+              }
             } catch (deleteError) {
-              console.error('Failed to sign out user after DB error:', deleteError);
+              console.error('Failed to sign out user after DB error');
             }
 
             // Return a more specific error message based on the error type
@@ -260,16 +288,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { error: insertError, data: null };
         }
 
-        console.log('User record created successfully');
+        if (import.meta.env.DEV) {
+          console.log('User record created successfully');
+        }
 
         // Auto-assign semester for new students
         if (userData.role === 'student' && data.user) {
           try {
-            console.log('Assigning initial semester to new student');
+            if (import.meta.env.DEV) {
+              console.log('Assigning initial semester to new student');
+            }
             await assignInitialSemester(data.user.id);
-            console.log('Initial semester assigned successfully');
+            if (import.meta.env.DEV) {
+              console.log('Initial semester assigned successfully');
+            }
           } catch (semesterError) {
-            console.error('Error assigning initial semester:', semesterError);
+            console.error('Error assigning initial semester');
             // Don't fail the registration if semester assignment fails
           }
         }
@@ -315,10 +349,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         email = userData.email;
-        console.log('signIn: Found email for admission number');
+        if (import.meta.env.DEV) {
+          console.log('signIn: Found email for admission number');
+        }
       } else {
         // For email login, check if the email exists in our system first
-        console.log('signIn: Input detected as email, checking if user exists');
+        if (import.meta.env.DEV) {
+          console.log('signIn: Input detected as email, checking if user exists');
+        }
 
         const { data: userData, error: lookupError } = await supabaseAdmin
           .from('users')
@@ -327,14 +365,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .single();
 
         if (lookupError || !userData) {
-          console.error('signIn: Email not found in system:', lookupError);
+          if (import.meta.env.DEV) {
+            console.error('signIn: Email not found in system');
+          }
           return {
             data: null,
             error: { message: 'No account found with this email address. Please check your email or register for a new account.' }
           };
         }
 
-        console.log('signIn: Email found in system, proceeding with authentication');
+        if (import.meta.env.DEV) {
+          console.log('signIn: Email found in system, proceeding with authentication');
+        }
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({

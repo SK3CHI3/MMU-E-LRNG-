@@ -12,20 +12,22 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log('ProtectedRoute: Current auth state', {
-      isLoading,
-      userExists: !!user,
-      dbUserExists: !!dbUser,
-      userEmail: user?.email,
-      dbUserRole: dbUser?.role,
-      allowedRoles,
-      currentPath: window.location.pathname
-    });
+    if (import.meta.env.DEV) {
+      console.log('ProtectedRoute: Current auth state', {
+        isLoading,
+        userExists: !!user,
+        dbUserExists: !!dbUser,
+        hasAllowedRoles: !!allowedRoles,
+        currentPath: window.location.pathname
+      });
+    }
   }, [isLoading, user, dbUser, allowedRoles]);
 
   // Show loading spinner while checking authentication
   if (isLoading) {
-    console.log('ProtectedRoute: Still loading authentication state');
+    if (import.meta.env.DEV) {
+      console.log('ProtectedRoute: Still loading authentication state');
+    }
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-2">
@@ -38,14 +40,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
 
   // If not authenticated, redirect to login
   if (!user) {
-    console.log('ProtectedRoute: No authenticated user, redirecting to login');
+    if (import.meta.env.DEV) {
+      console.log('ProtectedRoute: No authenticated user, redirecting to login');
+    }
     return <Navigate to="/login" replace />;
   }
 
   // If roles are specified but no database user yet, wait for user data to load
   // Give it a bit more time to load the user data before showing unauthorized
   if (allowedRoles && !dbUser) {
-    console.log('ProtectedRoute: Roles required but DB user not loaded yet, showing loading...');
+    if (import.meta.env.DEV) {
+      console.log('ProtectedRoute: Roles required but DB user not loaded yet, showing loading...');
+    }
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-2">
@@ -59,16 +65,22 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
 
   // If roles are specified and user doesn't have the required role, redirect to unauthorized
   if (allowedRoles && dbUser && !allowedRoles.includes(dbUser.role)) {
-    console.log(`ProtectedRoute: User role '${dbUser.role}' not in allowed roles [${allowedRoles.join(', ')}], redirecting to unauthorized`);
+    if (import.meta.env.DEV) {
+      console.log('ProtectedRoute: User role not in allowed roles, redirecting to unauthorized');
+    }
     return <Navigate to="/unauthorized" replace />;
   }
 
   // If no database user yet but no specific roles required, proceed
   if (!dbUser) {
-    console.log('ProtectedRoute: Auth user exists but no DB user yet, proceeding with minimal data (no roles required)');
+    if (import.meta.env.DEV) {
+      console.log('ProtectedRoute: Auth user exists but no DB user yet, proceeding with minimal data');
+    }
   }
 
-  console.log('ProtectedRoute: User is authenticated and authorized, rendering content');
+  if (import.meta.env.DEV) {
+    console.log('ProtectedRoute: User is authenticated and authorized, rendering content');
+  }
   // If authenticated and authorized, render the protected content
   return <Outlet />;
 };

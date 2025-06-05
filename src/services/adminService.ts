@@ -81,7 +81,9 @@ export const getAllUsers = async (): Promise<User[]> => {
       throw error;
     }
 
-    console.log('getAllUsers: Found users:', users?.length || 0);
+    if (import.meta.env.DEV) {
+      console.log('getAllUsers: Found users:', users?.length || 0);
+    }
 
     // Transform the data to match the User interface
     const transformedUsers: User[] = users?.map(user => ({

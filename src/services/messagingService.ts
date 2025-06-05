@@ -488,13 +488,17 @@ export const getMessageableUsers = async (currentUserId: string, currentUserRole
       throw new Error(`Failed to fetch users: ${usersError.message}`);
     }
 
-    console.log('Raw users from database:', allUsers);
+    if (import.meta.env.DEV) {
+      console.log('Raw users from database:', allUsers?.length || 0);
+    }
 
     if (!allUsers || allUsers.length === 0) {
-      console.log('No users found in database - this might mean:');
-      console.log('1. Database is empty');
-      console.log('2. All users have null names');
-      console.log('3. Current user is the only user');
+      if (import.meta.env.DEV) {
+        console.log('No users found in database - this might mean:');
+        console.log('1. Database is empty');
+        console.log('2. All users have null names');
+        console.log('3. Current user is the only user');
+      }
       return [];
     }
 
