@@ -171,25 +171,26 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
 
   if (compact) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-2 mobile-container overflow-hidden">
         {visibleAnnouncements.map((announcement) => (
           <Dialog key={announcement.id}>
             <DialogTrigger asChild>
-              <Card className={`${getAnnouncementStyle(announcement)} hover:shadow-lg transition-all duration-200 cursor-pointer`}>
+              <Card className={`${getAnnouncementStyle(announcement)} hover:shadow-lg transition-all duration-200 cursor-pointer mobile-card overflow-hidden`}>
                 <CardContent className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 flex-1">
-                      {getPriorityIcon(announcement.priority)}
-                      <span className="font-medium text-sm truncate">{announcement.title}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="flex-shrink-0">{getPriorityIcon(announcement.priority)}</div>
+                      <span className="font-medium text-sm break-words line-clamp-1 flex-1 min-w-0">{announcement.title}</span>
                       {announcement.isPublic && (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs flex-shrink-0">
                           <Globe className="h-3 w-3 mr-1" />
-                          Public
+                          <span className="hidden sm:inline">Public</span>
+                          <span className="sm:hidden">Pub</span>
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Badge className={`text-xs ${getPriorityColor(announcement.priority)}`}>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Badge className={`text-xs ${getPriorityColor(announcement.priority)} hidden sm:block`}>
                         {announcement.priority}
                       </Badge>
                       <Button
@@ -280,56 +281,62 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Bell className="h-5 w-5" />
-          {showPublicOnly ? 'Public Announcements' : 'Latest Announcements'}
+    <div className="space-y-4 mobile-container overflow-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 overflow-hidden">
+        <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2 min-w-0">
+          <Bell className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+          <span className="break-words">
+            {showPublicOnly ? 'Public Announcements' : 'Latest Announcements'}
+          </span>
         </h3>
         {visibleAnnouncements.length > 0 && (
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" asChild className="flex-shrink-0">
             <a href="/announcements">
-              View All
+              <span className="hidden sm:inline">View All</span>
+              <span className="sm:hidden">All</span>
               <ChevronRight className="h-4 w-4 ml-1" />
             </a>
           </Button>
         )}
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3 overflow-hidden">
         {visibleAnnouncements.map((announcement) => (
           <Dialog key={announcement.id}>
-            <Card className={`${getAnnouncementStyle(announcement)} hover:shadow-lg transition-all duration-200`}>
+            <Card className={`${getAnnouncementStyle(announcement)} hover:shadow-lg transition-all duration-200 mobile-card overflow-hidden`}>
               <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    {getPriorityIcon(announcement.priority)}
-                    <div>
-                      <CardTitle className="text-base font-semibold">{announcement.title}</CardTitle>
-                      <CardDescription className="text-xs flex items-center gap-2 mt-1">
-                        <span>By {announcement.authorName}</span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
+                <div className="flex flex-col gap-3 overflow-hidden">
+                  <div className="flex items-start gap-2 min-w-0">
+                    <div className="flex-shrink-0">{getPriorityIcon(announcement.priority)}</div>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-sm sm:text-base font-semibold break-words line-clamp-2">
+                        {announcement.title}
+                      </CardTitle>
+                      <CardDescription className="text-xs flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1 overflow-hidden">
+                        <span className="truncate">By {announcement.authorName}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="flex items-center gap-1 flex-shrink-0">
                           <Calendar className="h-3 w-3" />
-                          {new Date(announcement.createdAt).toLocaleDateString()}
+                          <span className="truncate">{new Date(announcement.createdAt).toLocaleDateString()}</span>
                         </span>
                       </CardDescription>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className={`text-xs ${getPriorityColor(announcement.priority)}`}>
+                  <div className="flex flex-wrap items-center gap-2 overflow-hidden">
+                    <Badge className={`text-xs ${getPriorityColor(announcement.priority)} flex-shrink-0`}>
                       {announcement.priority}
                     </Badge>
                     {announcement.isPublic && (
-                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
+                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs flex-shrink-0">
                         <Globe className="h-3 w-3 mr-1" />
-                        Public
+                        <span className="hidden sm:inline">Public</span>
+                        <span className="sm:hidden">Pub</span>
                       </Badge>
                     )}
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 w-6 p-0"
+                      className="h-6 w-6 p-0 flex-shrink-0 ml-auto"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDismiss(announcement.id);
@@ -341,41 +348,44 @@ const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
                 </div>
               </CardHeader>
               <DialogTrigger asChild>
-                <CardContent className="pt-0 cursor-pointer">
-                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                <CardContent className="pt-0 cursor-pointer overflow-hidden">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 break-words line-clamp-3">
                     {announcement.content.length > 150
                       ? `${announcement.content.substring(0, 150)}...`
                       : announcement.content
                     }
                   </p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 overflow-hidden">
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
+                      <Badge variant="outline" className="text-xs flex-shrink-0">
                         {announcement.category}
                       </Badge>
                       {announcement.expiresAt && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
                           <Clock className="h-3 w-3" />
-                          Expires: {new Date(announcement.expiresAt).toLocaleDateString()}
+                          <span className="truncate">Expires: {new Date(announcement.expiresAt).toLocaleDateString()}</span>
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       {announcement.externalLink && (
                         <Button
                           variant="outline"
                           size="sm"
                           asChild
                           onClick={(e) => e.stopPropagation()}
+                          className="mobile-button"
                         >
                           <a href={announcement.externalLink} target="_blank" rel="noopener noreferrer">
                             <ExternalLink className="h-3 w-3 mr-1" />
-                            Link
+                            <span className="hidden sm:inline">Link</span>
+                            <span className="sm:hidden">Go</span>
                           </a>
                         </Button>
                       )}
-                      <Button variant="outline" size="sm">
-                        View Details
+                      <Button variant="outline" size="sm" className="mobile-button">
+                        <span className="hidden sm:inline">View Details</span>
+                        <span className="sm:hidden">View</span>
                       </Button>
                     </div>
                   </div>

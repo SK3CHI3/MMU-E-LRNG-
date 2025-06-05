@@ -20,7 +20,8 @@ import {
   Zap,
   CheckCircle,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  MessageSquare
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStudentCourses } from "@/services/studentService";
@@ -322,81 +323,106 @@ What would you like to explore today? Feel free to ask about any concept, reques
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary">Study AI Assistant</h1>
-          <p className="text-muted-foreground">Your intelligent study companion for academic success and learning support</p>
-        </div>
-        <div className="flex items-center space-x-2">
-          {unitsLoading ? (
-            <Skeleton className="h-10 w-64" />
-          ) : (
-            <Select value={selectedUnit} onValueChange={setSelectedUnit}>
-              <SelectTrigger className="w-64">
-                <SelectValue placeholder={enrolledUnits.length > 0 ? "Select unit context" : "No units enrolled"} />
-              </SelectTrigger>
-              <SelectContent>
-                {enrolledUnits.length > 0 ? (
-                  enrolledUnits.map(unit => (
-                    <SelectItem key={unit.id} value={unit.id}>
-                      {unit.name}
+    <div className="space-y-4 md:space-y-6 mobile-content-with-nav">
+      {/* Enhanced Mobile Header */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-2xl p-4 md:p-6 border border-blue-200/50 dark:border-blue-800/50">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0">
+          <div className="flex items-center space-x-3">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+              <Brain className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+                Study AI Assistant
+              </h1>
+              <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 leading-tight">
+                Your intelligent study companion
+              </p>
+            </div>
+          </div>
+
+          {/* Mobile-optimized unit selector */}
+          <div className="w-full md:w-auto">
+            {unitsLoading ? (
+              <Skeleton className="h-10 w-full md:w-64" />
+            ) : (
+              <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+                <SelectTrigger className="w-full md:w-64 bg-white/80 dark:bg-gray-800/80 border-blue-200 dark:border-blue-800">
+                  <SelectValue placeholder={enrolledUnits.length > 0 ? "Select unit context" : "No units enrolled"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {enrolledUnits.length > 0 ? (
+                    enrolledUnits.map(unit => (
+                      <SelectItem key={unit.id} value={unit.id}>
+                        {unit.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="none" disabled>
+                      No enrolled units found
                     </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="none" disabled>
-                    No enrolled units found
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          )}
+                  )}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Enhanced Mobile Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="chat">AI Chat</TabsTrigger>
-          <TabsTrigger value="actions">Quick Actions</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-xl p-1">
+          <TabsTrigger
+            value="chat"
+            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300"
+          >
+            <MessageSquare className="h-4 w-4 mr-2" />
+            AI Chat
+          </TabsTrigger>
+          <TabsTrigger
+            value="actions"
+            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300"
+          >
+            <Zap className="h-4 w-4 mr-2" />
+            Quick Actions
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="chat" className="space-y-4">
-          <Card className="border-none shadow-lg">
-            <CardContent className="p-6 h-[calc(100vh-16rem)] flex flex-col">
-              {/* Chat Messages */}
-              <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+          <Card className="border-0 shadow-xl bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm">
+            <CardContent className="p-3 md:p-6 h-[calc(100vh-20rem)] md:h-[calc(100vh-16rem)] flex flex-col">
+              {/* Enhanced Chat Messages */}
+              <div className="flex-1 overflow-y-auto space-y-3 mb-4 px-1">
                 {messages.map((message, index) => (
                   <div
                     key={index}
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`flex items-start space-x-3 max-w-[85%] ${
+                      className={`flex items-start space-x-2 md:space-x-3 max-w-[90%] md:max-w-[85%] ${
                         message.role === 'user'
                           ? 'flex-row-reverse space-x-reverse'
                           : 'flex-row'
                       }`}
                     >
-                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                      <div className={`flex h-7 w-7 md:h-8 md:w-8 items-center justify-center rounded-full shadow-sm ${
                         message.role === 'user'
-                          ? 'bg-primary/10'
-                          : 'bg-gradient-to-br from-blue-500 to-purple-600'
+                          ? 'bg-gradient-to-br from-blue-500 to-blue-600'
+                          : 'bg-gradient-to-br from-indigo-500 to-purple-600'
                       }`}>
                         {message.role === 'user'
-                          ? <User className="h-4 w-4 text-primary" />
-                          : <Brain className="h-4 w-4 text-white" />
+                          ? <User className="h-3 w-3 md:h-4 md:w-4 text-white" />
+                          : <Brain className="h-3 w-3 md:h-4 md:w-4 text-white" />
                         }
                       </div>
                       <div
-                        className={`rounded-lg px-4 py-3 ${
+                        className={`rounded-2xl px-3 py-2 md:px-4 md:py-3 shadow-sm ${
                           message.role === 'user'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
+                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white'
+                            : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
                         }`}
                       >
-                        <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                        <div className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</div>
                       </div>
                     </div>
                   </div>
@@ -404,15 +430,15 @@ What would you like to explore today? Feel free to ask about any concept, reques
 
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="flex items-start space-x-3 max-w-[85%]">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600">
-                        <Brain className="h-4 w-4 text-white animate-pulse" />
+                    <div className="flex items-start space-x-2 md:space-x-3 max-w-[90%] md:max-w-[85%]">
+                      <div className="flex h-7 w-7 md:h-8 md:w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-sm">
+                        <Brain className="h-3 w-3 md:h-4 md:w-4 text-white animate-pulse" />
                       </div>
-                      <div className="bg-muted rounded-lg px-4 py-3">
+                      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-3 py-2 md:px-4 md:py-3 shadow-sm">
                         <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                         </div>
                       </div>
                     </div>
@@ -420,11 +446,11 @@ What would you like to explore today? Feel free to ask about any concept, reques
                 )}
               </div>
 
-              {/* Input Area */}
-              <div className="space-y-3">
+              {/* Enhanced Mobile Input Area */}
+              <div className="space-y-2 md:space-y-3 border-t border-gray-200 dark:border-gray-700 pt-3 md:pt-4">
                 <div className="flex space-x-2">
                   <Textarea
-                    placeholder="Ask me to explain concepts, generate practice questions, create study plans, or help with assignments..."
+                    placeholder="Ask me anything about your studies..."
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={(e) => {
@@ -434,48 +460,60 @@ What would you like to explore today? Feel free to ask about any concept, reques
                       }
                     }}
                     disabled={isLoading}
-                    className="flex-1 min-h-[60px] resize-none"
+                    className="flex-1 min-h-[50px] md:min-h-[60px] resize-none rounded-xl border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 bg-white/80 dark:bg-gray-800/80"
                   />
                   <Button
                     onClick={handleSendMessage}
                     disabled={!input.trim() || isLoading}
                     size="lg"
-                    className="px-6"
+                    className="px-4 md:px-6 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 rounded-xl shadow-md"
                   >
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground text-center">
-                  Study AI uses advanced AI to provide academic assistance. Always verify important information with your course materials.
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center leading-tight">
+                  AI assistant for academic help • Always verify with course materials
                 </p>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="actions" className="space-y-6">
-          {/* Quick Actions Grid */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <TabsContent value="actions" className="space-y-4 md:space-y-6">
+          {/* Enhanced Quick Actions Grid */}
+          <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {quickActions.map((action, index) => (
-              <Card key={index} className="cursor-pointer hover:shadow-md transition-shadow">
+              <Card
+                key={index}
+                className="cursor-pointer hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 hover:scale-[1.02] active:scale-[0.98]"
+                onClick={() => {
+                  handleQuickAction(action.prompt);
+                  setActiveTab("chat");
+                }}
+              >
                 <CardHeader className="pb-3">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      {action.icon}
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md">
+                      <div className="text-white">
+                        {action.icon}
+                      </div>
                     </div>
-                    <CardTitle className="text-lg">{action.title}</CardTitle>
+                    <div className="flex-1">
+                      <CardTitle className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        {action.title}
+                      </CardTitle>
+                      <CardDescription className="text-sm text-gray-600 dark:text-gray-400 leading-tight">
+                        {action.description}
+                      </CardDescription>
+                    </div>
                   </div>
-                  <CardDescription>{action.description}</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                   <Button
                     variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      handleQuickAction(action.prompt);
-                      setActiveTab("chat");
-                    }}
+                    className="w-full bg-white/80 dark:bg-gray-800/80 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 rounded-xl"
                   >
+                    <Zap className="h-4 w-4 mr-2" />
                     Try This
                   </Button>
                 </CardContent>

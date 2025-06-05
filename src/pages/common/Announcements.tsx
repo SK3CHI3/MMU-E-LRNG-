@@ -59,47 +59,47 @@ const Announcements = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Announcements</h1>
-        <p className="text-muted-foreground">Stay updated with important university news and events.</p>
+    <div className="space-y-6 mobile-container overflow-hidden">
+      <div className="overflow-hidden">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight break-words">Announcements</h1>
+        <p className="text-sm sm:text-base text-muted-foreground break-words">Stay updated with important university news and events.</p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 overflow-hidden">
         {announcements.map((announcement) => (
-          <Card key={announcement.id}>
+          <Card key={announcement.id} className="mobile-card overflow-hidden">
             <CardHeader className="pb-2">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-2">
-                  <BellRing className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-lg font-medium">
+              <div className="flex flex-col gap-3 overflow-hidden">
+                <div className="flex items-start gap-2 min-w-0">
+                  <BellRing className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                  <CardTitle className="text-base sm:text-lg font-medium break-words line-clamp-2 flex-1 min-w-0">
                     {announcement.title}
                   </CardTitle>
+                  <Badge
+                    className="text-xs flex-shrink-0"
+                    variant="outline"
+                    style={{ backgroundColor: getCategoryColor(announcement.category), color: "white" }}
+                  >
+                    {announcement.category}
+                  </Badge>
                 </div>
-                <Badge 
-                  className="ml-2" 
-                  variant="outline"
-                  style={{ backgroundColor: getCategoryColor(announcement.category), color: "white" }}
-                >
-                  {announcement.category}
-                </Badge>
+                <CardDescription className="flex items-center gap-2 text-xs sm:text-sm overflow-hidden">
+                  <Calendar className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{announcement.date}</span>
+                </CardDescription>
               </div>
-              <CardDescription className="flex items-center gap-2 mt-1">
-                <Calendar className="h-3 w-3" />
-                {announcement.date}
-              </CardDescription>
             </CardHeader>
-            <CardContent className="pb-3">
-              <p className="text-sm mb-4">{announcement.content}</p>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Avatar className="h-6 w-6">
+            <CardContent className="pb-3 overflow-hidden">
+              <p className="text-sm mb-4 break-words line-clamp-3">{announcement.content}</p>
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground overflow-hidden">
+                <Avatar className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0">
                   <AvatarImage src={announcement.sender.avatar} />
                   <AvatarFallback>
                     {announcement.sender.name.split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
-                <span>{announcement.sender.name}</span>
-                <span className="text-xs">({announcement.sender.role})</span>
+                <span className="truncate">{announcement.sender.name}</span>
+                <span className="text-xs flex-shrink-0">({announcement.sender.role})</span>
               </div>
             </CardContent>
           </Card>

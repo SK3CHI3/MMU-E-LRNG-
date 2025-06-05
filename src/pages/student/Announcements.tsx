@@ -40,6 +40,7 @@ const Announcements = () => {
   const notificationRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const [selectedNotification, setSelectedNotification] = useState<EnhancedNotification | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     if (user?.id) {
@@ -50,6 +51,12 @@ const Announcements = () => {
   useEffect(() => {
     filterAnnouncements();
   }, [searchTerm, selectedCategory, selectedPriority, activeTab, announcements]);
+
+  // Update unread count whenever announcements change
+  useEffect(() => {
+    const count = announcements.filter(ann => !ann.isRead).length;
+    setUnreadCount(count);
+  }, [announcements]);
 
   // Handle notification parameter from URL
   useEffect(() => {
@@ -187,9 +194,53 @@ const Announcements = () => {
     }
   };
 
-  const handleAnnouncementClick = (announcement: EnhancedNotification) => {
+  const handleAnnouncementClick = async (announcement: EnhancedNotification) => {
     setSelectedNotification(announcement);
     setIsModalOpen(true);
+
+    // Automatically mark as read when clicked (if not already read)
+    if (!announcement.isRead) {
+      await handleMarkAsRead(announcement.id);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    if (!user?.id) return;
+
+    const unreadAnnouncements = announcements.filter(ann => !ann.isRead);
+    if (unreadAnnouncements.length === 0) return;
+
+    try {
+      // Mark all unread announcements as read
+      const promises = unreadAnnouncements.map(async (announcement) => {
+        if (announcement.type === 'notification') {
+          return await markNotificationAsRead(user.id, announcement.id);
+        } else {
+          return await markAnnouncementAsRead(user.id, announcement.id);
+        }
+      });
+
+      const results = await Promise.all(promises);
+      const successCount = results.filter(Boolean).length;
+
+      if (successCount > 0) {
+        // Update local state for all successfully marked announcements
+        setAnnouncements(prev =>
+          prev.map(ann =>
+            unreadAnnouncements.some(unread => unread.id === ann.id)
+              ? { ...ann, isRead: true }
+              : ann
+          )
+        );
+
+        // Force re-filter to update counts
+        setTimeout(() => {
+          filterAnnouncements();
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Error marking all announcements as read:', error);
+    }
   };
 
   const handleMarkAsRead = async (notificationId: string) => {
@@ -199,23 +250,34 @@ const Announcements = () => {
     if (!announcement || announcement.isRead) return;
 
     try {
+      // Mark as read in the database
+      let success = false;
       if (announcement.type === 'notification') {
-        await markNotificationAsRead(user.id, notificationId);
+        success = await markNotificationAsRead(user.id, notificationId);
       } else {
-        await markAnnouncementAsRead(user.id, notificationId);
+        success = await markAnnouncementAsRead(user.id, notificationId);
       }
 
-      // Update local state
-      setAnnouncements(prev =>
-        prev.map(ann => ann.id === notificationId ? { ...ann, isRead: true } : ann)
-      );
+      if (success) {
+        // Update local state immediately for better UX
+        setAnnouncements(prev =>
+          prev.map(ann => ann.id === notificationId ? { ...ann, isRead: true } : ann)
+        );
 
-      // Update selected notification if it's the same one
-      if (selectedNotification?.id === notificationId) {
-        setSelectedNotification(prev => prev ? { ...prev, isRead: true } : null);
+        // Update selected notification if it's the same one
+        if (selectedNotification?.id === notificationId) {
+          setSelectedNotification(prev => prev ? { ...prev, isRead: true } : null);
+        }
+
+        // Force re-filter to update counts
+        setTimeout(() => {
+          filterAnnouncements();
+        }, 100);
       }
     } catch (error) {
       console.error('Error marking announcement as read:', error);
+      // Optionally show error toast
+      // showErrorToast('Failed to mark announcement as read');
     }
   };
 
@@ -262,21 +324,37 @@ const Announcements = () => {
     );
   }
 
-  const unreadCount = announcements.filter(ann => !ann.isRead).length;
+  // Unread count is now managed by state and useEffect above
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Announcements</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Stay updated with important notifications and course announcements
-          </p>
+    <div className="space-y-6 mobile-container overflow-hidden">
+      {/* Header - Mobile Optimized */}
+      <div className="flex flex-col gap-4 overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words">Announcements</h1>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 break-words">
+              Stay updated with important notifications and course announcements
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Badge variant="outline" className="text-sm w-fit">
+              {unreadCount} unread
+            </Badge>
+            {unreadCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleMarkAllAsRead}
+                className="mobile-button"
+              >
+                <CheckCircle className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Mark All Read</span>
+                <span className="sm:hidden">Read All</span>
+              </Button>
+            )}
+          </div>
         </div>
-        <Badge variant="outline" className="text-sm">
-          {unreadCount} unread
-        </Badge>
       </div>
 
       {/* Filters */}
@@ -323,24 +401,36 @@ const Announcements = () => {
         </CardContent>
       </Card>
 
-      {/* Tabs */}
+      {/* Tabs - Mobile Responsive */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="unread">Unread ({unreadCount})</TabsTrigger>
-          <TabsTrigger value="course">Unit</TabsTrigger>
-          <TabsTrigger value="general">General</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 mobile-card">
+          <TabsTrigger value="all" className="mobile-text-sm">
+            <span className="hidden sm:inline">All</span>
+            <span className="sm:hidden">All</span>
+          </TabsTrigger>
+          <TabsTrigger value="unread" className="mobile-text-sm">
+            <span className="hidden sm:inline">Unread ({unreadCount})</span>
+            <span className="sm:hidden">New ({unreadCount})</span>
+          </TabsTrigger>
+          <TabsTrigger value="course" className="mobile-text-sm">
+            <span className="hidden sm:inline">Unit</span>
+            <span className="sm:hidden">Unit</span>
+          </TabsTrigger>
+          <TabsTrigger value="general" className="mobile-text-sm">
+            <span className="hidden sm:inline">General</span>
+            <span className="sm:hidden">Gen</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-6">
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-hidden">
             {filteredAnnouncements.map((announcement) => (
               <Card
                 key={announcement.id}
                 ref={(el) => {
                   notificationRefs.current[announcement.id] = el;
                 }}
-                className={`cursor-pointer transition-all hover:shadow-md ${
+                className={`cursor-pointer transition-all hover:shadow-md mobile-card overflow-hidden ${
                   !announcement.isRead ? 'border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20' : ''
                 } ${
                   highlightedNotificationId === announcement.id
@@ -350,55 +440,58 @@ const Announcements = () => {
                 onClick={() => handleAnnouncementClick(announcement)}
               >
                 <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
+                  <div className="flex flex-col gap-3 overflow-hidden">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
                         <AvatarImage src={announcement.sender.avatar} />
                         <AvatarFallback>
                           {announcement.sender.name.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          {getPriorityIcon(announcement.priority)}
-                          <CardTitle className="text-lg font-medium">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start gap-2 min-w-0">
+                          <div className="flex-shrink-0">{getPriorityIcon(announcement.priority)}</div>
+                          <CardTitle className="text-base sm:text-lg font-medium break-words line-clamp-2 flex-1 min-w-0">
                             {announcement.title}
                           </CardTitle>
                           {!announcement.isRead && (
-                            <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
+                            <div className="h-2 w-2 bg-blue-500 rounded-full flex-shrink-0"></div>
                           )}
                         </div>
-                        <CardDescription className="flex items-center gap-2 mt-1">
-                          <User className="h-3 w-3" />
-                          {announcement.sender.name} • {announcement.sender.role}
+                        <CardDescription className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1 text-xs sm:text-sm overflow-hidden">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <User className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">{announcement.sender.name} • {announcement.sender.role}</span>
+                          </div>
                           {announcement.courseName && (
-                            <>
-                              <BookOpen className="h-3 w-3 ml-2" />
-                              {announcement.courseName}
-                            </>
+                            <div className="flex items-center gap-1 min-w-0">
+                              <BookOpen className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">{announcement.courseName}</span>
+                            </div>
                           )}
                         </CardDescription>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className={getCategoryColor(announcement.category)}>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 overflow-hidden">
+                      <Badge className={`${getCategoryColor(announcement.category)} text-xs flex-shrink-0 w-fit`}>
                         {announcement.category}
                       </Badge>
-                      <div className="text-sm text-muted-foreground flex items-center gap-1">
+                      <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1 flex-shrink-0">
                         <Clock className="h-3 w-3" />
-                        {formatDate(announcement.date)}
+                        <span className="truncate">{formatDate(announcement.date)}</span>
                       </div>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                <CardContent className="pt-0 overflow-hidden">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 break-words line-clamp-3">
                     {announcement.content}
                   </p>
                   {announcement.externalLink && (
-                    <Button variant="outline" size="sm" className="mt-2">
+                    <Button variant="outline" size="sm" className="mt-2 mobile-button">
                       <ExternalLink className="mr-2 h-3 w-3" />
-                      View Details
+                      <span className="hidden sm:inline">View Details</span>
+                      <span className="sm:hidden">Details</span>
                     </Button>
                   )}
                 </CardContent>

@@ -476,244 +476,265 @@ const Assignments = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+    <div className="space-y-6 mobile-container">
+      {/* Header - Mobile Optimized */}
+      <div className="flex flex-col gap-4 overflow-hidden">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words">
             {categoryFilter === 'assignments' ? 'Assignments' :
-             categoryFilter === 'cats' ? 'CATs (Continuous Assessment Tests)' :
+             categoryFilter === 'cats' ? 'CATs' :
              categoryFilter === 'exams' ? 'Exams & Quizzes' :
              'All Assessments'}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            {categoryFilter === 'assignments' ? 'Track and submit your course assignments' :
-             categoryFilter === 'cats' ? 'Take your continuous assessment tests' :
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 break-words">
+            {categoryFilter === 'assignments' ? 'Track and submit your assignments' :
+             categoryFilter === 'cats' ? 'Take your assessment tests' :
              categoryFilter === 'exams' ? 'Take your exams and quizzes' :
-             'Track and manage all your course assessments'}
+             'Track and manage all assessments'}
           </p>
         </div>
 
-        {/* Category Filter Buttons */}
-        <div className="flex flex-wrap gap-2">
+        {/* Category Filter Buttons - Mobile Responsive */}
+        <div className="flex flex-wrap gap-2 w-full">
           <Button
             variant={categoryFilter === 'all' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setCategoryFilter('all')}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 mobile-button text-xs sm:text-sm"
           >
-            <FileText className="h-4 w-4" />
-            All ({assignments.length})
+            <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">All</span>
+            <span className="xs:hidden">All</span>
+            ({assignments.length})
           </Button>
           <Button
             variant={categoryFilter === 'assignments' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setCategoryFilter('assignments')}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 mobile-button text-xs sm:text-sm"
           >
-            <Upload className="h-4 w-4" />
-            Assignments ({stats.totalAssignments})
+            <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Assignments</span>
+            <span className="xs:hidden">Assign</span>
+            ({stats.totalAssignments})
           </Button>
           <Button
             variant={categoryFilter === 'cats' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setCategoryFilter('cats')}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 mobile-button text-xs sm:text-sm"
           >
-            <Brain className="h-4 w-4" />
+            <Brain className="h-3 w-3 sm:h-4 sm:w-4" />
             CATs ({stats.totalCATs})
           </Button>
           <Button
             variant={categoryFilter === 'exams' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setCategoryFilter('exams')}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 mobile-button text-xs sm:text-sm"
           >
-            <Timer className="h-4 w-4" />
-            Exams ({stats.totalExams})
+            <Timer className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Exams</span>
+            <span className="xs:hidden">Exam</span>
+            ({stats.totalExams})
           </Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600">
+      {/* Stats Cards - Mobile Optimized */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 overflow-hidden">
+        <Card className="hover:shadow-md transition-shadow mobile-card">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between min-w-0">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 truncate">Pending</p>
+                <p className="text-lg sm:text-2xl font-bold text-yellow-600">
                   {filteredAssignments.filter(a => a.status === 'pending').length}
                 </p>
               </div>
-              <Clock className="h-8 w-8 text-yellow-600" />
+              <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Overdue</p>
-                <p className="text-2xl font-bold text-red-600">
+        <Card className="hover:shadow-md transition-shadow mobile-card">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between min-w-0">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 truncate">Overdue</p>
+                <p className="text-lg sm:text-2xl font-bold text-red-600">
                   {filteredAssignments.filter(a => a.status === 'overdue').length}
                 </p>
               </div>
-              <XCircle className="h-8 w-8 text-red-600" />
+              <XCircle className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Submitted</p>
-                <p className="text-2xl font-bold text-blue-600">
+        <Card className="hover:shadow-md transition-shadow mobile-card">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between min-w-0">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 truncate">Submitted</p>
+                <p className="text-lg sm:text-2xl font-bold text-blue-600">
                   {filteredAssignments.filter(a => a.status === 'submitted').length}
                 </p>
               </div>
-              <Upload className="h-8 w-8 text-blue-600" />
+              <Upload className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Graded</p>
-                <p className="text-2xl font-bold text-green-600">
+        <Card className="hover:shadow-md transition-shadow mobile-card">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between min-w-0">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 truncate">Graded</p>
+                <p className="text-lg sm:text-2xl font-bold text-green-600">
                   {filteredAssignments.filter(a => a.status === 'graded').length}
                 </p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Category Summary */}
+      {/* Category Summary - Mobile Optimized */}
       {categoryFilter === 'all' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-blue-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Regular Assignments</p>
-                  <p className="text-xl font-bold text-blue-800 dark:text-blue-200">{stats.totalAssignments}</p>
-                  <p className="text-xs text-blue-600 dark:text-blue-400">File uploads, essays, projects</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 overflow-hidden">
+          <Card className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-blue-200 mobile-card">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center justify-between min-w-0">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-blue-700 dark:text-blue-300 truncate">Regular Assignments</p>
+                  <p className="text-lg sm:text-xl font-bold text-blue-800 dark:text-blue-200">{stats.totalAssignments}</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 line-clamp-1">File uploads, essays, projects</p>
                 </div>
-                <Upload className="h-6 w-6 text-blue-600" />
+                <Upload className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-purple-700 dark:text-purple-300">CATs</p>
-                  <p className="text-xl font-bold text-purple-800 dark:text-purple-200">{stats.totalCATs}</p>
-                  <p className="text-xs text-purple-600 dark:text-purple-400">Continuous Assessment Tests</p>
+          <Card className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200 mobile-card">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center justify-between min-w-0">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-300 truncate">CATs</p>
+                  <p className="text-lg sm:text-xl font-bold text-purple-800 dark:text-purple-200">{stats.totalCATs}</p>
+                  <p className="text-xs text-purple-600 dark:text-purple-400 line-clamp-1">Continuous Assessment Tests</p>
                 </div>
-                <Brain className="h-6 w-6 text-purple-600" />
+                <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-900/20 border-red-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-red-700 dark:text-red-300">Exams & Quizzes</p>
-                  <p className="text-xl font-bold text-red-800 dark:text-red-200">{stats.totalExams}</p>
-                  <p className="text-xs text-red-600 dark:text-red-400">Formal assessments</p>
+          <Card className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-900/20 border-red-200 mobile-card">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center justify-between min-w-0">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-red-700 dark:text-red-300 truncate">Exams & Quizzes</p>
+                  <p className="text-lg sm:text-xl font-bold text-red-800 dark:text-red-200">{stats.totalExams}</p>
+                  <p className="text-xs text-red-600 dark:text-red-400 line-clamp-1">Formal assessments</p>
                 </div>
-                <Timer className="h-6 w-6 text-red-600" />
+                <Timer className="h-5 w-5 sm:h-6 sm:w-6 text-red-600 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Assignments Tabs */}
+      {/* Assignments Tabs - Mobile Responsive */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="pending">Pending & Overdue</TabsTrigger>
-          <TabsTrigger value="submitted">Submitted</TabsTrigger>
-          <TabsTrigger value="graded">Graded</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 mobile-card">
+          <TabsTrigger value="pending" className="mobile-text-sm">
+            <span className="hidden sm:inline">Pending & Overdue</span>
+            <span className="sm:hidden">Pending</span>
+          </TabsTrigger>
+          <TabsTrigger value="submitted" className="mobile-text-sm">
+            <span className="hidden sm:inline">Submitted</span>
+            <span className="sm:hidden">Done</span>
+          </TabsTrigger>
+          <TabsTrigger value="graded" className="mobile-text-sm">
+            <span className="hidden sm:inline">Graded</span>
+            <span className="sm:hidden">Graded</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-4">
           {filteredAssignments.length > 0 ? (
             filteredAssignments.map((assignment) => (
-            <Card key={assignment.id} className={`hover:shadow-lg transition-all duration-200 ${
+            <Card key={assignment.id} className={`hover:shadow-lg transition-all duration-200 assignment-card-mobile ${
               isCATType(assignment) ? 'border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50/30 to-transparent dark:from-purple-950/10' :
               isExamType(assignment) && !isCATType(assignment) ? 'border-l-4 border-l-red-500 bg-gradient-to-r from-red-50/30 to-transparent dark:from-red-950/10' :
               'border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50/30 to-transparent dark:from-blue-950/10'
             }`}>
               <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-3 h-3 rounded-full ${getStatusColor(assignment.status)}`} />
-                    <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-3 overflow-hidden">
+                  <div className="flex items-start space-x-3 min-w-0">
+                    <div className={`w-3 h-3 rounded-full flex-shrink-0 ${getStatusColor(assignment.status)}`} />
+                    <div className="flex items-start gap-2 min-w-0 flex-1">
                       {/* Type Icon */}
-                      {isCATType(assignment) && <Brain className="h-5 w-5 text-purple-600" />}
-                      {isExamType(assignment) && !isCATType(assignment) && <Timer className="h-5 w-5 text-red-600" />}
-                      {isRegularAssignment(assignment) && <FileText className="h-5 w-5 text-blue-600" />}
-                      <div>
-                        <CardTitle className="text-lg">{assignment.title}</CardTitle>
-                        <CardDescription className="font-medium">{assignment.course}</CardDescription>
+                      <div className="flex-shrink-0">
+                        {isCATType(assignment) && <Brain className="h-5 w-5 text-purple-600" />}
+                        {isExamType(assignment) && !isCATType(assignment) && <Timer className="h-5 w-5 text-red-600" />}
+                        {isRegularAssignment(assignment) && <FileText className="h-5 w-5 text-blue-600" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-base sm:text-lg mobile-text-lg break-words line-clamp-2">
+                          {assignment.title}
+                        </CardTitle>
+                        <CardDescription className="font-medium mobile-text-sm break-words line-clamp-1">
+                          {assignment.course}
+                        </CardDescription>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center flex-wrap gap-2 overflow-hidden">
                     {/* Assignment Type Badge */}
-                    <Badge className={getAssignmentTypeInfo(assignment).className}>
+                    <Badge className={`${getAssignmentTypeInfo(assignment).className} mobile-text-sm text-xs flex-shrink-0`}>
                       {getAssignmentTypeInfo(assignment).label}
                     </Badge>
-                    <Badge variant={getPriorityColor(assignment.priority)}>
+                    <Badge variant={getPriorityColor(assignment.priority)} className="mobile-text-sm text-xs flex-shrink-0">
                       {assignment.priority}
                     </Badge>
-                    <Badge variant="outline">
+                    <Badge variant="outline" className="mobile-text-sm text-xs flex-shrink-0">
                       {assignment.points} pts
                     </Badge>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+              <CardContent className="space-y-4 overflow-hidden">
+                <p className="text-sm text-gray-600 dark:text-gray-400 break-words line-clamp-3">
                   {assignment.description}
                 </p>
 
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>Due: {assignment.dueDate} at {assignment.dueTime}</span>
+                <div className="flex flex-col gap-2 text-sm mobile-text-sm overflow-hidden">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center space-x-1 min-w-0">
+                      <Calendar className="h-4 w-4 flex-shrink-0" />
+                      <span className="break-words min-w-0">Due: {assignment.dueDate} at {assignment.dueTime}</span>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      {getStatusIcon(assignment.status)}
-                      <span className={assignment.status === 'overdue' ? 'text-red-600' : ''}>
+                    <div className="flex items-center space-x-1 min-w-0">
+                      <div className="flex-shrink-0">{getStatusIcon(assignment.status)}</div>
+                      <span className={`break-words min-w-0 ${assignment.status === 'overdue' ? 'text-red-600' : ''}`}>
                         {assignment.timeLeft}
                       </span>
                     </div>
                     {/* Show duration for exams/CATs */}
                     {isExamType(assignment) && assignment.duration_minutes && (
-                      <div className="flex items-center space-x-1">
-                        <Timer className="h-4 w-4" />
-                        <span>{formatDuration(assignment.duration_minutes)}</span>
+                      <div className="flex items-center space-x-1 min-w-0">
+                        <Timer className="h-4 w-4 flex-shrink-0" />
+                        <span className="break-words min-w-0">{formatDuration(assignment.duration_minutes)}</span>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Exam-specific information */}
+                {/* Exam-specific information - Mobile Responsive */}
                 {isExamType(assignment) && (
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-                    <div className="flex items-center gap-4 text-sm">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mobile-card">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm mobile-text-sm">
                       {assignment.duration_minutes && (
                         <div className="flex items-center gap-1">
                           <Timer className="h-3 w-3" />
@@ -742,37 +763,41 @@ const Assignments = () => {
                   </div>
                 )}
 
-                {/* Grade display for completed exams */}
+                {/* Grade display for completed exams - Mobile Responsive */}
                 {assignment.status === 'graded' && assignment.grade && (
-                  <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
-                    <div className="flex items-center justify-between">
+                  <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg mobile-card">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">Grade:</span>
+                          <span className="text-sm font-medium mobile-text-sm">Grade:</span>
                           <Badge variant="default" className="bg-green-600">
                             {assignment.grade.letter_grade}
                           </Badge>
-                          <span className="text-sm">{assignment.grade.percentage.toFixed(1)}%</span>
+                          <span className="text-sm mobile-text-sm">{assignment.grade.percentage.toFixed(1)}%</span>
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">
                           {assignment.grade.points_earned}/{assignment.grade.total_points} points
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleViewResults(assignment)}
+                          className="assignment-button-mobile"
                         >
-                          View Results
+                          <span className="hidden sm:inline">View Results</span>
+                          <span className="sm:hidden">Results</span>
                         </Button>
                         {assignment.max_attempts && assignment.max_attempts > 1 && (
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleViewAttempts(assignment)}
+                            className="assignment-button-mobile"
                           >
-                            View Attempts
+                            <span className="hidden sm:inline">View Attempts</span>
+                            <span className="sm:hidden">Attempts</span>
                           </Button>
                         )}
                       </div>
@@ -790,143 +815,117 @@ const Assignments = () => {
                   </div>
                 )}
 
-                {/* Action buttons */}
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <div className="flex items-center gap-2">
-                    {/* Status indicator */}
-                    <div className="flex items-center gap-1 text-sm">
-                      {getStatusIcon(assignment.status)}
-                      <span className={assignment.status === 'overdue' ? 'text-red-600 font-medium' : ''}>
-                        {assignment.status === 'pending' ? 'Not Started' :
-                         assignment.status === 'submitted' ? 'Submitted' :
-                         assignment.status === 'graded' ? 'Graded' :
-                         assignment.status === 'overdue' ? 'Overdue' : assignment.status}
-                      </span>
-                    </div>
+                {/* Action buttons - Mobile Responsive */}
+                <div className="pt-4 border-t space-y-3">
+                  {/* Status indicator */}
+                  <div className="flex items-center gap-1 text-sm">
+                    {getStatusIcon(assignment.status)}
+                    <span className={assignment.status === 'overdue' ? 'text-red-600 font-medium' : ''}>
+                      {assignment.status === 'pending' ? 'Not Started' :
+                       assignment.status === 'submitted' ? 'Submitted' :
+                       assignment.status === 'graded' ? 'Graded' :
+                       assignment.status === 'overdue' ? 'Overdue' : assignment.status}
+                    </span>
                   </div>
 
-                  <div className="flex gap-2">
-                    {/* View Details Button */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewDetails(assignment)}
-                    >
-                      <FileText className="h-4 w-4 mr-1" />
-                      Details
-                    </Button>
-
-                    {/* Exam/CAT specific buttons */}
-                    {isExamType(assignment) ? (
+                  {/* Mobile-optimized button layout */}
+                  <div className="flex flex-col sm:flex-row gap-2 assignment-buttons-mobile">
+                    {/* Primary action button - full width on mobile */}
+                    {assignment.status === 'pending' && (
                       <>
-                        {assignment.status === 'pending' && (
+                        {isExamType(assignment) ? (
                           <Button
                             size="sm"
                             onClick={() => handleStartExam(assignment)}
                             disabled={examLoading}
-                            className="bg-blue-600 hover:bg-blue-700"
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 assignment-button-mobile"
                           >
-                            <Brain className="h-4 w-4 mr-1" />
-                            {examLoading ? 'Loading...' : 'Start Exam'}
+                            <Brain className="h-4 w-4 mr-2" />
+                            {examLoading ? 'Loading...' : `Start ${assignment.assignment_type?.toUpperCase()}`}
                           </Button>
-                        )}
-                        {assignment.status === 'graded' && (
+                        ) : (
                           <Button
                             size="sm"
-                            variant="outline"
-                            onClick={() => handleViewResults(assignment)}
+                            onClick={() => handleSubmitAssignment(assignment)}
+                            className="flex-1 bg-green-600 hover:bg-green-700 assignment-button-mobile"
                           >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            View Results
-                          </Button>
-                        )}
-                        {assignment.max_attempts && assignment.max_attempts > 1 && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleViewAttempts(assignment)}
-                          >
-                            <Users className="h-4 w-4 mr-1" />
-                            Attempts
+                            <Upload className="h-4 w-4 mr-2" />
+                            Submit Assignment
                           </Button>
                         )}
                       </>
-                    ) : (
-                      /* Regular assignment buttons */
-                      assignment.status === 'pending' && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleSubmitAssignment(assignment)}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <Upload className="h-4 w-4 mr-1" />
-                          Submit
-                        </Button>
-                      )
                     )}
-                  </div>
-                </div>
 
-                {assignment.grade && (
-                  <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-green-800 dark:text-green-200">Grade: {assignment.grade}/{assignment.points}</span>
-                      <Badge variant="outline" className="text-green-600">
-                        {Math.round((assignment.grade / assignment.points) * 100)}%
-                      </Badge>
-                    </div>
-                    {assignment.feedback && (
-                      <p className="text-sm text-green-700 dark:text-green-300">{assignment.feedback}</p>
-                    )}
-                  </div>
-                )}
+                    {/* Secondary action buttons */}
+                    <div className="flex gap-2 flex-wrap">
+                      {/* View Details Button - always visible */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewDetails(assignment)}
+                        className="assignment-button-mobile"
+                      >
+                        <FileText className="h-4 w-4 mr-1" />
+                        <span className="hidden sm:inline">Details</span>
+                        <span className="sm:hidden">View</span>
+                      </Button>
 
-                <div className="flex space-x-2 pt-2">
-                  {assignment.status === 'pending' && (
-                    <>
-                      {isExamType(assignment) ? (
+                      {/* Status-specific buttons */}
+                      {assignment.status === 'graded' && isExamType(assignment) && (
                         <Button
                           size="sm"
-                          className="flex-1 bg-blue-600 hover:bg-blue-700"
-                          onClick={() => handleStartExam(assignment)}
-                          disabled={examLoading}
+                          variant="outline"
+                          onClick={() => handleViewResults(assignment)}
+                          className="assignment-button-mobile"
                         >
-                          <Brain className="h-4 w-4 mr-2" />
-                          {examLoading ? 'Loading...' : `Start ${assignment.assignment_type?.toUpperCase()}`}
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => handleSubmitAssignment(assignment)}
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Submit Assignment
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          <span className="hidden sm:inline">Results</span>
+                          <span className="sm:hidden">Grade</span>
                         </Button>
                       )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleViewDetails(assignment)}
-                      >
-                        <FileText className="h-4 w-4 mr-2" />
-                        View Details
-                      </Button>
-                    </>
-                  )}
-                  {assignment.status === 'submitted' && (
-                    <Button size="sm" variant="outline" className="flex-1">
-                      <FileText className="h-4 w-4 mr-2" />
-                      View Submission
-                    </Button>
-                  )}
-                  {assignment.status === 'graded' && (
-                    <Button size="sm" variant="outline" className="flex-1">
-                      <FileText className="h-4 w-4 mr-2" />
-                      View Feedback
-                    </Button>
-                  )}
+
+                      {assignment.status === 'submitted' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="assignment-button-mobile"
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          <span className="hidden sm:inline">Submission</span>
+                          <span className="sm:hidden">View</span>
+                        </Button>
+                      )}
+
+                      {assignment.status === 'graded' && !isExamType(assignment) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="assignment-button-mobile"
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          <span className="hidden sm:inline">Feedback</span>
+                          <span className="sm:hidden">Grade</span>
+                        </Button>
+                      )}
+
+                      {/* Attempts button for multi-attempt exams */}
+                      {assignment.max_attempts && assignment.max_attempts > 1 && isExamType(assignment) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewAttempts(assignment)}
+                          className="assignment-button-mobile"
+                        >
+                          <Users className="h-4 w-4 mr-1" />
+                          <span className="hidden sm:inline">Attempts</span>
+                          <span className="sm:hidden">Try</span>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
+
+
               </CardContent>
             </Card>
             ))

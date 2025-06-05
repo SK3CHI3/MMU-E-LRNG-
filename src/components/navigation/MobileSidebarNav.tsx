@@ -13,7 +13,6 @@ import {
   Settings,
   FileText,
   GraduationCap,
-  Bell,
   HelpCircle,
   LogOut,
   CreditCard,
@@ -100,11 +99,6 @@ const getMobileNavItemsForRole = (role: string): MobileNavItem[] => {
           title: 'Profile',
           href: '/profile',
           icon: <User className="h-5 w-5" />,
-        },
-        {
-          title: 'Notifications',
-          href: '/notifications',
-          icon: <Bell className="h-5 w-5" />,
         },
         {
           title: 'Help & Support',
@@ -284,8 +278,8 @@ export function MobileSidebarNav({ onItemClick }: MobileSidebarNavProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 py-4">
-        <nav className="space-y-1 px-3">
+      <div className="flex-1 py-2">
+        <nav className="space-y-0.5 px-3">
           {navItems.map((item) => {
             // Get the actual href - if it's a function, call it with user role
             const actualHref = typeof item.href === 'function'
@@ -302,14 +296,19 @@ export function MobileSidebarNav({ onItemClick }: MobileSidebarNavProps) {
                 to={actualHref}
                 onClick={onItemClick}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-3 rounded-lg transition-colors duration-200 mobile-touch-target",
-                  isActive 
-                    ? "bg-primary text-primary-foreground" 
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  "flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 mobile-touch-target group relative overflow-hidden",
+                  isActive
+                    ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25"
+                    : "text-gray-700 dark:text-gray-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-800 dark:hover:to-gray-700 hover:shadow-md active:scale-[0.98]"
                 )}
               >
-                {item.icon}
-                <span className="font-medium">{item.title}</span>
+                <div className="transition-transform duration-300 group-hover:scale-110 group-active:scale-95">
+                  {item.icon}
+                </div>
+                <span className="font-semibold tracking-wide">{item.title}</span>
+                {isActive && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-blue-600/20 rounded-xl animate-pulse" />
+                )}
               </Link>
             );
           })}
@@ -320,10 +319,12 @@ export function MobileSidebarNav({ onItemClick }: MobileSidebarNavProps) {
       <div className="p-3 border-t border-sidebar-border">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-3 rounded-lg transition-colors duration-200 mobile-touch-target w-full text-left text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          className="flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 mobile-touch-target w-full text-left text-red-600 dark:text-red-400 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 dark:hover:from-red-950/50 dark:hover:to-red-900/50 hover:shadow-md active:scale-[0.98] group"
         >
-          <LogOut className="h-5 w-5" />
-          <span className="font-medium">Logout</span>
+          <div className="transition-transform duration-300 group-hover:scale-110 group-active:scale-95">
+            <LogOut className="h-5 w-5" />
+          </div>
+          <span className="font-semibold tracking-wide">Logout</span>
         </button>
       </div>
     </div>

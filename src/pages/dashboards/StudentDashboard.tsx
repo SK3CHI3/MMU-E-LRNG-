@@ -1,15 +1,18 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { CalendarDays, Clock, FileText, ArrowRight, BookOpen, GraduationCap } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CalendarDays, Clock, BookOpen, GraduationCap, BarChart3, PieChart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { getStudentData, StudentData } from "@/services/userDataService";
+import { studentActivityService, StudyMetrics } from "@/services/studentActivityService";
 import AnnouncementBanner from "@/components/announcements/AnnouncementBanner";
+import { MobileDataCards } from "@/components/dashboard/MobileDataCards";
+import { MobileChartWidgets } from "@/components/dashboard/MobileChartWidgets";
 
 const StudentDashboard = () => {
   const { user, dbUser } = useAuth();
   const [studentData, setStudentData] = useState<StudentData | null>(null);
+  const [studyMetrics, setStudyMetrics] = useState<StudyMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,16 +29,36 @@ const StudentDashboard = () => {
       setLoading(true);
 
       try {
-        // Fetch dynamic student data
-        const data = await getStudentData(user.id);
-        console.log('StudentDashboard: Successfully fetched student data:', data);
-        setStudentData(data);
+        // Track login activity
+        await studentActivityService.trackLogin(user.id);
+
+        // Fetch dynamic student data and activity metrics in parallel
+        const [data, metrics] = await Promise.all([
+          getStudentData(user.id),
+          studentActivityService.getStudyMetrics(user.id)
+        ]);
+
+        if (import.meta.env.DEV) {
+          console.log('StudentDashboard: Successfully fetched student data');
+          console.log('StudentDashboard: Successfully fetched study metrics');
+        }
+
+        // Merge activity metrics with student data
+        const enhancedStudentData = {
+          ...data,
+          ...metrics,
+          studyActivity: Math.min(100, (metrics.weeklyStudyHours / 40) * 100), // Convert to percentage
+        };
+
+        setStudentData(enhancedStudentData);
+        setStudyMetrics(metrics);
         setError(null); // Clear any previous errors
       } catch (error) {
         console.error('StudentDashboard: Error fetching student data:', error);
         setError('Failed to load student data. Using basic profile information.');
+
         // Use dbUser information as fallback
-        setStudentData({
+        const fallbackData = {
           name: dbUser?.full_name || user?.email?.split('@')[0] || 'Student',
           admissionNumber: dbUser?.student_id || 'Not Set',
           semester: 'Current Semester',
@@ -54,15 +77,28 @@ const StudentDashboard = () => {
           programmeTitle: 'Not Set',
           yearOfStudy: 1,
           upcomingClasses: [],
-          pendingAssignments: []
-        });
+          pendingAssignments: [],
+          // Add default activity metrics
+          weeklyStudyHours: 0,
+          weeklyStudyData: Array(7).fill(0),
+          studyActivityTrend: 0,
+          attendanceRate: 0,
+          attendanceTrend: 0,
+          classesAttended: 0,
+          totalClasses: 0,
+          completedAssignments: 0,
+          overdueAssignments: 0,
+          studyActivity: 0
+        };
+
+        setStudentData(fallbackData);
       } finally {
         setLoading(false);
       }
     };
 
     fetchStudentData();
-  }, [user?.id]);
+  }, [user?.id, dbUser]);
 
   // Helper function to display values with proper N/A handling
   const displayValue = (value: any, type: 'text' | 'number' | 'currency' = 'text') => {
@@ -75,11 +111,6 @@ const StudentDashboard = () => {
 
   // Use dynamic data only - no fallbacks
   const studentInfo = studentData;
-
-  // Calculate percentages safely
-  const feePercentage = studentInfo && studentInfo.feeRequired > 0
-    ? Math.round((studentInfo.feePaid / studentInfo.feeRequired) * 100)
-    : 0;
 
   // Show loading state
   if (loading) {
@@ -134,8 +165,32 @@ const StudentDashboard = () => {
         {/* Announcements Banner */}
         <AnnouncementBanner maxAnnouncements={2} compact={false} />
 
-      {/* Stats Cards */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Mobile-First Data Visualization */}
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <PieChart className="h-4 w-4" />
+              <span className="hidden sm:inline">Charts</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            {/* Enhanced Mobile Data Cards */}
+            <MobileDataCards studentData={studentData} loading={loading} />
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6">
+            {/* Mobile Chart Widgets - Prioritizing dynamic charts with real activity data */}
+            <MobileChartWidgets studentData={studentData} loading={loading} />
+          </TabsContent>
+        </Tabs>
+
+      {/* Legacy Stats Cards - Hidden on mobile, shown on larger screens */}
+      <div className="hidden lg:grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <Card className="mobile-card bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Current Semester</CardTitle>
@@ -178,226 +233,9 @@ const StudentDashboard = () => {
         </Card>
       </div>
 
-      {/* Academic Progress Card */}
-      <Card className="mobile-card bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300">
-        <CardHeader>
-          <CardTitle className="text-lg md:text-xl">Academic Progress</CardTitle>
-          <CardDescription>Your academic journey overview</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 md:gap-8 md:grid-cols-2 md:divide-x md:divide-gray-100 dark:md:divide-gray-800">
-            <div className="space-y-3 md:pr-6">
-              <div className="flex justify-between items-center gap-2">
-                <span className="text-sm text-muted-foreground">Faculty:</span>
-                <span className="font-medium text-sm truncate">{displayValue(studentInfo?.faculty)}</span>
-              </div>
-              <div className="border-t border-gray-100 dark:border-gray-800"></div>
-              <div className="flex justify-between items-center gap-2">
-                <span className="text-sm text-muted-foreground">Current Semester:</span>
-                <span className="font-medium text-sm">{displayValue(studentInfo?.semester)}</span>
-              </div>
-              <div className="border-t border-gray-100 dark:border-gray-800"></div>
-              <div className="flex justify-between items-center gap-2">
-                <span className="text-sm text-muted-foreground">GPA:</span>
-                <span className="font-medium text-sm">{displayValue(studentInfo?.gpa, 'number')}</span>
-              </div>
-            </div>
 
-            <div className="space-y-3 md:pl-6 mt-6 md:mt-0">
-              <div className="flex justify-between items-center gap-2">
-                <span className="text-sm text-muted-foreground">Fee Balance:</span>
-                <span className="font-medium text-sm">{displayValue(studentInfo?.feeBalance, 'currency')}</span>
-              </div>
-              <div className="border-t border-gray-100 dark:border-gray-800"></div>
-              <div className="flex justify-between items-center gap-2">
-                <span className="text-sm text-muted-foreground">Fee Paid:</span>
-                <span className="font-medium text-sm">{displayValue(studentInfo?.feePaid, 'currency')}</span>
-              </div>
-              <div className="border-t border-gray-100 dark:border-gray-800"></div>
-              <div className="flex justify-between items-center gap-2">
-                <span className="text-sm text-muted-foreground">Total Required:</span>
-                <span className="font-medium text-sm">{displayValue(studentInfo?.feeRequired, 'currency')}</span>
-              </div>
-              <div className="border-t border-gray-100 dark:border-gray-800"></div>
-              <div className="flex justify-between items-center gap-2">
-                <span className="text-sm text-muted-foreground">Payment Progress:</span>
-                <span className="font-medium text-sm">{studentInfo ? `${feePercentage}%` : "N/A"}</span>
-              </div>
-              {studentInfo && <Progress value={feePercentage} className="h-2 mt-3" />}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* My Units Statistics Card */}
-      <Card className="mobile-card bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300">
-        <CardHeader>
-          <CardTitle className="text-lg md:text-xl">My Units</CardTitle>
-          <CardDescription>Semester-specific unit statistics and progress</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {studentInfo ? (
-            <>
-              <div className="grid gap-4 grid-cols-2 md:grid-cols-4 md:gap-8 md:divide-x md:divide-gray-100 dark:md:divide-gray-800">
-                <div className="text-center space-y-2 md:pr-6">
-                  <div className="text-xl md:text-2xl font-bold text-blue-600">{displayValue(studentInfo.currentSemesterUnits, 'number')}</div>
-                  <p className="text-xs text-muted-foreground">Units Registered</p>
-                  <p className="text-xs text-muted-foreground hidden md:block">Current Semester</p>
-                </div>
-                <div className="text-center space-y-2 md:px-6">
-                  <div className="text-xl md:text-2xl font-bold text-green-600">{displayValue(studentInfo.unitsCompleted, 'number')}</div>
-                  <p className="text-xs text-muted-foreground">Units Completed</p>
-                  <p className="text-xs text-muted-foreground hidden md:block">Total So Far</p>
-                </div>
-                <div className="text-center space-y-2 md:px-6">
-                  <div className="text-xl md:text-2xl font-bold text-emerald-600">{displayValue(studentInfo.unitsPassed, 'number')}</div>
-                  <p className="text-xs text-muted-foreground">Units Passed</p>
-                  <p className="text-xs text-muted-foreground hidden md:block">Grade ≥ 50%</p>
-                </div>
-                <div className="text-center space-y-2 md:pl-6">
-                  <div className="text-xl md:text-2xl font-bold text-red-600">{displayValue(studentInfo.unitsFailed, 'number')}</div>
-                  <p className="text-xs text-muted-foreground">Units Failed</p>
-                  <p className="text-xs text-muted-foreground hidden md:block">Grade &lt; 50%</p>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Programme:</span>
-                  <span className="text-sm font-medium truncate ml-2">{displayValue(studentInfo.programmeTitle)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Year of Study:</span>
-                  <span className="text-sm font-medium">{studentInfo.yearOfStudy > 0 ? `Year ${studentInfo.yearOfStudy}` : "N/A"}</span>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No academic data available</p>
-              <p className="text-sm">Please contact the academic office if this is an error</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Main Content Grid */}
-      <div className="grid gap-4 md:gap-8 lg:grid-cols-2 lg:divide-x lg:divide-gray-100 dark:lg:divide-gray-800">
-        <Card className="mobile-card bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300 lg:pr-6">
-          <CardHeader>
-            <CardTitle className="text-lg md:text-xl">Upcoming Classes</CardTitle>
-            <CardDescription>Your scheduled classes for the next 24 hours</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 md:space-y-4">
-            {loading ? (
-              <div className="space-y-4">
-                <div className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                </div>
-                <div className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              </div>
-            ) : studentInfo?.upcomingClasses && studentInfo.upcomingClasses.length > 0 ? (
-              studentInfo.upcomingClasses.map(classInfo => (
-              <div key={classInfo.id} className="flex items-start space-x-3 rounded-md border p-3 md:p-4 mobile-touch-target">
-                <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-full bg-primary/10 shrink-0">
-                  {classInfo.isOnline ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M15 10l5 -5"></path>
-                      <path d="M20 5v5h-5"></path>
-                      <path d="M18 12v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2h6"></path>
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 21l18 0"></path>
-                      <path d="M3 7v1a3 3 0 0 0 6 0v-1m0 1a3 3 0 0 0 6 0v-1m0 1a3 3 0 0 0 6 0v-1"></path>
-                      <path d="M3 7l18 0"></path>
-                      <path d="M3 11l18 0"></path>
-                      <path d="M9 8v13"></path>
-                      <path d="M15 8v13"></path>
-                    </svg>
-                  )}
-                </div>
-                <div className="space-y-1 flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold truncate">{classInfo.unit}</h4>
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3 md:h-3.5 md:w-3.5 mr-1 shrink-0" />
-                    <span className="truncate">{classInfo.time}</span>
-                  </div>
-                  <div className="flex items-center text-xs">
-                    {classInfo.isOnline ? (
-                      <a href={classInfo.location} className="text-primary hover:underline flex items-center truncate mobile-touch-target">
-                        <span className="truncate">Join Online Class</span>
-                        <ArrowRight className="h-3 w-3 md:h-3.5 md:w-3.5 ml-1 shrink-0" />
-                      </a>
-                    ) : (
-                      <span className="truncate">{classInfo.location}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              ))
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No upcoming classes scheduled</p>
-              </div>
-            )}
-            <Button variant="outline" className="w-full mobile-button">
-              View All Classes
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="mobile-card bg-white/80 dark:bg-card backdrop-blur-sm border-white/40 dark:border-border shadow-lg hover:shadow-xl transition-all duration-300 lg:pl-6">
-          <CardHeader>
-            <CardTitle className="text-lg md:text-xl">Pending Assignments</CardTitle>
-            <CardDescription>Assignments due in the next 7 days</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 md:space-y-4">
-            {loading ? (
-              <div className="space-y-4">
-                <div className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                </div>
-                <div className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              </div>
-            ) : studentInfo?.pendingAssignments && studentInfo.pendingAssignments.length > 0 ? (
-              studentInfo.pendingAssignments.map(assignment => (
-              <div key={assignment.id} className="flex items-start space-x-3 rounded-md border p-3 md:p-4 mobile-touch-target">
-                <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-full bg-primary/10 shrink-0">
-                  <FileText className="h-4 w-4 md:h-5 md:w-5 text-primary" />
-                </div>
-                <div className="space-y-1 flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold truncate">{assignment.title}</h4>
-                  <p className="text-xs text-muted-foreground truncate">{assignment.unit}</p>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-xs text-muted-foreground truncate">Due: {assignment.dueDate}</div>
-                    <div className={`px-2 py-0.5 rounded-full text-xs shrink-0 ${
-                      assignment.daysRemaining <= 2 ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
-                    }`}>
-                      {assignment.daysRemaining} days left
-                    </div>
-                  </div>
-                </div>
-              </div>
-              ))
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No pending assignments</p>
-              </div>
-            )}
-            <Button variant="outline" className="w-full mobile-button">
-              View All Assignments
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
     </div>
     );
   } catch (renderError) {

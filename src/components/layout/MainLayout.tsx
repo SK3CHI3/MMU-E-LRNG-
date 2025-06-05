@@ -80,19 +80,21 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
         {/* Mobile Sidebar */}
         <div className={cn("mobile-sidebar", isMobileSidebarOpen && "open")}>
-          <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-            <div className="flex items-center gap-2">
-              <Logo />
+          <div className="flex items-center justify-between p-5 border-b border-gray-200/50 dark:border-gray-700/50 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-blue-950/30 dark:to-indigo-950/30">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+                <Logo />
+              </div>
               <div className="flex flex-col">
-                <h2 className="font-semibold text-sidebar-foreground">MMU LMS</h2>
-                <p className="text-xs text-sidebar-foreground/70">Learning Management System</p>
+                <h2 className="font-bold text-gray-800 dark:text-gray-100 text-lg">MMU LMS</h2>
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">Learning Management System</p>
               </div>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={closeMobileSidebar}
-              className="text-sidebar-foreground hover:bg-sidebar-accent"
+              className="text-gray-600 dark:text-gray-400 hover:bg-white/80 dark:hover:bg-gray-800/80 hover:text-gray-800 dark:hover:text-gray-200 rounded-xl transition-all duration-300 active:scale-95"
             >
               <X className="h-5 w-5" />
             </Button>
@@ -100,19 +102,26 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           <div className="flex-1 overflow-y-auto mobile-scroll">
             <MobileSidebarNav onItemClick={closeMobileSidebar} />
           </div>
-          <div className="p-4 border-t border-sidebar-border">
-            <div className="flex flex-col space-y-2">
-              <span className="text-xs text-sidebar-foreground/70">© 2025 MMU LMS</span>
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/support">Support</Link>
+          <div className="p-5 border-t border-gray-200/50 dark:border-gray-700/50 bg-gradient-to-r from-gray-50/50 to-gray-100/50 dark:from-gray-900/50 dark:to-gray-800/50">
+            <div className="flex flex-col space-y-3">
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">© 2025 MMU LMS</span>
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="bg-white/80 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 rounded-xl"
+              >
+                <Link to="/support" className="font-semibold">Support</Link>
               </Button>
             </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 mobile-padding pb-20 mobile-scroll">
-          {children}
+        <main className="flex-1 mobile-padding mobile-content-with-nav mobile-scroll overflow-x-hidden">
+          <div className="max-w-full overflow-x-hidden">
+            {children}
+          </div>
         </main>
 
         {/* Mobile Bottom Navigation */}

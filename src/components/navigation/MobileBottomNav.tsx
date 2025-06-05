@@ -256,19 +256,25 @@ export function MobileBottomNav() {
 
   return (
     <div className={cn(
-      "fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ease-out",
+      "mobile-bottom-nav-container transition-transform duration-300 ease-out",
       "flex justify-center items-end",
       // Show/hide based on scroll behavior
       (isVisible || isInitialLoad) ? "translate-y-0" : "translate-y-full"
     )}>
       <div className="safe-area-bottom pb-4 px-4">
         <div className={cn(
-          "bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl",
-          "border border-gray-200/30 dark:border-slate-700/30",
-          "rounded-full shadow-lg shadow-black/8 dark:shadow-black/25",
-          "px-2 py-1.5"
+          "mobile-bottom-nav-content",
+          "bg-gradient-to-r from-white/98 via-gray-50/98 to-white/98",
+          "dark:bg-gradient-to-r dark:from-slate-900/98 dark:via-slate-800/98 dark:to-slate-900/98",
+          "backdrop-blur-xl",
+          "border-2 border-gray-300/60 dark:border-slate-600/60",
+          "rounded-2xl shadow-xl shadow-black/12 dark:shadow-black/30",
+          "ring-1 ring-gray-200/50 dark:ring-slate-700/50",
+          "px-3 py-2.5",
+          "relative overflow-hidden",
+          "before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:dark:via-white/5"
         )}>
-          <div className="flex items-center justify-center space-x-1">
+          <div className="flex items-center justify-center space-x-2 relative z-10">
             {navItems.map((item) => {
               // Get the actual href - if it's a function, call it with user role
               const actualHref = typeof item.href === 'function'
