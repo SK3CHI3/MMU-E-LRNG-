@@ -176,14 +176,11 @@ const TopBar = () => {
     <div className="border-b h-16 px-6 flex items-center justify-between bg-white/70 dark:bg-background/95 backdrop-blur-md border-white/40 dark:border-border shadow-sm">
       <div className="flex items-center gap-4">
         <SidebarTrigger />
-        <div className="hidden md:block w-64">
+        <div className="hidden sm:block w-64">
           <Search />
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <div className="hidden sm:block">
-          <Search className="w-48" />
-        </div>
         <ThemeToggle />
         <Notifications />
         <ProfileDropdown />
