@@ -12,19 +12,21 @@
     </linearGradient>
   </defs>
   
-  <!-- Background Square with Subtle Shadow -->
-  <rect x="1" y="1" width="30" height="30" rx="6" fill="url(#bgGradient)" stroke="#1e40af" stroke-width="1"/>
+  <!-- Background Square with Smooth Corners -->
+  <rect x="1" y="1" width="30" height="30" rx="6" fill="#1e40af"/>
   
-  <!-- Graduation Cap with Gradient -->
-  <path d="M16 5L5 11L16 17L27 11L16 5Z" fill="url(#capGradient)"/>
-  <path d="M9 13.5V21C9 21 13 25 16 25C19 25 23 21 23 21V13.5" fill="url(#capGradient)"/>
+  <!-- Graduation Cap in White -->
+  <path d="M16 5L5 11L16 17L27 11L16 5Z" fill="#ffffff"/>
+  <path d="M9 13.5V21C9 21 13 25 16 25C19 25 23 21 23 21V13.5" fill="#ffffff"/>
   
-  <!-- Red Accent Line with Gradient -->
+  <!-- Red Accent Line -->
   <path d="M16 5L5 11L16 17L27 11L16 5Z" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Red Tassel Circle -->
+  <circle cx="23" cy="23" r="2" fill="#dc2626"/>
   
   <!-- Modern Tassel Design -->
   <path d="M23 13V23L25 27" stroke="#1e40af" stroke-width="2" stroke-linecap="round"/>
-  <circle cx="23" cy="23" r="2" fill="#dc2626"/>
   
   <!-- Decorative Elements -->
   <path d="M11 9L13 10" stroke="#dc2626" stroke-width="1" stroke-linecap="round"/>
