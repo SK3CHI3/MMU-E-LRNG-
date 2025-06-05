@@ -12,7 +12,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { FileText, Clock, Calendar, Upload, CheckCircle, AlertCircle, XCircle, Brain, Timer, Users, File } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getStudentAssignments, Assignment, submitAssignment } from '@/services/assignmentService';
-import { startExamAttempt, getExamQuestions, getStudentExamAttempts } from '@/services/examService';
+import {
+  startExamAttempt,
+  getExamQuestions,
+  getStudentExamAttempts,
+  getExamGrade,
+  isAssignmentAvailable,
+  getAssignmentDetails,
+  type ExamGrade
+} from '@/services/examService';
 import { uploadAssignmentFiles, validateAssignmentFile, formatFileSize, getFileIcon } from '@/services/assignmentFileService';
 import ExamInterface from '@/components/exam/ExamInterface';
 import { showErrorToast, showSuccessToast } from '@/utils/ui/toast';
@@ -42,6 +50,15 @@ const Assignments = () => {
     url: '',
     files: [] as File[]
   });
+
+  // Exam results state
+  const [showResultsDialog, setShowResultsDialog] = useState(false);
+  const [selectedExamGrade, setSelectedExamGrade] = useState<ExamGrade | null>(null);
+  const [examAttempts, setExamAttempts] = useState<any[]>([]);
+  const [showAttemptsDialog, setShowAttemptsDialog] = useState(false);
+
+  // Filter and category state
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'assignments' | 'cats' | 'exams'>('all');
 
   useEffect(() => {
     if (user?.id) {
@@ -79,6 +96,37 @@ const Assignments = () => {
         return;
       }
 
+      // Check assignment availability
+      const availability = await isAssignmentAvailable(assignment.id);
+      if (!availability.isAvailable) {
+        if (!availability.isPublished) {
+          showErrorToast('This exam is not yet published');
+        } else if (availability.availableFrom && new Date() < availability.availableFrom) {
+          showErrorToast(`This exam will be available from ${availability.availableFrom.toLocaleString()}`);
+        } else if (availability.availableUntil && new Date() > availability.availableUntil) {
+          showErrorToast('This exam is no longer available');
+        }
+        return;
+      }
+
+      // Check if student has exceeded maximum attempts
+      const attempts = await getStudentExamAttempts(assignment.id, user.id);
+      if (assignment.max_attempts && attempts.length >= assignment.max_attempts) {
+        showErrorToast(`You have used all ${assignment.max_attempts} attempts for this exam`);
+        return;
+      }
+
+      // Check if there's an active attempt
+      const activeAttempt = attempts.find(attempt => attempt.status === 'in_progress');
+      if (activeAttempt) {
+        // Resume existing attempt
+        const questions = await getExamQuestions(assignment.id);
+        setExamQuestions(questions);
+        setExamAttempt(activeAttempt);
+        setShowExamDialog(true);
+        return;
+      }
+
       // Get exam questions
       const questions = await getExamQuestions(assignment.id);
       if (questions.length === 0) {
@@ -86,7 +134,7 @@ const Assignments = () => {
         return;
       }
 
-      // Start or resume exam attempt
+      // Start new exam attempt
       const attempt = await startExamAttempt(assignment.id, user.id);
 
       setExamQuestions(questions);
@@ -101,7 +149,7 @@ const Assignments = () => {
   };
 
   // Handle exam completion
-  const handleExamComplete = (completedAttempt: any) => {
+  const handleExamComplete = async (completedAttempt: any) => {
     setShowExamDialog(false);
     setCurrentExam(null);
     setExamQuestions([]);
@@ -109,8 +157,62 @@ const Assignments = () => {
 
     showSuccessToast('Exam submitted successfully!');
 
+    // Get the grade for this attempt
+    try {
+      const grade = await getExamGrade(completedAttempt.id);
+      if (grade) {
+        setSelectedExamGrade(grade);
+        setShowResultsDialog(true);
+      }
+    } catch (error) {
+      console.error('Error fetching exam grade:', error);
+    }
+
     // Refresh assignments to update status
     fetchAssignments();
+  };
+
+  // Handle viewing exam results
+  const handleViewResults = async (assignment: Assignment) => {
+    if (!user?.id) return;
+
+    try {
+      const attempts = await getStudentExamAttempts(assignment.id, user.id);
+      const completedAttempts = attempts.filter(attempt => attempt.status === 'submitted' || attempt.status === 'graded');
+
+      if (completedAttempts.length === 0) {
+        showErrorToast('No completed attempts found');
+        return;
+      }
+
+      // Get the best attempt or latest attempt
+      const bestAttempt = completedAttempts.reduce((best, current) => {
+        if (!best.grade || !current.grade) return best;
+        return current.grade.percentage > best.grade.percentage ? current : best;
+      });
+
+      if (bestAttempt.grade) {
+        setSelectedExamGrade(bestAttempt.grade);
+        setShowResultsDialog(true);
+      }
+    } catch (error) {
+      console.error('Error fetching exam results:', error);
+      showErrorToast('Failed to load exam results');
+    }
+  };
+
+  // Handle viewing all attempts
+  const handleViewAttempts = async (assignment: Assignment) => {
+    if (!user?.id) return;
+
+    try {
+      const attempts = await getStudentExamAttempts(assignment.id, user.id);
+      setExamAttempts(attempts);
+      setShowAttemptsDialog(true);
+    } catch (error) {
+      console.error('Error fetching exam attempts:', error);
+      showErrorToast('Failed to load exam attempts');
+    }
   };
 
   // Handle viewing assignment details
@@ -209,6 +311,17 @@ const Assignments = () => {
            assignment.submission_format === 'online_exam';
   };
 
+  // Check if assignment is a CAT
+  const isCATType = (assignment: Assignment) => {
+    return assignment.assignment_type === 'cat';
+  };
+
+  // Check if assignment is a regular assignment
+  const isRegularAssignment = (assignment: Assignment) => {
+    return !['exam', 'quiz', 'cat'].includes(assignment.assignment_type || '') ||
+           assignment.submission_format !== 'online_exam';
+  };
+
   // Get assignment type display info
   const getAssignmentTypeInfo = (assignment: Assignment) => {
     const type = assignment.assignment_type || 'assignment';
@@ -278,23 +391,51 @@ const Assignments = () => {
   };
 
   const filteredAssignments = assignments.filter(assignment => {
+    // First filter by status (activeTab)
+    let statusMatch = false;
     switch (activeTab) {
       case 'pending':
-        return assignment.status === 'pending' || assignment.status === 'overdue';
+        statusMatch = assignment.status === 'pending' || assignment.status === 'overdue';
+        break;
       case 'submitted':
-        return assignment.status === 'submitted';
+        statusMatch = assignment.status === 'submitted';
+        break;
       case 'graded':
-        return assignment.status === 'graded';
+        statusMatch = assignment.status === 'graded';
+        break;
       default:
-        return true;
+        statusMatch = true;
     }
+
+    // Then filter by category
+    let categoryMatch = false;
+    switch (categoryFilter) {
+      case 'assignments':
+        categoryMatch = isRegularAssignment(assignment);
+        break;
+      case 'cats':
+        categoryMatch = isCATType(assignment);
+        break;
+      case 'exams':
+        categoryMatch = isExamType(assignment) && !isCATType(assignment);
+        break;
+      case 'all':
+      default:
+        categoryMatch = true;
+    }
+
+    return statusMatch && categoryMatch;
   });
 
   const stats = {
     pending: assignments.filter(a => a.status === 'pending').length,
     overdue: assignments.filter(a => a.status === 'overdue').length,
     submitted: assignments.filter(a => a.status === 'submitted').length,
-    graded: assignments.filter(a => a.status === 'graded').length
+    graded: assignments.filter(a => a.status === 'graded').length,
+    // Category stats
+    totalAssignments: assignments.filter(a => isRegularAssignment(a)).length,
+    totalCATs: assignments.filter(a => isCATType(a)).length,
+    totalExams: assignments.filter(a => isExamType(a) && !isCATType(a)).length
   };
 
   // Loading state
@@ -337,63 +478,165 @@ const Assignments = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Assignments</h1>
-          <p className="text-gray-600 dark:text-gray-400">Track and manage your course assignments</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            {categoryFilter === 'assignments' ? 'Assignments' :
+             categoryFilter === 'cats' ? 'CATs (Continuous Assessment Tests)' :
+             categoryFilter === 'exams' ? 'Exams & Quizzes' :
+             'All Assessments'}
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            {categoryFilter === 'assignments' ? 'Track and submit your course assignments' :
+             categoryFilter === 'cats' ? 'Take your continuous assessment tests' :
+             categoryFilter === 'exams' ? 'Take your exams and quizzes' :
+             'Track and manage all your course assessments'}
+          </p>
+        </div>
+
+        {/* Category Filter Buttons */}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={categoryFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setCategoryFilter('all')}
+            className="flex items-center gap-1"
+          >
+            <FileText className="h-4 w-4" />
+            All ({assignments.length})
+          </Button>
+          <Button
+            variant={categoryFilter === 'assignments' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setCategoryFilter('assignments')}
+            className="flex items-center gap-1"
+          >
+            <Upload className="h-4 w-4" />
+            Assignments ({stats.totalAssignments})
+          </Button>
+          <Button
+            variant={categoryFilter === 'cats' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setCategoryFilter('cats')}
+            className="flex items-center gap-1"
+          >
+            <Brain className="h-4 w-4" />
+            CATs ({stats.totalCATs})
+          </Button>
+          <Button
+            variant={categoryFilter === 'exams' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setCategoryFilter('exams')}
+            className="flex items-center gap-1"
+          >
+            <Timer className="h-4 w-4" />
+            Exams ({stats.totalExams})
+          </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="p-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {filteredAssignments.filter(a => a.status === 'pending').length}
+                </p>
               </div>
               <Clock className="h-8 w-8 text-yellow-600" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Overdue</p>
-                <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {filteredAssignments.filter(a => a.status === 'overdue').length}
+                </p>
               </div>
               <XCircle className="h-8 w-8 text-red-600" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Submitted</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.submitted}</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {filteredAssignments.filter(a => a.status === 'submitted').length}
+                </p>
               </div>
               <Upload className="h-8 w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Graded</p>
-                <p className="text-2xl font-bold text-green-600">{stats.graded}</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {filteredAssignments.filter(a => a.status === 'graded').length}
+                </p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Category Summary */}
+      {categoryFilter === 'all' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-blue-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Regular Assignments</p>
+                  <p className="text-xl font-bold text-blue-800 dark:text-blue-200">{stats.totalAssignments}</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400">File uploads, essays, projects</p>
+                </div>
+                <Upload className="h-6 w-6 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-purple-700 dark:text-purple-300">CATs</p>
+                  <p className="text-xl font-bold text-purple-800 dark:text-purple-200">{stats.totalCATs}</p>
+                  <p className="text-xs text-purple-600 dark:text-purple-400">Continuous Assessment Tests</p>
+                </div>
+                <Brain className="h-6 w-6 text-purple-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-900/20 border-red-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-red-700 dark:text-red-300">Exams & Quizzes</p>
+                  <p className="text-xl font-bold text-red-800 dark:text-red-200">{stats.totalExams}</p>
+                  <p className="text-xs text-red-600 dark:text-red-400">Formal assessments</p>
+                </div>
+                <Timer className="h-6 w-6 text-red-600" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Assignments Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -406,14 +649,24 @@ const Assignments = () => {
         <TabsContent value={activeTab} className="space-y-4">
           {filteredAssignments.length > 0 ? (
             filteredAssignments.map((assignment) => (
-            <Card key={assignment.id} className="hover:shadow-lg transition-shadow">
+            <Card key={assignment.id} className={`hover:shadow-lg transition-all duration-200 ${
+              isCATType(assignment) ? 'border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50/30 to-transparent dark:from-purple-950/10' :
+              isExamType(assignment) && !isCATType(assignment) ? 'border-l-4 border-l-red-500 bg-gradient-to-r from-red-50/30 to-transparent dark:from-red-950/10' :
+              'border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50/30 to-transparent dark:from-blue-950/10'
+            }`}>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
                     <div className={`w-3 h-3 rounded-full ${getStatusColor(assignment.status)}`} />
-                    <div>
-                      <CardTitle className="text-lg">{assignment.title}</CardTitle>
-                      <CardDescription className="font-medium">{assignment.course}</CardDescription>
+                    <div className="flex items-center gap-2">
+                      {/* Type Icon */}
+                      {isCATType(assignment) && <Brain className="h-5 w-5 text-purple-600" />}
+                      {isExamType(assignment) && !isCATType(assignment) && <Timer className="h-5 w-5 text-red-600" />}
+                      {isRegularAssignment(assignment) && <FileText className="h-5 w-5 text-blue-600" />}
+                      <div>
+                        <CardTitle className="text-lg">{assignment.title}</CardTitle>
+                        <CardDescription className="font-medium">{assignment.course}</CardDescription>
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -489,7 +742,45 @@ const Assignments = () => {
                   </div>
                 )}
 
-                {assignment.status === 'pending' && (
+                {/* Grade display for completed exams */}
+                {assignment.status === 'graded' && assignment.grade && (
+                  <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">Grade:</span>
+                          <Badge variant="default" className="bg-green-600">
+                            {assignment.grade.letter_grade}
+                          </Badge>
+                          <span className="text-sm">{assignment.grade.percentage.toFixed(1)}%</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {assignment.grade.points_earned}/{assignment.grade.total_points} points
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewResults(assignment)}
+                        >
+                          View Results
+                        </Button>
+                        {assignment.max_attempts && assignment.max_attempts > 1 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleViewAttempts(assignment)}
+                          >
+                            View Attempts
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {assignment.status === 'pending' && !isExamType(assignment) && (
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Progress</span>
@@ -498,6 +789,83 @@ const Assignments = () => {
                     <Progress value={assignment.progress} className="h-2" />
                   </div>
                 )}
+
+                {/* Action buttons */}
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <div className="flex items-center gap-2">
+                    {/* Status indicator */}
+                    <div className="flex items-center gap-1 text-sm">
+                      {getStatusIcon(assignment.status)}
+                      <span className={assignment.status === 'overdue' ? 'text-red-600 font-medium' : ''}>
+                        {assignment.status === 'pending' ? 'Not Started' :
+                         assignment.status === 'submitted' ? 'Submitted' :
+                         assignment.status === 'graded' ? 'Graded' :
+                         assignment.status === 'overdue' ? 'Overdue' : assignment.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {/* View Details Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewDetails(assignment)}
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      Details
+                    </Button>
+
+                    {/* Exam/CAT specific buttons */}
+                    {isExamType(assignment) ? (
+                      <>
+                        {assignment.status === 'pending' && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleStartExam(assignment)}
+                            disabled={examLoading}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Brain className="h-4 w-4 mr-1" />
+                            {examLoading ? 'Loading...' : 'Start Exam'}
+                          </Button>
+                        )}
+                        {assignment.status === 'graded' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleViewResults(assignment)}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            View Results
+                          </Button>
+                        )}
+                        {assignment.max_attempts && assignment.max_attempts > 1 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleViewAttempts(assignment)}
+                          >
+                            <Users className="h-4 w-4 mr-1" />
+                            Attempts
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      /* Regular assignment buttons */
+                      assignment.status === 'pending' && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleSubmitAssignment(assignment)}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <Upload className="h-4 w-4 mr-1" />
+                          Submit
+                        </Button>
+                      )
+                    )}
+                  </div>
+                </div>
 
                 {assignment.grade && (
                   <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
@@ -565,18 +933,40 @@ const Assignments = () => {
           ) : (
             <Card>
               <CardContent className="p-12 text-center">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Assignments Found</h3>
-                <p className="text-muted-foreground">
-                  {activeTab === 'pending'
-                    ? "You don't have any pending assignments at the moment."
-                    : activeTab === 'submitted'
-                    ? "You haven't submitted any assignments yet."
-                    : activeTab === 'graded'
-                    ? "No graded assignments to display."
-                    : "Your lecturers haven't assigned any work yet."
-                  }
-                </p>
+                <div className="text-muted-foreground">
+                  {categoryFilter === 'assignments' && (
+                    <>
+                      <Upload className="h-16 w-16 mx-auto mb-4 opacity-50 text-blue-400" />
+                      <h3 className="text-lg font-semibold mb-2">No Regular Assignments</h3>
+                      <p>You don't have any regular assignments {activeTab === 'pending' ? 'pending' : `in "${activeTab}" status`} yet.</p>
+                      <p className="text-sm mt-2">Regular assignments include file uploads, essays, and projects.</p>
+                    </>
+                  )}
+                  {categoryFilter === 'cats' && (
+                    <>
+                      <Brain className="h-16 w-16 mx-auto mb-4 opacity-50 text-purple-400" />
+                      <h3 className="text-lg font-semibold mb-2">No CATs Available</h3>
+                      <p>You don't have any Continuous Assessment Tests {activeTab === 'pending' ? 'pending' : `in "${activeTab}" status`} yet.</p>
+                      <p className="text-sm mt-2">CATs are online tests that contribute to your continuous assessment.</p>
+                    </>
+                  )}
+                  {categoryFilter === 'exams' && (
+                    <>
+                      <Timer className="h-16 w-16 mx-auto mb-4 opacity-50 text-red-400" />
+                      <h3 className="text-lg font-semibold mb-2">No Exams or Quizzes</h3>
+                      <p>You don't have any exams or quizzes {activeTab === 'pending' ? 'pending' : `in "${activeTab}" status`} yet.</p>
+                      <p className="text-sm mt-2">Exams and quizzes are formal timed assessments.</p>
+                    </>
+                  )}
+                  {categoryFilter === 'all' && (
+                    <>
+                      <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                      <h3 className="text-lg font-semibold mb-2">No Assessments Found</h3>
+                      <p>You don't have any assessments {activeTab === 'pending' ? 'pending' : `in "${activeTab}" status`} yet.</p>
+                      <p className="text-sm mt-2">This includes assignments, CATs, exams, and quizzes.</p>
+                    </>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}
@@ -915,6 +1305,158 @@ const Assignments = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Exam Results Dialog */}
+      {showResultsDialog && selectedExamGrade && (
+        <Dialog open={showResultsDialog} onOpenChange={setShowResultsDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Exam Results</DialogTitle>
+              <DialogDescription>
+                Your performance summary for this assessment
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* Grade Summary */}
+              <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg">
+                <div className="text-4xl font-bold text-blue-600 mb-2">
+                  {selectedExamGrade.letter_grade}
+                </div>
+                <div className="text-2xl font-semibold mb-1">
+                  {selectedExamGrade.percentage.toFixed(1)}%
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {selectedExamGrade.points_earned}/{selectedExamGrade.total_points} points
+                </div>
+                <Badge
+                  variant={selectedExamGrade.is_passing ? "default" : "destructive"}
+                  className="mt-2"
+                >
+                  {selectedExamGrade.is_passing ? "PASSED" : "FAILED"}
+                </Badge>
+              </div>
+
+              {/* Detailed Breakdown */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 border rounded-lg">
+                  <div className="text-sm text-muted-foreground">Auto-Graded</div>
+                  <div className="text-lg font-semibold">
+                    {selectedExamGrade.auto_graded_points} pts
+                  </div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="text-sm text-muted-foreground">Manual Review</div>
+                  <div className="text-lg font-semibold">
+                    {selectedExamGrade.manual_graded_points} pts
+                  </div>
+                </div>
+              </div>
+
+              {/* Grading Status */}
+              <div className="p-4 border rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Grading Status:</span>
+                  <Badge variant="outline">
+                    {selectedExamGrade.grading_status.replace('_', ' ').toUpperCase()}
+                  </Badge>
+                </div>
+                {selectedExamGrade.graded_at && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Graded on {new Date(selectedExamGrade.graded_at).toLocaleString()}
+                  </div>
+                )}
+              </div>
+
+              {/* Feedback */}
+              {selectedExamGrade.feedback && (
+                <div className="p-4 border rounded-lg">
+                  <div className="text-sm font-medium mb-2">Instructor Feedback:</div>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedExamGrade.feedback}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button onClick={() => setShowResultsDialog(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Exam Attempts Dialog */}
+      {showAttemptsDialog && (
+        <Dialog open={showAttemptsDialog} onOpenChange={setShowAttemptsDialog}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Exam Attempts</DialogTitle>
+              <DialogDescription>
+                All your attempts for this assessment
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {examAttempts.map((attempt, index) => (
+                <Card key={attempt.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">
+                          Attempt #{attempt.attempt_number}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Started: {new Date(attempt.started_at).toLocaleString()}
+                        </div>
+                        {attempt.submitted_at && (
+                          <div className="text-sm text-muted-foreground">
+                            Submitted: {new Date(attempt.submitted_at).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <Badge variant={
+                          attempt.status === 'completed' ? 'default' :
+                          attempt.status === 'in_progress' ? 'secondary' :
+                          'outline'
+                        }>
+                          {attempt.status.replace('_', ' ').toUpperCase()}
+                        </Badge>
+                        {attempt.grade && (
+                          <div className="mt-2">
+                            <div className="text-lg font-semibold">
+                              {attempt.grade.letter_grade} ({attempt.grade.percentage.toFixed(1)}%)
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {attempt.grade.points_earned}/{attempt.grade.total_points} points
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {examAttempts.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No attempts found</p>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button onClick={() => setShowAttemptsDialog(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

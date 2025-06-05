@@ -9,6 +9,7 @@ import { lazy, Suspense } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { PopupProvider } from "./components/popups/PopupManager";
+import { PWAInstallPrompt, PWAUpdateNotification, PWAOfflineIndicator } from "./components/pwa";
 
 // Development mode check (console logging removed for production)
 
@@ -59,6 +60,7 @@ const DeanPerformance = lazy(() => import("./pages/dean/Performance"));
 const DeanReports = lazy(() => import("./pages/dean/Reports"));
 const DeanAnnouncements = lazy(() => import("./pages/dean/Announcements"));
 const DeanManagementAI = lazy(() => import("./pages/dean/ManagementAI"));
+const UnitManagement = lazy(() => import("./pages/dean/UnitManagement"));
 
 // Admin pages
 const AdminUsers = lazy(() => import("./pages/admin/Users"));
@@ -116,6 +118,10 @@ const App = () => {
           <TooltipProvider>
             <Toaster />
             <Sonner />
+            {/* PWA Components */}
+            <PWAInstallPrompt />
+            <PWAUpdateNotification />
+            <PWAOfflineIndicator />
             <BrowserRouter>
             <MaintenanceGuard>
               <Routes>
@@ -179,6 +185,7 @@ const App = () => {
                   <Route path="/departments" element={<DeanDepartments />} />
                   <Route path="/staff" element={<DeanStaff />} />
                   <Route path="/dean/students" element={<DeanStudents />} />
+                  <Route path="/unit-management" element={<UnitManagement />} />
                   <Route path="/performance" element={<DeanPerformance />} />
                   <Route path="/reports" element={<DeanReports />} />
                   <Route path="/dean/announcements" element={<DeanAnnouncements />} />

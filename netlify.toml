@@ -22,6 +22,10 @@
   # Memory optimization for large builds
   NODE_OPTIONS = "--max-old-space-size=4096"
 
+  # Supabase configuration (set these in Netlify dashboard)
+  # VITE_SUPABASE_URL = "https://eekajmfvqntbloqgizwk.supabase.co"
+  # VITE_SUPABASE_ANON_KEY = "your_anon_key_here"
+
 # Context-specific builds
 [context.production]
   command = "npm run build"
@@ -56,8 +60,8 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    # Content Security Policy (simplified for deployment)
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' *.supabase.co; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' *.supabase.co wss://*.supabase.co; frame-ancestors 'none';"
+    # Content Security Policy (allow necessary domains)
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' *.supabase.co cdn.gpteng.co; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' *.supabase.co wss://*.supabase.co; frame-ancestors 'none';"
 
     # Security headers
     X-Frame-Options = "DENY"
@@ -158,10 +162,8 @@
 [[headers]]
   for = "/index.html"
   [headers.values]
-    # Preload critical resources
-    Link = '''</assets/index.css>; rel=preload; as=style,
-              </assets/index.js>; rel=preload; as=script,
-              <https://fonts.googleapis.com>; rel=preconnect,
+    # Preconnect to external domains
+    Link = '''<https://fonts.googleapis.com>; rel=preconnect,
               <https://fonts.gstatic.com>; rel=preconnect; crossorigin,
               <https://eekajmfvqntbloqgizwk.supabase.co>; rel=preconnect'''
 

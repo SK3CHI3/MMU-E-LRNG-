@@ -73,6 +73,26 @@ export interface ExamTemplate {
   updated_at: string;
 }
 
+export interface ExamGrade {
+  id: string;
+  attempt_id: string;
+  assignment_id: string;
+  user_id: string;
+  total_points: number;
+  points_earned: number;
+  percentage: number;
+  letter_grade: string;
+  is_passing: boolean;
+  auto_graded_points: number;
+  manual_graded_points: number;
+  grading_status: 'pending' | 'auto_graded' | 'manual_review' | 'completed';
+  graded_by?: string;
+  graded_at?: string;
+  feedback?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Create exam questions for an assignment
 export const createExamQuestions = async (
   assignmentId: string,
@@ -307,15 +327,102 @@ export const getStudentExamAttempts = async (assignmentId: string, userId: strin
   try {
     const { data, error } = await supabase
       .from('exam_attempts')
-      .select('*')
+      .select(`
+        *,
+        grade:exam_grades(*)
+      `)
       .eq('assignment_id', assignmentId)
       .eq('user_id', userId)
       .order('attempt_number', { ascending: false });
 
     if (error) throw error;
-    return data as ExamAttempt[];
+    return data as (ExamAttempt & { grade?: ExamGrade })[];
   } catch (error) {
     console.error('Error fetching student exam attempts:', error);
+    throw error;
+  }
+};
+
+// Get exam grade for an attempt
+export const getExamGrade = async (attemptId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('exam_grades')
+      .select('*')
+      .eq('attempt_id', attemptId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data as ExamGrade | null;
+  } catch (error) {
+    console.error('Error fetching exam grade:', error);
+    throw error;
+  }
+};
+
+// Calculate and record exam grade
+export const calculateExamGrade = async (attemptId: string) => {
+  try {
+    const { data, error } = await supabase.rpc('calculate_exam_grade', {
+      attempt_id_param: attemptId
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error calculating exam grade:', error);
+    throw error;
+  }
+};
+
+// Check if assignment is available for taking
+export const isAssignmentAvailable = async (assignmentId: string) => {
+  try {
+    const { data: assignment, error } = await supabase
+      .from('assignments')
+      .select('available_from, available_until, is_published')
+      .eq('id', assignmentId)
+      .single();
+
+    if (error) throw error;
+
+    const now = new Date();
+    const availableFrom = assignment.available_from ? new Date(assignment.available_from) : null;
+    const availableUntil = assignment.available_until ? new Date(assignment.available_until) : null;
+
+    const isAvailable = assignment.is_published &&
+      (!availableFrom || now >= availableFrom) &&
+      (!availableUntil || now <= availableUntil);
+
+    return {
+      isAvailable,
+      availableFrom,
+      availableUntil,
+      isPublished: assignment.is_published
+    };
+  } catch (error) {
+    console.error('Error checking assignment availability:', error);
+    throw error;
+  }
+};
+
+// Get assignment with questions count
+export const getAssignmentDetails = async (assignmentId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('assignments')
+      .select(`
+        *,
+        course:courses(title, code),
+        questions:exam_questions(count)
+      `)
+      .eq('id', assignmentId)
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching assignment details:', error);
     throw error;
   }
 };

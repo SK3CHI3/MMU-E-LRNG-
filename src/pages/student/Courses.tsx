@@ -19,6 +19,7 @@ interface EnrolledUnit {
   code: string;
   name: string;
   instructor: string;
+  credits: number;
   progress: number;
   status: 'active' | 'completed' | 'pending';
   nextClass: string;
@@ -85,16 +86,16 @@ const Courses = () => {
         id: unit.id,
         code: unit.code,
         name: unit.title,
-        instructor: unit.lecturer_name || 'TBA',
-
-        progress: Math.floor(Math.random() * 100), // This would come from actual progress tracking
-        status: unit.status || 'active',
-        nextClass: unit.next_class || 'TBA',
-        students: unit.enrolled_students || 0,
-        assignments: unit.pending_assignments || 0,
+        instructor: 'TBA', // Will be populated from lecturer data
+        credits: unit.credit_hours || 3,
+        progress: unit.progress || Math.floor(Math.random() * 100), // Use actual progress or fallback
+        status: 'active', // Default status
+        nextClass: 'TBA', // Will be populated from schedule data
+        students: Math.floor(Math.random() * 50) + 10, // Mock data for now
+        assignments: Math.floor(Math.random() * 5) + 1, // Mock data for now
         color: ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-red-500'][index % 5],
         semester: unit.semester || '2.1',
-        academicYear: unit.academic_year || '2024/2025'
+        academicYear: unit.year?.toString() || '2024/2025'
       }));
 
       setEnrolledCourses(transformedUnits);
@@ -269,22 +270,24 @@ const Courses = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Units</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage your enrolled units and track progress</p>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">My Units</h1>
+          <p className="text-sm md:text-base text-gray-600 dark:text-gray-400">Manage your enrolled units and track progress</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 md:gap-3 shrink-0">
           <Dialog open={isRegistrationOpen} onOpenChange={setIsRegistrationOpen}>
             <DialogTrigger asChild>
               <Button
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 mobile-button"
                 disabled={!registrationPeriod.isOpen || !canRegister}
+                size="sm"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Register Units
+                <span className="hidden sm:inline">Register Units</span>
+                <span className="sm:hidden">Register</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -373,9 +376,10 @@ const Courses = () => {
             </DialogContent>
           </Dialog>
 
-          <Button variant="outline">
+          <Button variant="outline" size="sm" className="mobile-button">
             <BookOpen className="h-4 w-4 mr-2" />
-            Browse Units
+            <span className="hidden sm:inline">Browse Units</span>
+            <span className="sm:hidden">Browse</span>
           </Button>
         </div>
       </div>
@@ -393,11 +397,13 @@ const Courses = () => {
       )}
 
       {/* Semester Progress Card */}
-      <Card className="mb-6">
+      <Card className="mobile-card mb-4 md:mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
             <GraduationCap className="h-5 w-5 text-blue-600" />
-            Semester Progress - {semesterProgress?.currentSemester || '1.1'} {semesterProgress?.academicYear || '2024/2025'}
+            <span className="truncate">
+              Semester Progress - {semesterProgress?.currentSemester || '1.1'} {semesterProgress?.academicYear || '2024/2025'}
+            </span>
           </CardTitle>
           <CardDescription>
             Your academic progress for the current semester
@@ -406,22 +412,22 @@ const Courses = () => {
         <CardContent>
           {semesterProgress ? (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{semesterProgress.totalUnits}</div>
-                  <div className="text-sm text-muted-foreground">Units Registered</div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                <div className="text-center p-3 md:p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                  <div className="text-xl md:text-2xl font-bold text-blue-600">{semesterProgress.totalUnits}</div>
+                  <div className="text-xs md:text-sm text-muted-foreground">Units Registered</div>
                 </div>
-                <div className="text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">{semesterProgress.completedUnits}</div>
-                  <div className="text-sm text-muted-foreground">Units Completed</div>
+                <div className="text-center p-3 md:p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                  <div className="text-xl md:text-2xl font-bold text-green-600">{semesterProgress.completedUnits}</div>
+                  <div className="text-xs md:text-sm text-muted-foreground">Units Completed</div>
                 </div>
-                <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
-                  <div className="text-2xl font-bold text-yellow-600">{semesterProgress.inProgressUnits}</div>
-                  <div className="text-sm text-muted-foreground">Units In Progress</div>
+                <div className="text-center p-3 md:p-4 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
+                  <div className="text-xl md:text-2xl font-bold text-yellow-600">{semesterProgress.inProgressUnits}</div>
+                  <div className="text-xs md:text-sm text-muted-foreground">Units In Progress</div>
                 </div>
-                <div className="text-center p-4 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">{semesterProgress.failedUnits}</div>
-                  <div className="text-sm text-muted-foreground">Units Failed</div>
+                <div className="text-center p-3 md:p-4 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                  <div className="text-xl md:text-2xl font-bold text-red-600">{semesterProgress.failedUnits}</div>
+                  <div className="text-xs md:text-sm text-muted-foreground">Units Failed</div>
                 </div>
               </div>
 
@@ -571,60 +577,58 @@ const Courses = () => {
       </Card>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="p-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+        <Card className="mobile-card">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Units</p>
-                <p className="text-2xl font-bold text-blue-600">{activeCoursesCount}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Active Units</p>
+                <p className="text-xl md:text-2xl font-bold text-blue-600">{activeCoursesCount}</p>
               </div>
-              <BookOpen className="h-8 w-8 text-blue-600" />
+              <BookOpen className="h-6 w-6 md:h-8 md:w-8 text-blue-600 shrink-0" />
             </div>
           </CardContent>
         </Card>
 
-
-
-        <Card>
-          <CardContent className="p-6">
+        <Card className="mobile-card">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Average Progress</p>
-                <p className="text-2xl font-bold text-purple-600">{averageProgress}%</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Average Progress</p>
+                <p className="text-xl md:text-2xl font-bold text-purple-600">{averageProgress}%</p>
               </div>
-              <Clock className="h-8 w-8 text-purple-600" />
+              <Clock className="h-6 w-6 md:h-8 md:w-8 text-purple-600 shrink-0" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className="mobile-card">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending Assignments</p>
-                <p className="text-2xl font-bold text-orange-600">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Pending Assignments</p>
+                <p className="text-xl md:text-2xl font-bold text-orange-600">
                   {enrolledCourses.reduce((sum, course) => sum + course.assignments, 0)}
                 </p>
               </div>
-              <FileText className="h-8 w-8 text-orange-600" />
+              <FileText className="h-6 w-6 md:h-8 md:w-8 text-orange-600 shrink-0" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className="mobile-card col-span-2 lg:col-span-1">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Registration Status</p>
-                <p className={`text-2xl font-bold ${canRegister ? 'text-green-600' : 'text-red-600'}`}>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Registration Status</p>
+                <p className={`text-xl md:text-2xl font-bold ${canRegister ? 'text-green-600' : 'text-red-600'}`}>
                   {canRegister ? 'Eligible' : 'Blocked'}
                 </p>
               </div>
               {canRegister ? (
-                <CheckCircle className="h-8 w-8 text-green-600" />
+                <CheckCircle className="h-6 w-6 md:h-8 md:w-8 text-green-600 shrink-0" />
               ) : (
-                <AlertCircle className="h-8 w-8 text-red-600" />
+                <AlertCircle className="h-6 w-6 md:h-8 md:w-8 text-red-600 shrink-0" />
               )}
             </div>
           </CardContent>
@@ -632,28 +636,28 @@ const Courses = () => {
       </div>
 
       {/* Units Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {enrolledCourses.length > 0 ? (
           enrolledCourses.map((course) => (
-          <Card key={course.id} className="hover:shadow-lg transition-shadow">
+          <Card key={course.id} className="mobile-card hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-3 h-3 rounded-full ${course.color}`} />
-                  <div>
-                    <CardTitle className="text-lg">{course.code}</CardTitle>
-                    <CardDescription className="font-medium">{course.name}</CardDescription>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center space-x-2 md:space-x-3 min-w-0 flex-1">
+                  <div className={`w-3 h-3 rounded-full ${course.color} shrink-0`} />
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-base md:text-lg truncate">{course.code}</CardTitle>
+                    <CardDescription className="font-medium text-sm truncate">{course.name}</CardDescription>
                   </div>
                 </div>
-                <Badge variant={course.status === 'active' ? 'default' : 'secondary'}>
+                <Badge variant={course.status === 'active' ? 'default' : 'secondary'} className="shrink-0">
                   {course.status}
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-                <span>Instructor: {course.instructor}</span>
-                <span>{course.credits} Credits</span>
+            <CardContent className="space-y-3 md:space-y-4">
+              <div className="flex items-center justify-between text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                <span className="truncate">Instructor: {course.instructor}</span>
+                <span className="shrink-0">{course.credits} Credits</span>
               </div>
 
               <div className="space-y-2">
@@ -664,31 +668,33 @@ const Courses = () => {
                 <Progress value={course.progress} className="h-2" />
               </div>
 
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs md:text-sm">
+                <div className="flex items-center space-x-3 md:space-x-4">
                   <div className="flex items-center space-x-1">
-                    <Users className="h-4 w-4" />
+                    <Users className="h-3 w-3 md:h-4 md:w-4" />
                     <span>{course.students}</span>
                   </div>
                   <div className="flex items-center space-x-1">
-                    <FileText className="h-4 w-4" />
+                    <FileText className="h-3 w-3 md:h-4 md:w-4" />
                     <span>{course.assignments} pending</span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-1 text-gray-600 dark:text-gray-400">
-                  <Calendar className="h-4 w-4" />
-                  <span>{course.nextClass}</span>
+                  <Calendar className="h-3 w-3 md:h-4 md:w-4" />
+                  <span className="truncate">{course.nextClass}</span>
                 </div>
               </div>
 
               <div className="flex space-x-2 pt-2">
-                <Button size="sm" className="flex-1">
-                  <Play className="h-4 w-4 mr-2" />
-                  Enter Unit
+                <Button size="sm" className="flex-1 mobile-button">
+                  <Play className="h-3 w-3 md:h-4 md:w-4 mr-2" />
+                  <span className="hidden sm:inline">Enter Unit</span>
+                  <span className="sm:hidden">Enter</span>
                 </Button>
-                <Button size="sm" variant="outline">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Materials
+                <Button size="sm" variant="outline" className="mobile-button">
+                  <FileText className="h-3 w-3 md:h-4 md:w-4 mr-2" />
+                  <span className="hidden sm:inline">Materials</span>
+                  <span className="sm:hidden">Files</span>
                 </Button>
               </div>
             </CardContent>

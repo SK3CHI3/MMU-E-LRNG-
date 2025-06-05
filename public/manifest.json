@@ -1,21 +1,39 @@
 {
   "name": "MMU Digital Campus - Multimedia University of Kenya",
-  "short_name": "MMU Digital Campus",
-  "description": "Official digital learning platform for Multimedia University of Kenya students, lecturers, and staff",
+  "short_name": "MMU Campus",
+  "description": "Official digital learning platform for Multimedia University of Kenya students, lecturers, and staff. Access courses, assignments, grades, announcements, and academic resources.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#1e40af",
+  "theme_color": "#2563eb",
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "en",
-  "categories": ["education", "productivity"],
+  "categories": ["education", "productivity", "utilities"],
   "icons": [
     {
       "src": "/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "screenshots": [
@@ -36,40 +54,60 @@
   ],
   "shortcuts": [
     {
-      "name": "Student Dashboard",
-      "short_name": "Dashboard",
-      "description": "Access your student dashboard",
-      "url": "/dashboard/student",
-      "icons": [
-        {
-          "src": "/favicon.svg",
-          "sizes": "96x96"
-        }
-      ]
-    },
-    {
       "name": "Assignments",
       "short_name": "Assignments",
       "description": "View and submit assignments",
-      "url": "/student/assignments",
+      "url": "/assignments",
       "icons": [
         {
-          "src": "/favicon.svg",
-          "sizes": "96x96"
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192"
         }
       ]
     },
     {
-      "name": "Grades",
-      "short_name": "Grades",
-      "description": "Check your academic grades",
-      "url": "/student/grades",
+      "name": "Classes",
+      "short_name": "Classes",
+      "description": "View class schedule",
+      "url": "/schedule",
       "icons": [
         {
-          "src": "/favicon.svg",
-          "sizes": "96x96"
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Study AI",
+      "short_name": "Study AI",
+      "description": "AI-powered study assistant",
+      "url": "/study-ai",
+      "icons": [
+        {
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Announcements",
+      "short_name": "Announcements",
+      "description": "View latest announcements",
+      "url": "/student/announcements",
+      "icons": [
+        {
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192"
         }
       ]
     }
-  ]
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
 }

@@ -213,6 +213,11 @@ const getNavItemsForRole = (role: string): NavItem[] => {
           icon: <Users className="h-4 w-4" />,
         },
         {
+          title: 'Unit Management',
+          href: '/unit-management',
+          icon: <BookOpen className="h-4 w-4" />,
+        },
+        {
           title: 'Performance',
           href: '/performance',
           icon: <TrendingUp className="h-4 w-4" />,
@@ -302,7 +307,11 @@ const getRoleInfo = (role: string) => {
   }
 };
 
-export function SidebarNav() {
+interface SidebarNavProps {
+  onItemClick?: () => void;
+}
+
+export function SidebarNav({ onItemClick }: SidebarNavProps = {}) {
   const location = useLocation();
   const { dbUser } = useAuth();
 
@@ -350,9 +359,10 @@ export function SidebarNav() {
                 <Link
                   to={actualHref}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-md",
+                    "flex items-center gap-3 px-3 py-2 rounded-md mobile-touch-target",
                     isActive && "font-medium"
                   )}
+                  onClick={onItemClick}
                 >
                   {item.icon}
                   <span>{item.title}</span>

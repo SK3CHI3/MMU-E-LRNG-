@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Modern Background with Gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="capGradient" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1e40af"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background Square with Subtle Shadow -->
+  <rect x="1" y="1" width="30" height="30" rx="6" fill="url(#bgGradient)" stroke="#1e40af" stroke-width="1"/>
+  
+  <!-- Graduation Cap with Gradient -->
+  <path d="M16 5L5 11L16 17L27 11L16 5Z" fill="url(#capGradient)"/>
+  <path d="M9 13.5V21C9 21 13 25 16 25C19 25 23 21 23 21V13.5" fill="url(#capGradient)"/>
+  
+  <!-- Red Accent Line with Gradient -->
+  <path d="M16 5L5 11L16 17L27 11L16 5Z" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Modern Tassel Design -->
+  <path d="M23 13V23L25 27" stroke="#1e40af" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="23" cy="23" r="2" fill="#dc2626"/>
+  
+  <!-- Decorative Elements -->
+  <path d="M11 9L13 10" stroke="#dc2626" stroke-width="1" stroke-linecap="round"/>
+  <path d="M21 9L19 10" stroke="#dc2626" stroke-width="1" stroke-linecap="round"/>
+  
+  <!-- Subtle Highlight -->
+  <path d="M16 5L5 11L16 17" stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.3"/>
+</svg> 

@@ -477,16 +477,16 @@ export const getAvailableUnitsForRegistration = async (studentId: string) => {
       return [];
     }
 
-    // Get student's program and year to filter relevant units
+    // Get student's programme and year to filter relevant units
     const { data: studentInfo, error: studentError } = await supabase
       .from('users')
-      .select('program_id, current_year, faculty_id')
+      .select('programme, current_year, faculty')
       .eq('id', studentId)
       .single();
 
     if (studentError) throw studentError;
 
-    // Get units available for the student's program and year
+    // Get units available for the student's programme and year
     const { data: availableUnits, error: unitsError } = await supabase
       .from('available_units')
       .select(`
@@ -495,23 +495,35 @@ export const getAvailableUnitsForRegistration = async (studentId: string) => {
           id,
           title,
           code,
-          credits,
           description,
+          max_students,
+          prerequisites,
+          lecturer_id,
           lecturer:users!courses_lecturer_id_fkey(
             id,
             full_name
           )
         ),
-        prerequisites:unit_prerequisites(
-          prerequisite_code
+        programme:programmes!inner(
+          id,
+          title,
+          code
         )
       `)
       .eq('registration_period_id', registrationPeriod.id)
-      .eq('program_id', studentInfo.program_id)
-      .eq('year_level', studentInfo.current_year)
+      .eq('year_level', studentInfo.current_year || 1)
       .eq('is_active', true);
 
     if (unitsError) throw unitsError;
+
+    // Filter units by student's programme if available
+    let filteredUnits = availableUnits || [];
+    if (studentInfo.programme) {
+      filteredUnits = availableUnits?.filter(unit =>
+        unit.programme?.title === studentInfo.programme ||
+        unit.programme?.code === studentInfo.programme
+      ) || [];
+    }
 
     // Get student's completed units to check prerequisites
     const { data: completedUnits, error: completedError } = await supabase
@@ -520,22 +532,25 @@ export const getAvailableUnitsForRegistration = async (studentId: string) => {
       .eq('user_id', studentId)
       .eq('status', 'completed');
 
-    if (completedError) throw completedError;
+    if (completedError) {
+      console.error('Error fetching completed units:', completedError);
+    }
 
     const completedCodes = completedUnits?.map(enrollment => enrollment.course.code) || [];
 
     // Transform and check prerequisites
-    return availableUnits?.map(unit => {
-      const prerequisites = unit.prerequisites?.map(p => p.prerequisite_code) || [];
+    return filteredUnits.map(unit => {
+      const prerequisites = unit.course.prerequisites || [];
       const isPrerequisiteMet = prerequisites.length === 0 ||
         prerequisites.every(prereq => completedCodes.includes(prereq));
 
       return {
-        id: unit.course.id,
+        id: unit.id, // Use available_unit id for registration
+        courseId: unit.course.id, // Keep course id for reference
         code: unit.course.code,
         name: unit.course.title,
         instructor: unit.course.lecturer?.full_name || 'TBA',
-        credits: unit.course.credits,
+        credits: 3, // Default credit value
         prerequisites,
         description: unit.course.description || 'No description available',
         semester: unit.semester,
@@ -544,7 +559,7 @@ export const getAvailableUnitsForRegistration = async (studentId: string) => {
         enrolledStudents: unit.current_enrollment || 0,
         isPrerequisiteMet
       };
-    }) || [];
+    });
   } catch (error) {
     console.error('Error fetching available units:', error);
     return [];
@@ -552,7 +567,7 @@ export const getAvailableUnitsForRegistration = async (studentId: string) => {
 };
 
 // Register student for selected units
-export const registerForUnits = async (studentId: string, unitIds: string[]) => {
+export const registerForUnits = async (studentId: string, availableUnitIds: string[]) => {
   try {
     // Check if registration period is still open
     const { data: registrationPeriod, error: periodError } = await supabase
@@ -565,27 +580,49 @@ export const registerForUnits = async (studentId: string, unitIds: string[]) => 
       return { success: false, error: 'Registration period is not active' };
     }
 
+    // Get the available units to extract course IDs
+    const { data: availableUnits, error: unitsError } = await supabase
+      .from('available_units')
+      .select('id, course_id, max_students, current_enrollment')
+      .in('id', availableUnitIds)
+      .eq('is_active', true);
+
+    if (unitsError || !availableUnits) {
+      return { success: false, error: 'Unable to find selected units' };
+    }
+
+    // Check capacity for each unit
+    for (const unit of availableUnits) {
+      if (unit.current_enrollment >= unit.max_students) {
+        return { success: false, error: `Unit is full (${unit.current_enrollment}/${unit.max_students})` };
+      }
+    }
+
     // Check if student is eligible (fees paid)
-    const { data: feeStatus, error: feeError } = await supabase
-      .from('student_fees')
-      .select('amount_paid, total_fees')
-      .eq('student_id', studentId)
-      .eq('is_active', true)
-      .single();
+    try {
+      const { data: feeStatus, error: feeError } = await supabase
+        .from('student_fees')
+        .select('amount_paid, total_fees')
+        .eq('student_id', studentId)
+        .eq('is_active', true)
+        .single();
 
-    if (feeError || !feeStatus) {
-      return { success: false, error: 'Unable to verify fee payment status' };
+      if (feeStatus) {
+        const feePercentage = (feeStatus.amount_paid / feeStatus.total_fees) * 100;
+        if (feePercentage < 60) {
+          return { success: false, error: 'You need to pay at least 60% of your fees to register' };
+        }
+      }
+      // If no fee record exists (new student), allow registration
+    } catch (feeError) {
+      console.log('No fee record found, allowing registration for new student');
     }
 
-    const feePercentage = (feeStatus.amount_paid / feeStatus.total_fees) * 100;
-    if (feePercentage < 60) {
-      return { success: false, error: 'You need to pay at least 60% of your fees to register' };
-    }
-
-    // Create enrollment records
-    const enrollmentData = unitIds.map(unitId => ({
+    // Create enrollment records using course IDs
+    const enrollmentData = availableUnits.map(unit => ({
       user_id: studentId,
-      course_id: unitId,
+      course_id: unit.course_id,
+      available_unit_id: unit.id,
       semester: registrationPeriod.semester,
       academic_year: registrationPeriod.academic_year,
       status: 'enrolled',
@@ -601,22 +638,20 @@ export const registerForUnits = async (studentId: string, unitIds: string[]) => 
       return { success: false, error: 'Failed to register for units' };
     }
 
-    // Update enrollment counts for the units
-    for (const unitId of unitIds) {
-      await supabase.rpc('increment_unit_enrollment', {
-        unit_id: unitId
-      });
-    }
+    // Update enrollment counts for the available units
+    for (const unit of availableUnits) {
+      const { error: updateError } = await supabase
+        .from('available_units')
+        .update({
+          current_enrollment: (unit.current_enrollment || 0) + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', unit.id);
 
-    // Log the registration activity
-    await supabase
-      .from('registration_logs')
-      .insert({
-        student_id: studentId,
-        action: 'unit_registration',
-        details: { registered_units: unitIds },
-        timestamp: new Date().toISOString()
-      });
+      if (updateError) {
+        console.error('Error updating enrollment count:', updateError);
+      }
+    }
 
     return { success: true };
   } catch (error) {

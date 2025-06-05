@@ -6,7 +6,10 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  console.error('Missing Supabase environment variables. Please check your .env file.');
+  console.error('❌ Missing Supabase environment variables!');
+  console.error('Required: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
+  console.error('Please configure these in Netlify dashboard: Site Settings → Environment Variables');
+  throw new Error('Supabase configuration missing. Check environment variables.');
 }
 
 // Import the supabase client like this:

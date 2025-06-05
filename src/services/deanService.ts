@@ -12,6 +12,71 @@ export interface DeanStats {
   publications: number;
 }
 
+// Types for unit management
+export interface Faculty {
+  id: string;
+  name: string;
+  code: string;
+  description?: string;
+  dean_id: string;
+  is_active: boolean;
+}
+
+export interface Programme {
+  id: string;
+  code: string;
+  title: string;
+  description?: string;
+  level: 'certificate' | 'diploma' | 'bachelors' | 'masters' | 'phd';
+  faculty: string;
+  department?: string;
+  duration_years: number;
+  total_units: number;
+  is_active: boolean;
+}
+
+export interface Course {
+  id: string;
+  code: string;
+  title: string;
+  description?: string;
+  department: string;
+  level: 'undergraduate' | 'graduate' | 'postgraduate';
+  semester: string;
+  year: number;
+  max_students: number;
+  prerequisites?: string[];
+  programme_id: string;
+  created_by: string;
+  is_active: boolean;
+}
+
+export interface AvailableUnit {
+  id: string;
+  course_id: string;
+  programme_id: string;
+  registration_period_id: string;
+  semester: string;
+  academic_year: string;
+  year_level: number;
+  max_students: number;
+  current_enrollment: number;
+  is_active: boolean;
+  course?: Course;
+  programme?: Programme;
+}
+
+export interface RegistrationPeriod {
+  id: string;
+  academic_year: string;
+  semester: string;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  max_units_per_student: number;
+  min_fee_percentage: number;
+}
+
 export interface DepartmentData {
   id: string;
   name: string;
@@ -413,5 +478,433 @@ export const getFacultyAnnouncements = async (faculty: string): Promise<any[]> =
   } catch (error) {
     console.error('Error fetching faculty announcements:', error);
     throw error;
+  }
+};
+
+// =============================================
+// UNIT MANAGEMENT FUNCTIONS
+// =============================================
+
+// Get dean's faculty information
+export const getDeanFaculty = async (deanId: string): Promise<Faculty | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('faculties')
+      .select('*')
+      .eq('dean_id', deanId)
+      .eq('is_active', true)
+      .single();
+
+    if (error) {
+      console.error('Error fetching dean faculty:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in getDeanFaculty:', error);
+    return null;
+  }
+};
+
+// Get programmes under dean's faculty
+export const getFacultyProgrammes = async (facultyName: string): Promise<Programme[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('programmes')
+      .select('*')
+      .eq('faculty', facultyName)
+      .eq('is_active', true)
+      .order('title');
+
+    if (error) {
+      console.error('Error fetching faculty programmes:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getFacultyProgrammes:', error);
+    return [];
+  }
+};
+
+// Get courses for specific programmes
+export const getProgrammeCourses = async (programmeIds: string[]): Promise<Course[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('courses')
+      .select('*')
+      .in('programme_id', programmeIds)
+      .eq('is_active', true)
+      .order('code');
+
+    if (error) {
+      console.error('Error fetching programme courses:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getProgrammeCourses:', error);
+    return [];
+  }
+};
+
+// Get current registration periods
+export const getRegistrationPeriods = async (): Promise<RegistrationPeriod[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('registration_periods')
+      .select('*')
+      .eq('is_active', true)
+      .order('academic_year', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching registration periods:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getRegistrationPeriods:', error);
+    return [];
+  }
+};
+
+// Get available units for dean's faculty
+export const getFacultyAvailableUnits = async (facultyName: string): Promise<AvailableUnit[]> => {
+  try {
+    // First get programmes for this faculty
+    const programmes = await getFacultyProgrammes(facultyName);
+    const programmeIds = programmes.map(p => p.id);
+
+    if (programmeIds.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('available_units')
+      .select(`
+        *,
+        course:courses(*),
+        programme:programmes(*)
+      `)
+      .in('programme_id', programmeIds)
+      .eq('is_active', true)
+      .order('academic_year', { ascending: false })
+      .order('semester');
+
+    if (error) {
+      console.error('Error fetching faculty available units:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getFacultyAvailableUnits:', error);
+    return [];
+  }
+};
+
+// Create a new course
+export const createCourse = async (courseData: Omit<Course, 'id' | 'created_at' | 'updated_at'>): Promise<Course | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('courses')
+      .insert({
+        ...courseData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating course:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in createCourse:', error);
+    return null;
+  }
+};
+
+// Create available unit for registration
+export const createAvailableUnit = async (unitData: Omit<AvailableUnit, 'id' | 'created_at' | 'updated_at' | 'current_enrollment'>): Promise<AvailableUnit | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('available_units')
+      .insert({
+        ...unitData,
+        current_enrollment: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating available unit:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in createAvailableUnit:', error);
+    return null;
+  }
+};
+
+// Update course
+export const updateCourse = async (courseId: string, updates: Partial<Course>): Promise<Course | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('courses')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', courseId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating course:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in updateCourse:', error);
+    return null;
+  }
+};
+
+// Update available unit
+export const updateAvailableUnit = async (unitId: string, updates: Partial<AvailableUnit>): Promise<AvailableUnit | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('available_units')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', unitId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating available unit:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in updateAvailableUnit:', error);
+    return null;
+  }
+};
+
+// Delete course (soft delete)
+export const deleteCourse = async (courseId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('courses')
+      .update({
+        is_active: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', courseId);
+
+    if (error) {
+      console.error('Error deleting course:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in deleteCourse:', error);
+    return false;
+  }
+};
+
+// Delete available unit (soft delete)
+export const deleteAvailableUnit = async (unitId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('available_units')
+      .update({
+        is_active: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', unitId);
+
+    if (error) {
+      console.error('Error deleting available unit:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in deleteAvailableUnit:', error);
+    return false;
+  }
+};
+
+// =============================================
+// LECTURER ASSIGNMENT FUNCTIONS
+// =============================================
+
+// Get faculty lecturers
+export const getFacultyLecturers = async (facultyName: string): Promise<any[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, full_name, email, department, specialization')
+      .eq('role', 'lecturer')
+      .eq('faculty', facultyName)
+      .eq('is_active', true)
+      .order('full_name');
+
+    if (error) {
+      console.error('Error fetching faculty lecturers:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getFacultyLecturers:', error);
+    return [];
+  }
+};
+
+// Assign lecturer to course
+export const assignLecturerToCourse = async (courseId: string, lecturerId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('courses')
+      .update({
+        lecturer_id: lecturerId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', courseId);
+
+    if (error) {
+      console.error('Error assigning lecturer to course:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in assignLecturerToCourse:', error);
+    return false;
+  }
+};
+
+// Get course assignments for a lecturer
+export const getLecturerCourseAssignments = async (lecturerId: string): Promise<Course[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('courses')
+      .select(`
+        *,
+        programme:programmes(title, code)
+      `)
+      .eq('lecturer_id', lecturerId)
+      .eq('is_active', true)
+      .order('code');
+
+    if (error) {
+      console.error('Error fetching lecturer assignments:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getLecturerCourseAssignments:', error);
+    return [];
+  }
+};
+
+// Get unassigned courses in faculty
+export const getUnassignedFacultyCourses = async (facultyName: string): Promise<Course[]> => {
+  try {
+    // First get programmes for this faculty
+    const programmes = await getFacultyProgrammes(facultyName);
+    const programmeIds = programmes.map(p => p.id);
+
+    if (programmeIds.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('courses')
+      .select(`
+        *,
+        programme:programmes(title, code)
+      `)
+      .in('programme_id', programmeIds)
+      .is('lecturer_id', null)
+      .eq('is_active', true)
+      .order('code');
+
+    if (error) {
+      console.error('Error fetching unassigned courses:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getUnassignedFacultyCourses:', error);
+    return [];
+  }
+};
+
+// Bulk assign lecturer to multiple courses
+export const bulkAssignLecturer = async (courseIds: string[], lecturerId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('courses')
+      .update({
+        lecturer_id: lecturerId,
+        updated_at: new Date().toISOString()
+      })
+      .in('id', courseIds);
+
+    if (error) {
+      console.error('Error bulk assigning lecturer:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in bulkAssignLecturer:', error);
+    return false;
+  }
+};
+
+// Remove lecturer assignment from course
+export const removeLecturerFromCourse = async (courseId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('courses')
+      .update({
+        lecturer_id: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', courseId);
+
+    if (error) {
+      console.error('Error removing lecturer from course:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in removeLecturerFromCourse:', error);
+    return false;
   }
 };
