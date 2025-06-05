@@ -84,6 +84,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('fetchDbUser: Fetching user with authId', authId);
 
     try {
+      // Check if admin client is available
+      if (!supabaseAdmin) {
+        console.error('fetchDbUser: Admin client not available');
+        setDbUser(null);
+        setIsLoading(false);
+        return;
+      }
+
       // Use admin client directly to bypass RLS and speed up the process
       const { data, error } = await supabaseAdmin
         .from('users')

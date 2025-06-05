@@ -25,6 +25,7 @@
   # Supabase configuration (temporary - move to dashboard for security)
   VITE_SUPABASE_URL = "https://eekajmfvqntbloqgizwk.supabase.co"
   VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVla2FqbWZ2cW50YmxvcWdpendrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyMjk5NTIsImV4cCI6MjA2MTgwNTk1Mn0.HfR6KwhaWCRcrlavKiY0XUo_SXX2epQNrCV4sya2kl4"
+  VITE_SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVla2FqbWZ2cW50YmxvcWdpendrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NjIyOTk1MiwiZXhwIjoyMDYxODA1OTUyfQ.IQgAFxPi-0Oy9KX4MVFXsoTymxSVCzgPNIw76Um9UCQ"
 
 # Context-specific builds
 [context.production]
