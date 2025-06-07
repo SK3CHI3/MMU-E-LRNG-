@@ -8,6 +8,7 @@ const PWAUpdateNotification: React.FC = () => {
   const [offlineReady, setOfflineReady] = useState(false);
   const [needRefresh, setNeedRefresh] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [hasShownOfflineReady, setHasShownOfflineReady] = useState(false);
 
   useEffect(() => {
     // Register service worker and listen for updates
@@ -20,13 +21,18 @@ const PWAUpdateNotification: React.FC = () => {
             console.log('PWA: Service Worker registered successfully');
           }
 
-          // Show offline ready notification briefly
-          setOfflineReady(true);
+          // Only show offline ready notification once per session and only if it's a fresh install
+          const isFirstTime = !localStorage.getItem('pwa-offline-ready-shown');
+          if (isFirstTime && !hasShownOfflineReady) {
+            setOfflineReady(true);
+            setHasShownOfflineReady(true);
+            localStorage.setItem('pwa-offline-ready-shown', 'true');
 
-          // Auto-hide the offline ready notification after 4 seconds
-          setTimeout(() => {
-            setOfflineReady(false);
-          }, 4000);
+            // Auto-hide the offline ready notification after 3 seconds
+            setTimeout(() => {
+              setOfflineReady(false);
+            }, 3000);
+          }
 
           // Check for updates
           registration.addEventListener('updatefound', () => {
@@ -74,53 +80,51 @@ const PWAUpdateNotification: React.FC = () => {
     setNeedRefresh(false);
   };
 
-  // Show offline ready notification
+  // Show offline ready notification (compact and professional)
   if (offlineReady && !needRefresh) {
     return (
-      <div className="fixed bottom-4 left-4 right-4 z-50 md:left-auto md:right-4 md:w-80 animate-in slide-in-from-bottom-2 duration-300">
-        <Card className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 shadow-lg">
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-600 rounded-full">
-                  <CheckCircle className="h-4 w-4 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-sm font-semibold text-green-800 dark:text-green-200">
-                    Ready for Offline Use
-                  </CardTitle>
-                  <CardDescription className="text-xs text-green-600 dark:text-green-300">
-                    Content cached and available offline
-                  </CardDescription>
-                </div>
+      <div className="fixed top-4 right-4 z-40 animate-in slide-in-from-top-2 duration-300">
+        <Card className="border-green-200 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-lg max-w-xs">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 bg-green-600 rounded-full">
+                <CheckCircle className="h-3 w-3 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-green-800 dark:text-green-200 truncate">
+                  App Ready for Offline Use
+                </p>
+                <p className="text-xs text-green-600 dark:text-green-400 truncate">
+                  Content cached successfully
+                </p>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setOfflineReady(false)}
-                className="h-6 w-6 p-0 text-green-600 hover:text-green-800 hover:bg-green-100 dark:text-green-400 dark:hover:text-green-200 dark:hover:bg-green-950/30"
+                className="h-5 w-5 p-0 text-green-600 hover:text-green-800 hover:bg-green-100 dark:text-green-400 dark:hover:text-green-200 dark:hover:bg-green-950/30 shrink-0"
               >
                 <X className="h-3 w-3" />
               </Button>
             </div>
-          </CardHeader>
+          </CardContent>
         </Card>
       </div>
     );
   }
 
-  // Show update notification
+  // Show update notification (professional and non-intrusive)
   if (showUpdatePrompt && needRefresh) {
     return (
-      <div className="fixed bottom-4 left-4 right-4 z-50 md:left-auto md:right-4 md:w-80 animate-in slide-in-from-bottom-2 duration-300">
-        <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 shadow-lg">
+      <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
+        <Card className="border-blue-200 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-lg max-w-sm">
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-600 rounded-full animate-pulse">
-                  <RefreshCw className="h-4 w-4 text-white" />
+                <div className="p-1.5 bg-blue-600 rounded-full">
+                  <RefreshCw className="h-3 w-3 text-white" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <CardTitle className="text-sm font-semibold text-blue-800 dark:text-blue-200">
                     Update Available
                   </CardTitle>
@@ -133,7 +137,7 @@ const PWAUpdateNotification: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={handleDismiss}
-                className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-100 dark:text-blue-400 dark:hover:text-blue-200 dark:hover:bg-blue-950/30"
+                className="h-5 w-5 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-100 dark:text-blue-400 dark:hover:text-blue-200 dark:hover:bg-blue-950/30 shrink-0"
               >
                 <X className="h-3 w-3" />
               </Button>
@@ -141,24 +145,24 @@ const PWAUpdateNotification: React.FC = () => {
           </CardHeader>
 
           <CardContent className="pt-0 space-y-3">
-            <p className="text-xs text-blue-700 dark:text-blue-300">
-              A new version of MMU Digital Campus is available with improvements and bug fixes.
+            <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+              A new version is available with improvements and bug fixes.
             </p>
 
             <div className="flex gap-2">
               <Button
                 size="sm"
                 onClick={handleUpdate}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
               >
                 <RefreshCw className="h-3 w-3 mr-1" />
-                Update Now
+                Update
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleDismiss}
-                className="flex-1 border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-950/30"
+                className="flex-1 border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-950/30 text-xs h-8"
               >
                 Later
               </Button>

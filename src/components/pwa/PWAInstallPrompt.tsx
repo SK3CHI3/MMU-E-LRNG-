@@ -100,80 +100,75 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ onClose }) => {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 md:left-auto md:right-4 md:w-96">
-      <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 shadow-lg">
+    <div className="fixed top-16 right-4 z-40 animate-in slide-in-from-top-2 duration-300">
+      <Card className="border-blue-200 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-lg max-w-sm">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
-              <div className="p-2 bg-blue-600 rounded-lg">
-                <Smartphone className="h-5 w-5 text-white" />
+              <div className="p-1.5 bg-blue-600 rounded-lg">
+                <Smartphone className="h-4 w-4 text-white" />
               </div>
-              <div>
-                <CardTitle className="text-lg">Install MMU Campus</CardTitle>
-                <CardDescription>Get the full app experience</CardDescription>
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-sm font-semibold">Install MMU Campus</CardTitle>
+                <CardDescription className="text-xs">Get the full app experience</CardDescription>
               </div>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleDismiss}
-              className="h-8 w-8 p-0"
+              className="h-5 w-5 p-0 shrink-0"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3 w-3" />
             </Button>
           </div>
         </CardHeader>
         
-        <CardContent className="space-y-4">
-          {/* Features */}
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-yellow-600" />
-              <span>Faster loading</span>
+        <CardContent className="space-y-3">
+          {/* Features - Compact */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="flex items-center gap-1.5">
+              <Zap className="h-3 w-3 text-yellow-600" />
+              <span>Faster</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Wifi className="h-4 w-4 text-green-600" />
-              <span>Works offline</span>
+            <div className="flex items-center gap-1.5">
+              <Wifi className="h-3 w-3 text-green-600" />
+              <span>Offline</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Bell className="h-4 w-4 text-blue-600" />
-              <span>Push notifications</span>
+            <div className="flex items-center gap-1.5">
+              <Bell className="h-3 w-3 text-blue-600" />
+              <span>Notifications</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Smartphone className="h-4 w-4 text-purple-600" />
+            <div className="flex items-center gap-1.5">
+              <Smartphone className="h-3 w-3 text-purple-600" />
               <span>Native feel</span>
             </div>
           </div>
 
-          {/* Benefits */}
-          <div className="space-y-2">
-            <Badge variant="secondary" className="text-xs">
-              ✨ Enhanced Performance
-            </Badge>
-            <p className="text-sm text-muted-foreground">
-              Install the app for instant access to assignments, classes, and study tools - even when you're offline!
-            </p>
+          {/* Benefits - Compact */}
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Install for instant access to assignments, classes, and study tools - even offline!
+          </p>
+
+          {/* Install Button - Compact */}
+          <div className="flex gap-2">
+            <Button
+              onClick={handleInstallClick}
+              disabled={isInstalling}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-xs h-8"
+            >
+              <Download className="h-3 w-3 mr-1" />
+              {isInstalling ? 'Installing...' : 'Install'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDismiss}
+              className="text-xs h-8 px-3"
+            >
+              Later
+            </Button>
           </div>
-
-          {/* Install Button */}
-          <Button
-            onClick={handleInstallClick}
-            disabled={isInstalling}
-            className="w-full bg-blue-600 hover:bg-blue-700"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            {isInstalling ? 'Installing...' : 'Install App'}
-          </Button>
-
-          {/* Dismiss option */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDismiss}
-            className="w-full text-xs"
-          >
-            Maybe later
-          </Button>
         </CardContent>
       </Card>
     </div>
