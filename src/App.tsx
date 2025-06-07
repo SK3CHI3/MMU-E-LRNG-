@@ -69,6 +69,7 @@ const AdminSecurity = lazy(() => import("./pages/admin/Security"));
 const AdminGlobalSettings = lazy(() => import("./pages/admin/GlobalSettings"));
 const AdminAnalytics = lazy(() => import("./pages/admin/Analytics"));
 const AdminAI = lazy(() => import("./pages/admin/AdminAI"));
+const AdminFeedback = lazy(() => import("./pages/admin/Feedback"));
 const SystemLogs = lazy(() => import("./pages/admin/SystemLogs"));
 const SystemActivities = lazy(() => import("./pages/admin/SystemActivities"));
 const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
@@ -249,6 +250,7 @@ const App = () => {
                   <Route path="/admin/analytics" element={<AdminAnalytics />} />
                   <Route path="/global-settings" element={<AdminGlobalSettings />} />
                   <Route path="/admin/announcements" element={<AdminAnnouncementManagement />} />
+                  <Route path="/admin/feedback" element={<AdminFeedback />} />
                   <Route path="/admin-ai" element={<AdminAI />} />
                   <Route path="/system-logs" element={<SystemLogs />} />
                   <Route path="/system-activities" element={<SystemActivities />} />

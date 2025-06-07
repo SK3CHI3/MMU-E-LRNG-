@@ -41,6 +41,7 @@ import {
 import { useState, useEffect } from "react";
 import { initScrollAnimations } from "@/utils/ui/scrollAnimations";
 import { usePopupActions } from "@/components/popups/PopupManager";
+import FeedbackButton from "@/components/feedback/FeedbackButton";
 
 const Index = () => {
   const [notifications, setNotifications] = useState<PublicNotification[]>([]);
@@ -1105,10 +1106,7 @@ const Index = () => {
 
           {/* Feedback Button */}
           <div className="fixed bottom-4 md:bottom-6 right-4 md:right-6 z-50">
-            <Button className="bg-accent text-primary hover:bg-accent/90 shadow-lg hover-lift text-xs md:text-sm px-2 py-1 md:px-3 md:py-2">
-              <MessageSquare className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Feedback</span>
-            </Button>
+            <FeedbackButton />
           </div>
 
           <div className="border-t border-white/10 mt-12 pt-8 text-center text-sm opacity-75">

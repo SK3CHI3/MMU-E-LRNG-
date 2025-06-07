@@ -23,6 +23,7 @@ import {
   ClipboardList,
   Award,
   MessageSquare,
+  MessageCircle,
   Library,
   CreditCard,
   School,
@@ -277,6 +278,11 @@ const getNavItemsForRole = (role: string): NavItem[] => {
           title: 'Messages',
           href: '/messages',
           icon: <MessageSquare className="h-4 w-4" />,
+        },
+        {
+          title: 'Feedback',
+          href: '/admin/feedback',
+          icon: <MessageCircle className="h-4 w-4" />,
         },
         {
           title: 'Admin AI',

@@ -17,18 +17,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// Service role key for admin operations (only used in secure server contexts)
-const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVla2FqbWZ2cW50YmxvcWdpendrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NjIyOTk1MiwiZXhwIjoyMDYxODA1OTUyfQ.IQgAFxPi-0Oy9KX4MVFXsoTymxSVCzgPNIw76Um9UCQ';
+// SECURITY NOTE: Service role key should NEVER be used in client-side code
+// For admin operations, we'll use the regular client with proper RLS policies
+// The service role key should only be used in secure server environments
 
-// Create a separate admin client with service role key
-// WARNING: This should only be used for operations that require admin privileges
-// and should never be exposed to the client
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-  },
-});
+// Remove the admin client - we'll use regular client with RLS policies instead
+// export const supabaseAdmin = null; // Disabled for security
 
 // Test the connection (only in development)
 if (import.meta.env.DEV) {

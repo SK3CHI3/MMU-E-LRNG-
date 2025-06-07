@@ -6,13 +6,14 @@ import { Input, PasswordInput } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2, AlertTriangle, Info } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { showErrorToast, showSuccessToast } from '@/utils/ui/toast';
 import { getFacultyNames, getDepartmentsByFaculty } from '@/services/facultyService';
 import { mmuFaculties } from '@/data/mmuData';
 import { useRegistrationSettings } from '@/hooks/useSystemSettings';
+import { supabase } from '@/lib/supabaseClient';
 // Removed complex email checking utilities
 
 const Register = () => {
@@ -39,6 +40,8 @@ const Register = () => {
     feedback: string[];
     isValid: boolean;
   }>({ score: 0, feedback: [], isValid: false });
+  const [adminCount, setAdminCount] = useState<number>(0);
+  const [adminCountLoading, setAdminCountLoading] = useState(false);
   // Removed complex email status checking
   const { signUp } = useAuth();
   const navigate = useNavigate();
@@ -222,7 +225,36 @@ const Register = () => {
     }
   };
 
-  const handleRoleChange = (value: 'student' | 'lecturer' | 'dean' | 'admin') => {
+  // Function to check current admin count
+  const checkAdminCount = async () => {
+    try {
+      setAdminCountLoading(true);
+      const { data, error } = await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'admin');
+
+      if (error) {
+        console.error('Error checking admin count:', error);
+        return 0;
+      }
+
+      return data || 0;
+    } catch (error) {
+      console.error('Error checking admin count:', error);
+      return 0;
+    } finally {
+      setAdminCountLoading(false);
+    }
+  };
+
+  const handleRoleChange = async (value: 'student' | 'lecturer' | 'dean' | 'admin') => {
+    // If admin role is selected, check current admin count
+    if (value === 'admin') {
+      const currentAdminCount = await checkAdminCount();
+      setAdminCount(currentAdminCount);
+    }
+
     setFormData((prev) => ({
       ...prev,
       role: value,
@@ -582,6 +614,41 @@ const Register = () => {
                   <SelectItem value="admin">Administrator</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Admin limit warning */}
+              {formData.role === 'admin' && (
+                <div className="mt-2">
+                  {adminCountLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Checking admin availability...
+                    </div>
+                  ) : adminCount >= 2 ? (
+                    <Alert className="border-red-200 bg-red-50 dark:bg-red-900/20">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                      <AlertTitle className="text-red-800 dark:text-red-200">Administrator Limit Reached</AlertTitle>
+                      <AlertDescription className="text-red-700 dark:text-red-300">
+                        <div className="space-y-2">
+                          <p>The maximum number of administrators (2) has been reached.</p>
+                          <p className="font-medium">To request admin access, please contact:</p>
+                          <ul className="list-disc list-inside space-y-1 text-sm">
+                            <li>Email: admin@mmu.ac.ke</li>
+                            <li>Or contact your system administrator</li>
+                          </ul>
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-900/20">
+                      <Info className="h-4 w-4 text-amber-600" />
+                      <AlertTitle className="text-amber-800 dark:text-amber-200">Administrator Registration</AlertTitle>
+                      <AlertDescription className="text-amber-700 dark:text-amber-300">
+                        You are registering as an administrator. Currently {adminCount}/2 admin slots are used.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
             </div>
 
             {formData.role === 'student' && (
@@ -686,7 +753,7 @@ const Register = () => {
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading || !registrationEnabled}
+              disabled={isLoading || !registrationEnabled || (formData.role === 'admin' && adminCount >= 2)}
             >
               {isLoading ? (
                 <>
@@ -695,6 +762,8 @@ const Register = () => {
                 </>
               ) : !registrationEnabled ? (
                 'Registration Disabled'
+              ) : (formData.role === 'admin' && adminCount >= 2) ? (
+                'Admin Limit Reached'
               ) : (
                 'Create Account'
               )}

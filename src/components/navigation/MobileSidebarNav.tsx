@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   BookOpen,
   MessageSquare,
+  MessageCircle,
   Calendar,
   User,
   Users,
@@ -221,6 +222,11 @@ const getMobileNavItemsForRole = (role: string): MobileNavItem[] => {
           title: 'Messages',
           href: '/messages',
           icon: <MessageSquare className="h-5 w-5" />,
+        },
+        {
+          title: 'Feedback',
+          href: '/admin/feedback',
+          icon: <MessageCircle className="h-5 w-5" />,
         },
         {
           title: 'Global Settings',

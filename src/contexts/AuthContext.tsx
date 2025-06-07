@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase, supabaseAdmin, User as DbUser, getCurrentUser } from '@/lib/supabaseClient';
+import { supabase, User as DbUser, getCurrentUser } from '@/lib/supabaseClient';
 import { showErrorToast } from '@/utils/ui/toast';
 import { assignInitialSemester } from '@/services/academicService';
 
@@ -102,16 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // Check if admin client is available
-      if (!supabaseAdmin) {
-        console.error('fetchDbUser: Admin client not available');
-        setDbUser(null);
-        setIsLoading(false);
-        return;
-      }
-
-      // Use admin client directly to bypass RLS and speed up the process
-      const { data, error } = await supabaseAdmin
+      // Use regular client with proper authentication
+      const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('auth_id', authId)
@@ -151,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // First, check if email already exists in database
-      const { data: existingEmailUser } = await supabaseAdmin
+      const { data: existingEmailUser } = await supabase
         .from('users')
         .select('id, email')
         .eq('email', email)
@@ -168,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Check if student ID already exists (for students)
       if (userData.student_id) {
-        const { data: existingStudentId } = await supabaseAdmin
+        const { data: existingStudentId } = await supabase
           .from('users')
           .select('auth_id, student_id')
           .eq('student_id', userData.student_id)
@@ -178,6 +170,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return {
             error: {
               message: `The admission number ${userData.student_id} is already registered. Please check your admission number or contact support if this is an error.`
+            },
+            data: null
+          };
+        }
+      }
+
+      // Check admin limit (maximum 2 admins allowed)
+      if (userData.role === 'admin') {
+        const { data: adminCount, error: adminCountError } = await supabase
+          .from('users')
+          .select('id', { count: 'exact', head: true })
+          .eq('role', 'admin');
+
+        if (adminCountError) {
+          console.error('Error checking admin count:', adminCountError);
+          return {
+            error: {
+              message: 'Unable to verify admin registration. Please try again later.'
+            },
+            data: null
+          };
+        }
+
+        if (adminCount && adminCount >= 2) {
+          return {
+            error: {
+              message: 'Maximum number of administrators (2) has been reached. Please contact an existing administrator for assistance with admin account creation.'
             },
             data: null
           };
@@ -209,7 +228,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         try {
           // First, check if a user with this auth_id already exists
-          const { data: existingUser } = await supabaseAdmin
+          const { data: existingUser } = await supabase
             .from('users')
             .select('auth_id')
             .eq('auth_id', data.user.id)
@@ -220,11 +239,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return { data: { user: data.user, session: data.session }, error: null };
           }
 
-          // Insert user record into database using admin client to bypass RLS
+          // Insert user record into database
           if (import.meta.env.DEV) {
             console.log('Attempting to insert user into database');
           }
-          const { error: dbError, data: insertedUser } = await supabaseAdmin
+          const { error: dbError, data: insertedUser } = await supabase
             .from('users')
             .insert(userRecord)
             .select()
@@ -239,7 +258,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             // If it's a duplicate key error, check if the user actually exists
             if (dbError.message?.includes('duplicate key value violates unique constraint')) {
-              const { data: duplicateUser } = await supabaseAdmin
+              const { data: duplicateUser } = await supabase
                 .from('users')
                 .select('auth_id')
                 .eq('auth_id', data.user.id)
@@ -335,7 +354,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (admissionNumberRegex.test(emailOrAdmissionNumber)) {
 
         // Look up the user's email from the database using admission number
-        const { data: userData, error: lookupError } = await supabaseAdmin
+        const { data: userData, error: lookupError } = await supabase
           .from('users')
           .select('email')
           .eq('student_id', emailOrAdmissionNumber)
@@ -358,7 +377,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('signIn: Input detected as email, checking if user exists');
         }
 
-        const { data: userData, error: lookupError } = await supabaseAdmin
+        const { data: userData, error: lookupError } = await supabase
           .from('users')
           .select('email')
           .eq('email', email.toLowerCase())

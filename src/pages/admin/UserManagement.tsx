@@ -6,6 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { toast } from '@/components/ui/use-toast';
 import {
   Users,
   UserPlus,
@@ -25,11 +28,29 @@ import {
   GraduationCap,
   Briefcase,
   Shield,
-  Settings
+  Settings,
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { mmuFaculties } from '@/data/mmuData';
+import {
+  deleteUserCompletely,
+  deleteUserCompletelyServer,
+  deleteUserDirect,
+  checkRemainingReferences,
+  forceCleanupReferences,
+  testAuthDeletion,
+  deactivateUser,
+  reactivateUser,
+  bulkDeleteUsers,
+  bulkDeactivateUsers,
+  getUserDeletionInfo,
+  logAdminAction,
+  checkUserExists
+} from '@/services/adminService';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface User {
   id: string;
@@ -47,6 +68,7 @@ interface User {
 }
 
 const UserManagement = () => {
+  const { dbUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +77,15 @@ const UserManagement = () => {
   const [selectedFaculty, setSelectedFaculty] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedTab, setSelectedTab] = useState('all');
+
+  // Deletion state
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [deletionInfo, setDeletionInfo] = useState<any>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -67,13 +98,24 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      console.log('Fetching users from database...');
 
       const { data: usersData, error } = await supabase
         .from('users')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching users:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch users from database.",
+          variant: "destructive"
+        });
+        throw error;
+      }
+
+      console.log(`Fetched ${usersData?.length || 0} users from database`);
 
       // Transform data to match our interface
       const transformedUsers: User[] = (usersData || []).map(user => ({
@@ -92,8 +134,17 @@ const UserManagement = () => {
       }));
 
       setUsers(transformedUsers);
+
+      // Clear any selected users after refresh
+      setSelectedUsers([]);
+
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error in fetchUsers:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while fetching users.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -227,6 +278,249 @@ const UserManagement = () => {
 
   const stats = getUserStats();
 
+  // Deletion functions
+  const handleDeleteUser = async (userId: string) => {
+    // Prevent self-deletion
+    if (dbUser?.id === userId) {
+      toast({
+        title: "Cannot Delete",
+        description: "You cannot delete your own account.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setDeleteLoading(true);
+      const info = await getUserDeletionInfo(userId);
+      if (info) {
+        setDeletionInfo(info);
+        setDeletingUserId(userId);
+        setShowDeleteDialog(true);
+      } else {
+        toast({
+          title: "Error",
+          description: "Could not load user information for deletion.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error preparing user deletion:', error);
+      toast({
+        title: "Error",
+        description: "Failed to prepare user deletion.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!deletingUserId || !dbUser) return;
+
+    try {
+      setDeleteLoading(true);
+      console.log('Starting user deletion for ID:', deletingUserId);
+
+      // Use server-side deletion to bypass RLS issues
+      const result = await deleteUserCompletelyServer(deletingUserId);
+      console.log('Server-side deletion result:', result);
+
+      if (result.success) {
+        // Log the admin action
+        await logAdminAction(
+          dbUser.auth_id,
+          'delete_user',
+          deletingUserId,
+          { user_email: deletionInfo?.user?.email }
+        );
+
+        toast({
+          title: "User Deleted",
+          description: "User has been permanently deleted from the system.",
+        });
+
+        // Verify deletion and refresh users list
+        console.log('Verifying user deletion...');
+        setTimeout(async () => {
+          const userStillExists = await checkUserExists(deletingUserId);
+          console.log('User still exists after deletion:', userStillExists);
+
+          if (userStillExists) {
+            console.warn('User still exists in database after deletion!');
+            toast({
+              title: "Warning",
+              description: "User may not have been completely deleted. Please refresh and check.",
+              variant: "destructive"
+            });
+          }
+
+          await fetchUsers();
+          console.log('User list refreshed');
+        }, 1000);
+
+      } else {
+        console.error('Deletion failed:', result.error);
+        toast({
+          title: "Deletion Failed",
+          description: result.error || "Failed to delete user.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while deleting the user.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleteLoading(false);
+      setShowDeleteDialog(false);
+      setDeletingUserId(null);
+      setDeletionInfo(null);
+    }
+  };
+
+  const handleDeactivateUser = async (userId: string) => {
+    if (!dbUser) return;
+
+    try {
+      const result = await deactivateUser(userId);
+
+      if (result.success) {
+        await logAdminAction(dbUser.auth_id, 'deactivate_user', userId);
+        toast({
+          title: "User Deactivated",
+          description: "User has been deactivated and cannot log in.",
+        });
+        await fetchUsers();
+      } else {
+        toast({
+          title: "Deactivation Failed",
+          description: result.error || "Failed to deactivate user.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error deactivating user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to deactivate user.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleReactivateUser = async (userId: string) => {
+    if (!dbUser) return;
+
+    try {
+      const result = await reactivateUser(userId);
+
+      if (result.success) {
+        await logAdminAction(dbUser.auth_id, 'reactivate_user', userId);
+        toast({
+          title: "User Reactivated",
+          description: "User has been reactivated and can now log in.",
+        });
+        await fetchUsers();
+      } else {
+        toast({
+          title: "Reactivation Failed",
+          description: result.error || "Failed to reactivate user.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error reactivating user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reactivate user.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!dbUser || selectedUsers.length === 0) return;
+
+    // Check if trying to delete self
+    if (selectedUsers.includes(dbUser.id)) {
+      toast({
+        title: "Cannot Delete",
+        description: "You cannot delete your own account.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setBulkActionLoading(true);
+      const result = await bulkDeleteUsers(selectedUsers);
+
+      await logAdminAction(
+        dbUser.auth_id,
+        'bulk_delete_users',
+        undefined,
+        { user_count: selectedUsers.length, results: result.summary }
+      );
+
+      toast({
+        title: "Bulk Deletion Complete",
+        description: `${result.summary.successful} users deleted successfully. ${result.summary.failed} failed.`,
+        variant: result.summary.failed > 0 ? "destructive" : "default"
+      });
+
+      setSelectedUsers([]);
+      await fetchUsers();
+    } catch (error) {
+      console.error('Error in bulk delete:', error);
+      toast({
+        title: "Error",
+        description: "Failed to perform bulk deletion.",
+        variant: "destructive"
+      });
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkDeactivate = async () => {
+    if (!dbUser || selectedUsers.length === 0) return;
+
+    try {
+      setBulkActionLoading(true);
+      const result = await bulkDeactivateUsers(selectedUsers);
+
+      await logAdminAction(
+        dbUser.auth_id,
+        'bulk_deactivate_users',
+        undefined,
+        { user_count: selectedUsers.length, results: result.summary }
+      );
+
+      toast({
+        title: "Bulk Deactivation Complete",
+        description: `${result.summary.successful} users deactivated successfully. ${result.summary.failed} failed.`,
+        variant: result.summary.failed > 0 ? "destructive" : "default"
+      });
+
+      setSelectedUsers([]);
+      await fetchUsers();
+    } catch (error) {
+      console.error('Error in bulk deactivate:', error);
+      toast({
+        title: "Error",
+        description: "Failed to perform bulk deactivation.",
+        variant: "destructive"
+      });
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -236,13 +530,63 @@ const UserManagement = () => {
           <p className="text-gray-600 dark:text-gray-400">Comprehensive user administration and management</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Bulk Actions */}
+          {selectedUsers.length > 0 && (
+            <>
+              <Button
+                variant="outline"
+                onClick={handleBulkDeactivate}
+                disabled={bulkActionLoading}
+                className="text-orange-600 hover:text-orange-700"
+              >
+                {bulkActionLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <UserX className="h-4 w-4 mr-2" />
+                )}
+                Deactivate ({selectedUsers.length})
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleBulkDelete}
+                disabled={bulkActionLoading}
+                className="text-red-600 hover:text-red-700"
+              >
+                {bulkActionLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4 mr-2" />
+                )}
+                Delete ({selectedUsers.length})
+              </Button>
+            </>
+          )}
+
           <Button variant="outline" onClick={exportUsers}>
             <Download className="h-4 w-4 mr-2" />
             Export Users
           </Button>
-          <Button onClick={fetchUsers}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+          <Button
+            onClick={fetchUsers}
+            disabled={loading}
+            variant="outline"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Refresh ({users.length})
+          </Button>
+
+          {/* Debug Panel Toggle */}
+          <Button
+            onClick={() => setShowDebugPanel(!showDebugPanel)}
+            variant="outline"
+            size="sm"
+            className="text-xs"
+          >
+            🔧 Debug
           </Button>
           <Dialog>
             <DialogTrigger asChild>
@@ -420,16 +764,40 @@ const UserManagement = () => {
         <TabsContent value={selectedTab} className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>
-                {selectedTab === 'all' ? 'All Users' :
-                 selectedTab === 'student' ? 'Students' :
-                 selectedTab === 'lecturer' ? 'Lecturers' :
-                 selectedTab === 'dean' ? 'Deans' : 'Administrators'}
-                ({filteredUsers.length} users)
-              </CardTitle>
-              <CardDescription>
-                Manage user accounts, roles, and permissions • Last updated: {new Date().toLocaleTimeString()}
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>
+                    {selectedTab === 'all' ? 'All Users' :
+                     selectedTab === 'student' ? 'Students' :
+                     selectedTab === 'lecturer' ? 'Lecturers' :
+                     selectedTab === 'dean' ? 'Deans' : 'Administrators'}
+                    ({filteredUsers.length} users)
+                  </CardTitle>
+                  <CardDescription>
+                    Manage user accounts, roles, and permissions • Last updated: {new Date().toLocaleTimeString()}
+                  </CardDescription>
+                </div>
+
+                {filteredUsers.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={selectedUsers.length === filteredUsers.filter(u => dbUser?.id !== u.id).length && filteredUsers.filter(u => dbUser?.id !== u.id).length > 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          // Select all users except self
+                          const selectableUsers = filteredUsers.filter(u => dbUser?.id !== u.id).map(u => u.id);
+                          setSelectedUsers(selectableUsers);
+                        } else {
+                          setSelectedUsers([]);
+                        }
+                      }}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      Select All ({filteredUsers.filter(u => dbUser?.id !== u.id).length})
+                    </span>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -453,8 +821,23 @@ const UserManagement = () => {
                 <div className="space-y-4">
                   {filteredUsers.map((user) => {
                     const createdAt = formatDate(user.created_at);
+                    const isSelected = selectedUsers.includes(user.id);
+                    const isSelf = dbUser?.id === user.id;
+
                     return (
                       <div key={user.id} className="flex items-center space-x-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedUsers(prev => [...prev, user.id]);
+                            } else {
+                              setSelectedUsers(prev => prev.filter(id => id !== user.id));
+                            }
+                          }}
+                          disabled={isSelf}
+                          title={isSelf ? "Cannot select your own account" : "Select user"}
+                        />
                         <div className="flex items-center justify-center w-12 h-12 rounded-full bg-muted">
                           {getRoleIcon(user.role)}
                         </div>
@@ -509,14 +892,50 @@ const UserManagement = () => {
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" title="View Details">
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" title="Edit User">
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
-                            <Trash2 className="h-4 w-4" />
+
+                          {/* Status toggle button */}
+                          {user.status === 'active' ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-orange-600 hover:text-orange-700"
+                              onClick={() => handleDeactivateUser(user.id)}
+                              title="Deactivate User"
+                            >
+                              <UserX className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-green-600 hover:text-green-700"
+                              onClick={() => handleReactivateUser(user.id)}
+                              title="Reactivate User"
+                            >
+                              <UserCheck className="h-4 w-4" />
+                            </Button>
+                          )}
+
+                          {/* Delete button */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => handleDeleteUser(user.id)}
+                            disabled={deleteLoading && deletingUserId === user.id}
+                            title="Delete User Permanently"
+                          >
+                            {deleteLoading && deletingUserId === user.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -536,6 +955,276 @@ const UserManagement = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              Confirm User Deletion
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                You are about to permanently delete <strong>{deletionInfo?.user?.full_name}</strong> ({deletionInfo?.user?.email}).
+              </p>
+              <p className="text-red-600 font-medium">
+                This action cannot be undone. All user data will be permanently removed.
+              </p>
+
+              {deletionInfo?.relatedData && (
+                <div className="bg-muted p-3 rounded-lg space-y-2">
+                  <p className="font-medium">Related data that will be deleted:</p>
+                  <ul className="text-sm space-y-1">
+                    {deletionInfo.relatedData.enrollments > 0 && (
+                      <li>• {deletionInfo.relatedData.enrollments} course enrollments</li>
+                    )}
+                    {deletionInfo.relatedData.submissions > 0 && (
+                      <li>• {deletionInfo.relatedData.submissions} assignment submissions</li>
+                    )}
+                    {deletionInfo.relatedData.createdCourses > 0 && (
+                      <li>• {deletionInfo.relatedData.createdCourses} created courses (will be orphaned)</li>
+                    )}
+                    {deletionInfo.relatedData.createdAssignments > 0 && (
+                      <li>• {deletionInfo.relatedData.createdAssignments} created assignments (will be orphaned)</li>
+                    )}
+                    {deletionInfo.relatedData.messages > 0 && (
+                      <li>• {deletionInfo.relatedData.messages} messages</li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              <p>
+                Type <strong>DELETE</strong> to confirm this action.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="my-4">
+            <Input
+              placeholder="Type DELETE to confirm"
+              onChange={(e) => {
+                // You can add confirmation text validation here
+              }}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteUser}
+              disabled={deleteLoading}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete User
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Debug Panel */}
+      {showDebugPanel && (
+        <Card className="mt-4 border-yellow-200 bg-yellow-50">
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              🔧 Debug Panel
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowDebugPanel(false)}
+                className="ml-auto"
+              >
+                ✕
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-sm">
+              <p><strong>Total Users:</strong> {users.length}</p>
+              <p><strong>Filtered Users:</strong> {filteredUsers.length}</p>
+              <p><strong>Selected Users:</strong> {selectedUsers.length}</p>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Debug Functions (check browser console):</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    console.log('Current users:', users);
+                    console.log('Filtered users:', filteredUsers);
+                  }}
+                >
+                  Log Users
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    console.log('Debug functions available:', window.debugUserDeletion);
+                    console.log('Example: await window.debugUserDeletion.checkUserExists("user-id")');
+                  }}
+                >
+                  Show Debug Help
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    console.log('Force refreshing user list...');
+                    await fetchUsers();
+                  }}
+                >
+                  Force Refresh
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const userIds = filteredUsers.slice(0, 5).map(u => u.id);
+                    console.log('Sample user IDs for testing:', userIds);
+                  }}
+                >
+                  Get Sample IDs
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-red-600"
+                  onClick={async () => {
+                    const userId = prompt('Enter user ID for direct deletion test:');
+                    if (userId) {
+                      console.log('Testing direct deletion...');
+                      const result = await deleteUserDirect(userId);
+                      console.log('Direct deletion result:', result);
+                      if (result.success) {
+                        await fetchUsers();
+                        toast({
+                          title: "Direct Deletion",
+                          description: "User deleted directly. Check console for details.",
+                        });
+                      } else {
+                        toast({
+                          title: "Direct Deletion Failed",
+                          description: result.error,
+                          variant: "destructive"
+                        });
+                      }
+                    }
+                  }}
+                >
+                  Test Direct Delete
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-orange-600"
+                  onClick={async () => {
+                    const authId = prompt('Enter auth_id to check remaining references:');
+                    if (authId) {
+                      console.log('Checking remaining references...');
+                      const refs = await checkRemainingReferences(authId);
+                      console.log('Remaining references:', refs);
+                      toast({
+                        title: "Reference Check",
+                        description: "Check console for remaining references.",
+                      });
+                    }
+                  }}
+                >
+                  Check References
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-purple-600"
+                  onClick={async () => {
+                    const authId = prompt('Enter auth_id to force cleanup:');
+                    if (authId) {
+                      console.log('Force cleaning up references...');
+                      const result = await forceCleanupReferences(authId);
+                      console.log('Force cleanup result:', result);
+                      await fetchUsers();
+                      toast({
+                        title: "Force Cleanup",
+                        description: "Check console for cleanup results.",
+                      });
+                    }
+                  }}
+                >
+                  Force Cleanup
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-blue-600"
+                  onClick={async () => {
+                    const authId = prompt('Enter auth_id to test Edge Function deletion:');
+                    if (authId) {
+                      console.log('Testing Edge Function auth deletion...');
+                      const result = await testAuthDeletion(authId);
+                      console.log('Edge Function test result:', result);
+                      toast({
+                        title: "Edge Function Test",
+                        description: result.success ? "Auth deletion successful!" : `Failed: ${result.error}`,
+                        variant: result.success ? "default" : "destructive"
+                      });
+                    }
+                  }}
+                >
+                  Test Auth Delete
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-green-600"
+                  onClick={async () => {
+                    const userId = prompt('Enter user ID for server-side deletion:');
+                    if (userId) {
+                      console.log('Testing server-side deletion...');
+                      const result = await deleteUserCompletelyServer(userId);
+                      console.log('Server-side deletion result:', result);
+                      if (result.success) {
+                        await fetchUsers();
+                        toast({
+                          title: "Server-Side Deletion",
+                          description: "User deleted successfully via server!",
+                        });
+                      } else {
+                        toast({
+                          title: "Server-Side Deletion Failed",
+                          description: result.error,
+                          variant: "destructive"
+                        });
+                      }
+                    }
+                  }}
+                >
+                  Test Server Delete
+                </Button>
+              </div>
+            </div>
+
+            <div className="text-xs text-gray-600 bg-gray-100 p-2 rounded">
+              <p><strong>How to test deletion:</strong></p>
+              <p>1. Open browser console (F12)</p>
+              <p>2. Get a user ID from the list above</p>
+              <p>3. Run: <code>await window.debugUserDeletion.testUserDeletion("user-id")</code></p>
+              <p>4. Watch the console for detailed logs</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

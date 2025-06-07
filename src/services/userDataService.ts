@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabaseClient';
 import { mmuFaculties } from '@/data/mmuData';
 
 export interface StudentData {
@@ -281,7 +281,7 @@ export const getStudentData = async (userId: string): Promise<StudentData | null
     console.log('getStudentData: Starting data fetch for userId:', userId);
 
     // Get user info first - this is the most critical part
-    const { data: user, error: userError } = await supabaseAdmin
+    const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
       .eq('auth_id', userId)
@@ -351,7 +351,7 @@ export const getStudentData = async (userId: string): Promise<StudentData | null
 
       // Try to get enrollments
       try {
-        enrollments = await supabaseAdmin
+        enrollments = await supabase
           .from('course_enrollments')
           .select(`
             *,

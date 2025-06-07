@@ -33,13 +33,13 @@ export const useSystemSettings = () => {
     } catch (err) {
       console.error('Error fetching system settings:', err);
       setError('Failed to load system settings');
-      // Set default values on error
+      // Set restrictive default values on error - registration should be disabled by default when settings fail
       setSettings({
         site_name: 'MMU Learning Management System',
         site_description: 'Elevating Learning, Empowering Futures',
         maintenance_mode: false,
-        registration_enabled: true,
-        signup_page_visible: true,
+        registration_enabled: false, // Changed: Default to false for security
+        signup_page_visible: false,  // Changed: Default to false for security
         welcome_message: 'Welcome to MMU Digital Campus Experience',
         show_mmu_branding: true,
         theme: 'light',
@@ -67,11 +67,24 @@ export const useSystemSettings = () => {
 
 // Helper functions for specific settings
 export const useRegistrationSettings = () => {
-  const { settings, loading } = useSystemSettings();
-  
+  const { settings, loading, error } = useSystemSettings();
+
+  // If there's an error loading settings, default to restrictive values for security
+  if (error) {
+    console.warn('Registration settings unavailable due to error, defaulting to disabled');
+    return {
+      registrationEnabled: false,
+      signupPageVisible: false,
+      loading
+    };
+  }
+
+  const registrationEnabled = settings.registration_enabled ?? false; // Default to false for security
+  const signupPageVisible = settings.signup_page_visible ?? false;    // Default to false for security
+
   return {
-    registrationEnabled: settings.registration_enabled ?? true,
-    signupPageVisible: settings.signup_page_visible ?? true,
+    registrationEnabled,
+    signupPageVisible,
     loading
   };
 };

@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin, Course, Assignment, AssignmentSubmission, CourseMaterial } from '@/lib/supabaseClient';
+import { supabase, Course, Assignment, AssignmentSubmission, CourseMaterial } from '@/lib/supabaseClient';
 import { trackActivity } from './analyticsService';
 
 export interface StudentCourse extends Course {
@@ -108,7 +108,7 @@ export const getStudentDashboard = async (userId: string): Promise<StudentDashbo
 // Get student's enrolled courses with progress
 export const getStudentCourses = async (userId: string): Promise<StudentCourse[]> => {
   try {
-    const { data: enrollments, error } = await supabaseAdmin
+    const { data: enrollments, error } = await supabase
       .from('course_enrollments')
       .select(`
         *,
@@ -125,12 +125,12 @@ export const getStudentCourses = async (userId: string): Promise<StudentCourse[]
         const course = enrollment.course;
 
         // Calculate progress based on completed assignments
-        const { count: totalAssignments } = await supabaseAdmin
+        const { count: totalAssignments } = await supabase
           .from('assignments')
           .select('*', { count: 'exact', head: true })
           .eq('course_id', course.id);
 
-        const { count: submittedAssignments } = await supabaseAdmin
+        const { count: submittedAssignments } = await supabase
           .from('assignment_submissions')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', userId);
@@ -138,7 +138,7 @@ export const getStudentCourses = async (userId: string): Promise<StudentCourse[]
         const progress = totalAssignments > 0 ? (submittedAssignments / totalAssignments) * 100 : 0;
 
         // Get next assignment
-        const { data: nextAssignment } = await supabaseAdmin
+        const { data: nextAssignment } = await supabase
           .from('assignments')
           .select('*')
           .eq('course_id', course.id)
@@ -148,7 +148,7 @@ export const getStudentCourses = async (userId: string): Promise<StudentCourse[]
           .single();
 
         // Get recent materials
-        const { data: recentMaterials } = await supabaseAdmin
+        const { data: recentMaterials } = await supabase
           .from('course_materials')
           .select('*')
           .eq('course_id', course.id)

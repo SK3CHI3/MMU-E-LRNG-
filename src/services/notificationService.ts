@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabaseClient';
 import { sampleNotifications, PublicNotification } from '@/data/mmuData';
 
 export interface SystemNotification {
