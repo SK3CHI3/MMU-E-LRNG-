@@ -9,7 +9,8 @@ import React, { lazy, Suspense } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { PopupProvider } from "./components/popups/PopupManager";
-import { PWAProvider } from "./components/pwa";
+// Temporarily disabled PWA to fix infinite reload loops
+// import { PWAProvider } from "./components/pwa";
 import AuthDebugPanel from "./components/debug/AuthDebugPanel";
 // Removed all complex recovery mechanisms - keeping it simple
 
@@ -176,13 +177,14 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <PWAProvider>
+        {/* Temporarily disabled PWA to fix infinite reload loops */}
+        {/* <PWAProvider> */}
           <PopupProvider>
             <TooltipProvider>
               <Toaster />
               <Sonner />
-              {/* Debug Panel - only shows in development */}
-              <AuthDebugPanel />
+              {/* Debug Panel - temporarily disabled to prevent reload loops */}
+              {/* <AuthDebugPanel /> */}
             <BrowserRouter>
             <MaintenanceGuard>
               <Routes>
@@ -388,7 +390,7 @@ const App = () => {
           </BrowserRouter>
             </TooltipProvider>
           </PopupProvider>
-        </PWAProvider>
+        {/* </PWAProvider> */}
       </AuthProvider>
     </QueryClientProvider>
   );
