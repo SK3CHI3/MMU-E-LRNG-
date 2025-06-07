@@ -46,7 +46,15 @@ export default defineConfig(async ({ mode }) => {
           }
         ],
         skipWaiting: true,
-        clientsClaim: true
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        // Add version-based cache invalidation
+        additionalManifestEntries: [
+          {
+            url: '/manifest.json',
+            revision: null
+          }
+        ]
       },
       devOptions: {
         enabled: true,

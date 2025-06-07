@@ -25,6 +25,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [dbUser, setDbUser] = useState<DbUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Detect if this is a page reload
+  const isPageReload = React.useRef(
+    performance.navigation?.type === 1 || // Navigation type reload
+    performance.getEntriesByType('navigation')[0]?.type === 'reload' ||
+    sessionStorage.getItem('page-reloaded') === 'true'
+  );
+
+  React.useEffect(() => {
+    if (isPageReload.current) {
+      sessionStorage.setItem('page-reloaded', 'true');
+      console.log('AuthContext: Page reload detected');
+    }
+
+    // Clear the flag after a short delay
+    const clearReloadFlag = setTimeout(() => {
+      sessionStorage.removeItem('page-reloaded');
+    }, 2000);
+
+    return () => clearTimeout(clearReloadFlag);
+  }, []);
+
   useEffect(() => {
     // Set loading state
     setIsLoading(true);
@@ -33,18 +54,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('AuthContext: Initializing auth state');
     }
 
-    // Add a fallback timeout to prevent infinite loading
+    // Clear potentially stale auth data on reload
+    if (isPageReload.current) {
+      console.log('AuthContext: Clearing potentially stale auth data on reload');
+
+      // Check if auth tokens are expired or corrupted
+      const authData = localStorage.getItem('mmu-lms-auth');
+      if (authData) {
+        try {
+          const parsed = JSON.parse(authData);
+          const now = Date.now() / 1000;
+
+          // If token is expired or expires soon (within 5 minutes), clear it
+          if (parsed.expires_at && parsed.expires_at < (now + 300)) {
+            console.log('AuthContext: Clearing expired auth data');
+            localStorage.removeItem('mmu-lms-auth');
+          }
+        } catch (error) {
+          console.log('AuthContext: Clearing corrupted auth data');
+          localStorage.removeItem('mmu-lms-auth');
+        }
+      }
+    }
+
+    // Shorter fallback timeout for reloads, longer for initial loads
+    const timeoutDuration = isPageReload.current ? 4000 : 8000;
     const fallbackTimeout = setTimeout(() => {
       if (import.meta.env.DEV) {
-        console.warn('AuthContext: Fallback timeout triggered - setting loading to false');
+        console.warn(`AuthContext: Fallback timeout triggered after ${timeoutDuration}ms - setting loading to false`);
       }
       setIsLoading(false);
-    }, 15000); // 15 second fallback
+    }, timeoutDuration);
 
     // Get initial session with additional debugging
     console.log('AuthContext: Starting initial session check...');
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
       console.log('AuthContext: Initial session check completed', session ? 'Session found' : 'No session');
+
+      // Clear fallback timeout immediately since we got a response
+      clearTimeout(fallbackTimeout);
+
+      if (error) {
+        console.error('AuthContext: Session error:', error);
+        setIsLoading(false);
+        return;
+      }
+
       if (import.meta.env.DEV) {
         logAuthState('Initial Session Check', {
           hasSession: !!session,
@@ -59,13 +114,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (session?.user) {
         console.log('AuthContext: User found in session, fetching DB user for ID:', session.user.id);
-        // Fetch DB user immediately without timeout for faster loading
-        fetchDbUser(session.user.id);
-        // Clear fallback timeout since we're proceeding with fetchDbUser
-        clearTimeout(fallbackTimeout);
+        // Fetch DB user with a shorter timeout for reload scenarios
+        fetchDbUser(session.user.id).catch(error => {
+          console.error('AuthContext: Failed to fetch DB user:', error);
+          setIsLoading(false);
+        });
       } else {
         console.log('AuthContext: No user in session, setting loading to false');
-        clearTimeout(fallbackTimeout);
         setIsLoading(false);
       }
     }).catch(error => {
@@ -131,12 +186,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('fetchDbUser: Current loading state:', isLoading);
     }
 
-    // Set a timeout to prevent infinite loading
+    // Set a shorter timeout to prevent infinite loading on reload
     const timeoutId = setTimeout(() => {
-      console.warn('fetchDbUser: Database request timed out after 8 seconds - forcing loading to false');
+      console.warn('fetchDbUser: Database request timed out after 5 seconds - forcing loading to false');
       setIsLoading(false);
       setDbUser(null);
-    }, 8000); // 8 second timeout (reduced from 10)
+    }, 5000); // Reduced to 5 seconds for faster recovery
 
     try {
       // Use regular client with proper authentication

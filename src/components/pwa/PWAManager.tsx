@@ -52,18 +52,64 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
       }
     };
 
+    // Clear stale PWA data on version mismatch
+    const clearStaleData = () => {
+      const currentVersion = '1.2.0'; // Should match package.json version
+      const storedVersion = localStorage.getItem('app-version');
+
+      if (storedVersion && storedVersion !== currentVersion) {
+        console.log('PWA: Version mismatch detected, clearing stale data');
+
+        // Clear PWA-related localStorage items
+        const keysToRemove = [
+          'pwa-offline-ready-shown',
+          'pwa-install-dismissed',
+          'pwa-install-last-shown',
+          'pwa-installed'
+        ];
+
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        // Clear service worker caches
+        if ('caches' in window) {
+          caches.keys().then(cacheNames => {
+            cacheNames.forEach(cacheName => {
+              if (cacheName.includes('workbox') || cacheName.includes('api-cache')) {
+                caches.delete(cacheName);
+              }
+            });
+          });
+        }
+      }
+
+      localStorage.setItem('app-version', currentVersion);
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     checkInstalled();
+    clearStaleData();
 
     // Register service worker using VitePWA's generated files
     if ('serviceWorker' in navigator) {
+      // Clear any existing service workers first
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(registration => {
+          if (registration.scope !== window.location.origin + '/') {
+            registration.unregister();
+          }
+        });
+      });
+
       // VitePWA generates these files automatically
       const swUrl = import.meta.env.DEV ? '/dev-sw.js?dev-sw' : '/sw.js';
 
-      navigator.serviceWorker.register(swUrl, { scope: '/' })
+      navigator.serviceWorker.register(swUrl, {
+        scope: '/',
+        updateViaCache: 'none' // Prevent caching of the service worker itself
+      })
         .then((reg) => {
           setRegistration(reg);
 
@@ -94,9 +140,20 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
               });
             }
           });
+
+          // Force update check
+          reg.update();
         })
         .catch((error) => {
           console.error('PWA: Service Worker registration failed:', error);
+
+          // If service worker fails, clear related data
+          const keysToRemove = [
+            'pwa-offline-ready-shown',
+            'pwa-install-dismissed',
+            'pwa-install-last-shown'
+          ];
+          keysToRemove.forEach(key => localStorage.removeItem(key));
         });
     }
 

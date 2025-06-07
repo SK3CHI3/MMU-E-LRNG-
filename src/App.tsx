@@ -11,6 +11,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { PopupProvider } from "./components/popups/PopupManager";
 import { PWAProvider } from "./components/pwa";
 import AuthDebugPanel from "./components/debug/AuthDebugPanel";
+import { detectCorruptedStorage, cleanupAndReload, wasRecentlyCleanedUp } from "./utils/storageCleanup";
 
 // Development mode check (console logging removed for production)
 
@@ -95,19 +96,67 @@ import { DashboardRouter } from "./components/dashboard/DashboardRouter";
 // 404 Page
 import NotFound from "./pages/common/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes (formerly cacheTime)
+      retry: (failureCount, error: any) => {
+        // Don't retry on auth errors
+        if (error?.status === 401 || error?.status === 403) {
+          return false;
+        }
+        return failureCount < 3;
+      },
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+    },
+  },
+});
 
 // Loading component for Suspense
 const PageLoader = () => {
   const [showTimeout, setShowTimeout] = React.useState(false);
+  const [showCleanupOption, setShowCleanupOption] = React.useState(false);
 
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowTimeout(true);
-    }, 10000); // Show timeout message after 10 seconds
+    // Check for corrupted storage on mount
+    if (detectCorruptedStorage() && !wasRecentlyCleanedUp()) {
+      console.log('Corrupted storage detected, initiating cleanup...');
+      cleanupAndReload({ clearPWA: true, clearCache: true });
+      return;
+    }
 
-    return () => clearTimeout(timer);
+    const timeoutTimer = setTimeout(() => {
+      setShowTimeout(true);
+    }, 8000); // Show timeout message after 8 seconds
+
+    const cleanupTimer = setTimeout(() => {
+      setShowCleanupOption(true);
+    }, 15000); // Show cleanup option after 15 seconds
+
+    return () => {
+      clearTimeout(timeoutTimer);
+      clearTimeout(cleanupTimer);
+    };
   }, []);
+
+  const handleCleanupAndReload = () => {
+    cleanupAndReload({
+      clearPWA: true,
+      clearCache: true,
+      clearAuth: false // Don't clear auth unless user explicitly wants to
+    });
+  };
+
+  const handleForceCleanup = () => {
+    cleanupAndReload({
+      clearPWA: true,
+      clearCache: true,
+      clearAuth: true,
+      force: true
+    });
+  };
 
   if (import.meta.env.DEV) {
     console.log('PageLoader: Rendering loading component');
@@ -119,17 +168,36 @@ const PageLoader = () => {
         <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
         <p className="text-lg font-medium">Loading your dashboard...</p>
         <p className="text-muted-foreground mt-2">Please wait while we set things up</p>
+
         {showTimeout && (
           <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
             <p className="text-sm text-yellow-800 dark:text-yellow-200">
-              Taking longer than expected? Try refreshing the page.
+              Taking longer than expected?
             </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-2 text-sm text-yellow-600 dark:text-yellow-400 underline hover:no-underline"
-            >
-              Refresh Page
-            </button>
+            <div className="mt-2 space-y-2">
+              <button
+                onClick={() => window.location.reload()}
+                className="block w-full text-sm text-yellow-600 dark:text-yellow-400 underline hover:no-underline"
+              >
+                Refresh Page
+              </button>
+              {showCleanupOption && (
+                <>
+                  <button
+                    onClick={handleCleanupAndReload}
+                    className="block w-full text-sm text-blue-600 dark:text-blue-400 underline hover:no-underline"
+                  >
+                    Clear Cache & Reload
+                  </button>
+                  <button
+                    onClick={handleForceCleanup}
+                    className="block w-full text-sm text-red-600 dark:text-red-400 underline hover:no-underline"
+                  >
+                    Reset App Data (will sign you out)
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -138,6 +206,25 @@ const PageLoader = () => {
 };
 
 const App = () => {
+  // Perform startup checks
+  React.useEffect(() => {
+    // Check for critical storage corruption on app start
+    if (detectCorruptedStorage() && !wasRecentlyCleanedUp()) {
+      console.warn('Critical storage corruption detected on startup');
+      // Don't auto-cleanup here, let PageLoader handle it
+    }
+
+    // Clear React Query cache on page reload to prevent stale data
+    const isPageReload =
+      performance.navigation?.type === 1 ||
+      performance.getEntriesByType('navigation')[0]?.type === 'reload';
+
+    if (isPageReload) {
+      console.log('App: Page reload detected, clearing query cache');
+      queryClient.clear();
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
