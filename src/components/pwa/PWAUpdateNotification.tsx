@@ -7,17 +7,27 @@ import { usePWA } from './PWAManager';
 const PWAUpdateNotification: React.FC = () => {
   const { isOfflineReady, needsRefresh, updateApp, dismissOfflineReady, dismissUpdate } = usePWA();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
   const handleUpdate = async () => {
     if (isUpdating) return;
 
     setIsUpdating(true);
+    setUpdateError(null);
+
     try {
       console.log('PWA Update: User clicked update button');
       await updateApp();
+      // Note: updateApp will reload the page, so we won't reach this point normally
     } catch (error) {
       console.error('PWA Update: Error during update:', error);
+      setUpdateError(error instanceof Error ? error.message : 'Update failed');
       setIsUpdating(false);
+
+      // Auto-hide error after 5 seconds
+      setTimeout(() => {
+        setUpdateError(null);
+      }, 5000);
     }
   };
 
@@ -94,6 +104,12 @@ const PWAUpdateNotification: React.FC = () => {
             <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
               A new version is available with improvements and bug fixes.
             </p>
+
+            {updateError && (
+              <p className="text-xs text-red-600 dark:text-red-400 leading-relaxed">
+                Update failed: {updateError}. Please try again.
+              </p>
+            )}
 
             <div className="flex gap-2">
               <Button

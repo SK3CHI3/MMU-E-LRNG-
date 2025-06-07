@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { PWAInstallPrompt, PWAOfflineIndicator } from './index';
-import PWAAutoUpdateNotification from './PWAAutoUpdateNotification';
+import { PWAInstallPrompt, PWAUpdateNotification, PWAOfflineIndicator } from './index';
 import { pwaDebug } from '@/utils/pwaDebug';
 
 interface PWAContextType {
@@ -39,6 +38,18 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
     // Handle online/offline status
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
+
+    // Check for updates when app regains focus
+    const handleFocus = () => {
+      if (registration && !isCheckingForUpdates) {
+        console.log('PWA: App focused, checking for updates...');
+        setTimeout(() => {
+          registration.update().catch(error => {
+            console.error('PWA: Focus update check failed:', error);
+          });
+        }, 1000); // Small delay to avoid too frequent checks
+      }
+    };
 
     // Check if app is already installed
     const checkInstalled = () => {
@@ -103,6 +114,7 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('focus', handleFocus);
 
     if (import.meta.env.DEV) {
       window.addEventListener('pwa-debug-update', handleDebugEvent as EventListener);
@@ -163,35 +175,38 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
               newWorker.addEventListener('statechange', () => {
                 console.log('PWA: New service worker state:', newWorker.state);
                 if (newWorker.state === 'installed') {
-                  if (navigator.serviceWorker.controller) {
-                    // New update available - with autoUpdate, this will be applied automatically
-                    console.log('PWA: New update will be applied automatically');
-                    setIsUpdating(false);
+                  setIsUpdating(false);
 
-                    // Show a brief notification that update was applied
-                    setIsOfflineReady(true);
-                    setTimeout(() => {
-                      setIsOfflineReady(false);
-                    }, 3000);
+                  if (navigator.serviceWorker.controller) {
+                    // New update available - show notification for user to decide
+                    console.log('PWA: New update available, showing notification');
+                    setNeedsRefresh(true);
                   } else {
                     // First time install
                     console.log('PWA: App installed for first time');
-                    setIsUpdating(false);
                     setIsOfflineReady(true);
+                    setTimeout(() => {
+                      setIsOfflineReady(false);
+                    }, 5000);
                   }
                 }
               });
             }
           });
 
-          // Listen for controlling service worker changes (automatic updates)
-          navigator.serviceWorker.addEventListener('controllerchange', () => {
-            console.log('PWA: New service worker took control - reloading page');
-            window.location.reload();
-          });
-
           // Force update check
           reg.update();
+
+          // Set up automatic update checking every 30 minutes
+          const updateCheckInterval = setInterval(() => {
+            console.log('PWA: Performing automatic update check...');
+            reg.update().catch(error => {
+              console.error('PWA: Automatic update check failed:', error);
+            });
+          }, 30 * 60 * 1000); // 30 minutes
+
+          // Store interval reference for cleanup
+          (window as any).pwaUpdateInterval = updateCheckInterval;
         })
         .catch((error) => {
           console.error('PWA: Service Worker registration failed:', error);
@@ -210,6 +225,12 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('focus', handleFocus);
+
+      // Clear PWA update interval
+      if ((window as any).pwaUpdateInterval) {
+        clearInterval((window as any).pwaUpdateInterval);
+      }
 
       if (import.meta.env.DEV) {
         window.removeEventListener('pwa-debug-update', handleDebugEvent as EventListener);
@@ -226,10 +247,40 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
   };
 
   const updateApp = async () => {
-    // With autoUpdate enabled, updates happen automatically
-    // This function can be used to force an immediate reload if needed
-    console.log('PWA: Manual update requested - reloading page');
-    window.location.reload();
+    if (!registration || !registration.waiting) {
+      console.warn('PWA: No service worker waiting for update');
+      // Force reload anyway in case of edge cases
+      window.location.reload();
+      return;
+    }
+
+    try {
+      console.log('PWA: Starting manual update...');
+
+      // Set up one-time listener for controller change
+      const handleControllerChange = () => {
+        console.log('PWA: New service worker activated, reloading...');
+        navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+        window.location.reload();
+      };
+
+      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+
+      // Send skip waiting message to the waiting service worker
+      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+
+      // Fallback reload if controller change doesn't fire within 5 seconds
+      setTimeout(() => {
+        console.log('PWA: Fallback reload triggered');
+        navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+        window.location.reload();
+      }, 5000);
+
+    } catch (error) {
+      console.error('PWA: Error updating app:', error);
+      // Force reload as fallback
+      window.location.reload();
+    }
   };
 
   const installApp = async () => {
@@ -293,7 +344,7 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
       {children}
       {/* PWA Components */}
       <PWAInstallPrompt />
-      <PWAAutoUpdateNotification />
+      <PWAUpdateNotification />
       <PWAOfflineIndicator />
     </PWAContext.Provider>
   );
