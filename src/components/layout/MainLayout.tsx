@@ -21,7 +21,8 @@ import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MobileBottomNav } from "@/components/navigation/MobileBottomNav";
-import { PWAFooterControls, PWADashboardControls } from "@/components/pwa";
+// Temporarily disabled PWA components to fix infinite reload loops
+// import { PWAFooterControls, PWADashboardControls } from "@/components/pwa";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -65,7 +66,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <PWADashboardControls />
+            {/* Temporarily disabled PWA controls to fix infinite reload loops */}
+            {/* <PWADashboardControls /> */}
             <ThemeToggle />
             <Notifications />
             <ProfileDropdown />
@@ -106,7 +108,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           </div>
           <div className="p-5 border-t border-gray-200/50 dark:border-gray-700/50 bg-gradient-to-r from-gray-50/50 to-gray-100/50 dark:from-gray-900/50 dark:to-gray-800/50">
             <div className="flex flex-col space-y-3">
-              <PWAFooterControls className="justify-center" />
+              {/* Temporarily disabled PWA controls to fix infinite reload loops */}
+              {/* <PWAFooterControls className="justify-center" /> */}
               <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">© 2025 MMU LMS</span>
               <Button
                 variant="outline"
@@ -164,7 +167,8 @@ const MMUSidebar = () => {
       </SidebarContent>
       <SidebarFooter className="p-4">
         <div className="flex flex-col space-y-3">
-          <PWAFooterControls className="justify-center" />
+          {/* Temporarily disabled PWA controls to fix infinite reload loops */}
+          {/* <PWAFooterControls className="justify-center" /> */}
           <div className="flex flex-col space-y-2">
             <span className="text-xs text-muted-foreground">© 2025 MMU LMS</span>
             <Button variant="outline" size="sm" asChild>
@@ -187,7 +191,8 @@ const TopBar = () => {
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <PWADashboardControls />
+        {/* Temporarily disabled PWA controls to fix infinite reload loops */}
+        {/* <PWADashboardControls /> */}
         <ThemeToggle />
         <Notifications />
         <ProfileDropdown />

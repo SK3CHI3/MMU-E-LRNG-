@@ -1,68 +1,71 @@
 import { defineConfig, type PluginOption } from "vite";
 import react from "@vitejs/plugin-react-swc";
-import { VitePWA } from 'vite-plugin-pwa';
+// Temporarily disabled VitePWA to fix infinite reload loops
+// import { VitePWA } from 'vite-plugin-pwa';
 import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(async ({ mode }) => {
   const plugins: PluginOption[] = [
     react(),
-    VitePWA({
-      registerType: 'prompt',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
-      manifest: false, // Use the existing manifest.json file
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        maximumFileSizeToCacheInBytes: 5000000, // 5MB
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/.*\.supabase\.co\//,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              networkTimeoutSeconds: 10,
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\//,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'google-fonts-stylesheets'
-            }
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\//,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-webfonts',
-              expiration: {
-                maxEntries: 30,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
-              }
-            }
-          }
-        ],
-        skipWaiting: false, // Let our code handle this manually for better UX
-        clientsClaim: false, // Let our code handle this manually
-        cleanupOutdatedCaches: true,
-        // Add version-based cache invalidation
-        additionalManifestEntries: [
-          {
-            url: '/manifest.json',
-            revision: null
-          }
-        ],
-        // Import custom service worker extensions
-        importScripts: ['/sw-custom.js']
-      },
-      devOptions: {
-        enabled: true,
-        type: 'module'
-      }
-    })
+    // Temporarily disabled VitePWA to fix infinite reload loops in production
+    // The service worker was causing automatic reloads on deployment
+    // VitePWA({
+    //   registerType: 'prompt',
+    //   includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
+    //   manifest: false, // Use the existing manifest.json file
+    //   workbox: {
+    //     globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+    //     maximumFileSizeToCacheInBytes: 5000000, // 5MB
+    //     runtimeCaching: [
+    //       {
+    //         urlPattern: /^https:\/\/.*\.supabase\.co\//,
+    //         handler: 'NetworkFirst',
+    //         options: {
+    //           cacheName: 'api-cache',
+    //           networkTimeoutSeconds: 10,
+    //           cacheableResponse: {
+    //             statuses: [0, 200]
+    //           }
+    //         }
+    //       },
+    //       {
+    //         urlPattern: /^https:\/\/fonts\.googleapis\.com\//,
+    //         handler: 'StaleWhileRevalidate',
+    //         options: {
+    //           cacheName: 'google-fonts-stylesheets'
+    //         }
+    //       },
+    //       {
+    //         urlPattern: /^https:\/\/fonts\.gstatic\.com\//,
+    //         handler: 'CacheFirst',
+    //         options: {
+    //           cacheName: 'google-fonts-webfonts',
+    //           expiration: {
+    //             maxEntries: 30,
+    //             maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+    //           }
+    //         }
+    //       }
+    //     ],
+    //     skipWaiting: false, // Let our code handle this manually for better UX
+    //     clientsClaim: false, // Let our code handle this manually
+    //     cleanupOutdatedCaches: true,
+    //     // Add version-based cache invalidation
+    //     additionalManifestEntries: [
+    //       {
+    //         url: '/manifest.json',
+    //         revision: null
+    //       }
+    //     ],
+    //     // Import custom service worker extensions
+    //     importScripts: ['/sw-custom.js']
+    //   },
+    //   devOptions: {
+    //     enabled: true,
+    //     type: 'module'
+    //   }
+    // })
   ];
 
   // Only load lovable-tagger in development mode
