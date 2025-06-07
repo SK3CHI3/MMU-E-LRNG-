@@ -8,7 +8,7 @@ export default defineConfig(async ({ mode }) => {
   const plugins: PluginOption[] = [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: false, // Use the existing manifest.json file
       workbox: {
@@ -45,8 +45,8 @@ export default defineConfig(async ({ mode }) => {
             }
           }
         ],
-        skipWaiting: true,
-        clientsClaim: true,
+        skipWaiting: true, // Enable automatic updates
+        clientsClaim: true, // Take control immediately
         cleanupOutdatedCaches: true,
         // Add version-based cache invalidation
         additionalManifestEntries: [

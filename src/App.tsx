@@ -12,6 +12,8 @@ import { PopupProvider } from "./components/popups/PopupManager";
 import { PWAProvider } from "./components/pwa";
 import AuthDebugPanel from "./components/debug/AuthDebugPanel";
 import { detectCorruptedStorage, cleanupAndReload, wasRecentlyCleanedUp } from "./utils/storageCleanup";
+import { detectStuckLoading, autoRecovery } from "./utils/authRecovery";
+import "./utils/startupValidator"; // Auto-runs validation
 
 // Development mode check (console logging removed for production)
 
@@ -127,17 +129,30 @@ const PageLoader = () => {
       return;
     }
 
+    // Check for stuck loading state
+    if (detectStuckLoading()) {
+      console.log('Stuck loading detected, initiating auto-recovery...');
+      autoRecovery();
+      return;
+    }
+
     const timeoutTimer = setTimeout(() => {
       setShowTimeout(true);
-    }, 8000); // Show timeout message after 8 seconds
+    }, 6000); // Reduced to 6 seconds
 
     const cleanupTimer = setTimeout(() => {
       setShowCleanupOption(true);
-    }, 15000); // Show cleanup option after 15 seconds
+    }, 12000); // Reduced to 12 seconds
+
+    const emergencyTimer = setTimeout(() => {
+      console.warn('PageLoader: Emergency timeout reached, triggering auto-recovery');
+      autoRecovery();
+    }, 20000); // Emergency recovery after 20 seconds
 
     return () => {
       clearTimeout(timeoutTimer);
       clearTimeout(cleanupTimer);
+      clearTimeout(emergencyTimer);
     };
   }, []);
 
@@ -156,6 +171,10 @@ const PageLoader = () => {
       clearAuth: true,
       force: true
     });
+  };
+
+  const handleEmergencyRecovery = () => {
+    autoRecovery();
   };
 
   if (import.meta.env.DEV) {
@@ -194,6 +213,12 @@ const PageLoader = () => {
                     className="block w-full text-sm text-red-600 dark:text-red-400 underline hover:no-underline"
                   >
                     Reset App Data (will sign you out)
+                  </button>
+                  <button
+                    onClick={handleEmergencyRecovery}
+                    className="block w-full text-sm text-orange-600 dark:text-orange-400 underline hover:no-underline"
+                  >
+                    Emergency Recovery
                   </button>
                 </>
               )}

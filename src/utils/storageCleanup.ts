@@ -2,6 +2,8 @@
  * Storage cleanup utilities to handle corrupted data and version mismatches
  */
 
+import { validateAuthStorage, cleanupSupabaseStorage } from './authStorageManager';
+
 export interface StorageCleanupOptions {
   clearAuth?: boolean;
   clearPWA?: boolean;
@@ -14,39 +16,51 @@ export interface StorageCleanupOptions {
  */
 export const detectCorruptedStorage = (): boolean => {
   try {
+    // Use the comprehensive auth storage validation
+    const authValidation = validateAuthStorage();
+    if (authValidation.needsCleanup) {
+      console.log('Storage corruption detected via auth validation:', authValidation.errors);
+      return true;
+    }
+
     // Check for common corruption indicators
     const indicators = [
-      // Malformed JSON in critical storage items
-      () => {
-        const authData = localStorage.getItem('supabase.auth.token');
-        if (authData) {
-          try {
-            JSON.parse(authData);
-          } catch {
-            return true; // Corrupted auth data
-          }
-        }
-        return false;
-      },
-      
       // Version mismatch
       () => {
         const storedVersion = localStorage.getItem('app-version');
         const currentVersion = '1.2.0';
         return storedVersion && storedVersion !== currentVersion;
       },
-      
+
       // Inconsistent PWA state
       () => {
         const hasOfflineReady = localStorage.getItem('pwa-offline-ready-shown');
         const hasInstalled = localStorage.getItem('pwa-installed');
         const hasDismissed = localStorage.getItem('pwa-install-dismissed');
-        
+
         // If all PWA flags are set but service worker isn't available
         if (hasOfflineReady && hasInstalled && hasDismissed && !('serviceWorker' in navigator)) {
           return true;
         }
         return false;
+      },
+
+      // Check for malformed localStorage entries
+      () => {
+        try {
+          const keys = Object.keys(localStorage);
+          for (const key of keys) {
+            if (key.includes('auth') || key.includes('supabase')) {
+              const value = localStorage.getItem(key);
+              if (value && value.startsWith('{')) {
+                JSON.parse(value); // This will throw if corrupted
+              }
+            }
+          }
+          return false;
+        } catch {
+          return true; // JSON parsing failed
+        }
       }
     ];
 
@@ -89,28 +103,8 @@ export const cleanupStorage = async (options: StorageCleanupOptions = {}): Promi
 
     // Clear authentication data (use with caution)
     if (clearAuth) {
-      const authKeys = Object.keys(localStorage).filter(key => 
-        key.startsWith('supabase.auth') || 
-        key.includes('auth') ||
-        key.includes('session')
-      );
-      
-      authKeys.forEach(key => {
-        localStorage.removeItem(key);
-        console.log(`Removed auth key: ${key}`);
-      });
-      
-      // Also clear sessionStorage
-      const sessionAuthKeys = Object.keys(sessionStorage).filter(key => 
-        key.startsWith('supabase.auth') || 
-        key.includes('auth') ||
-        key.includes('session')
-      );
-      
-      sessionAuthKeys.forEach(key => {
-        sessionStorage.removeItem(key);
-        console.log(`Removed session auth key: ${key}`);
-      });
+      console.log('Performing comprehensive auth storage cleanup');
+      cleanupSupabaseStorage();
     }
 
     // Clear caches

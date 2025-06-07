@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RefreshCw, X, Download, CheckCircle } from 'lucide-react';
@@ -6,12 +6,23 @@ import { usePWA } from './PWAManager';
 
 const PWAUpdateNotification: React.FC = () => {
   const { isOfflineReady, needsRefresh, updateApp, dismissOfflineReady, dismissUpdate } = usePWA();
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleUpdate = async () => {
-    await updateApp();
+    if (isUpdating) return;
+
+    setIsUpdating(true);
+    try {
+      console.log('PWA Update: User clicked update button');
+      await updateApp();
+    } catch (error) {
+      console.error('PWA Update: Error during update:', error);
+      setIsUpdating(false);
+    }
   };
 
   const handleDismiss = () => {
+    if (isUpdating) return;
     dismissUpdate();
   };
 
@@ -88,16 +99,18 @@ const PWAUpdateNotification: React.FC = () => {
               <Button
                 size="sm"
                 onClick={handleUpdate}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-8"
+                disabled={isUpdating}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs h-8"
               >
-                <RefreshCw className="h-3 w-3 mr-1" />
-                Update
+                <RefreshCw className={`h-3 w-3 mr-1 ${isUpdating ? 'animate-spin' : ''}`} />
+                {isUpdating ? 'Updating...' : 'Update Now'}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleDismiss}
-                className="flex-1 border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-950/30 text-xs h-8"
+                disabled={isUpdating}
+                className="flex-1 border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-950/30 disabled:opacity-50 text-xs h-8"
               >
                 Later
               </Button>

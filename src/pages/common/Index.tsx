@@ -42,6 +42,7 @@ import { useState, useEffect } from "react";
 import { initScrollAnimations } from "@/utils/ui/scrollAnimations";
 import { usePopupActions } from "@/components/popups/PopupManager";
 import FeedbackButton from "@/components/feedback/FeedbackButton";
+import { PWAFooterControls } from "@/components/pwa";
 
 const Index = () => {
   const [notifications, setNotifications] = useState<PublicNotification[]>([]);
@@ -1109,8 +1110,13 @@ const Index = () => {
             <FeedbackButton />
           </div>
 
-          <div className="border-t border-white/10 mt-12 pt-8 text-center text-sm opacity-75">
-            <p>© {new Date().getFullYear()} Multimedia University. All rights reserved.</p>
+          <div className="border-t border-white/10 mt-12 pt-8">
+            <div className="flex flex-col items-center space-y-4">
+              <PWAFooterControls className="justify-center" />
+              <div className="text-center text-sm opacity-75">
+                <p>© {new Date().getFullYear()} Multimedia University. All rights reserved.</p>
+              </div>
+            </div>
           </div>
         </div>
       </footer>

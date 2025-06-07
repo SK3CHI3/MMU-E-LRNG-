@@ -10,3 +10,11 @@ export {
   PWAUpdateNotification as PWAUpdateNotificationNew,
   PWAConnectionStatus
 } from './PWANotifications';
+
+// PWA Control components
+export {
+  default as PWAControls,
+  PWAFooterControls,
+  PWADashboardControls,
+  PWASettingsControls
+} from './PWAControls';

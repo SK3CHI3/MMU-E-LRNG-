@@ -4,6 +4,13 @@ import { supabase, User as DbUser, getCurrentUser } from '@/lib/supabaseClient';
 import { showErrorToast } from '@/utils/ui/toast';
 import { assignInitialSemester } from '@/services/academicService';
 import { logAuthState } from '@/utils/auth-debug';
+import { recordLoadingStart, clearLoadingTracking } from '@/utils/authRecovery';
+import {
+  performAuthStorageCheck,
+  wasStorageRecentlyCleaned,
+  markStorageCleanup,
+  emergencyAuthStorageReset
+} from '@/utils/authStorageManager';
 
 interface AuthContextType {
   session: Session | null;
@@ -24,6 +31,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [dbUser, setDbUser] = useState<DbUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Track if we're currently fetching user data to prevent race conditions
+  const isFetchingUser = React.useRef(false);
+  const fetchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const fallbackTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Detect if this is a page reload
   const isPageReload = React.useRef(
@@ -47,44 +59,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Set loading state
+    // Set loading state and record start time
     setIsLoading(true);
+    recordLoadingStart();
 
     if (import.meta.env.DEV) {
       console.log('AuthContext: Initializing auth state');
     }
 
-    // Clear potentially stale auth data on reload
-    if (isPageReload.current) {
-      console.log('AuthContext: Clearing potentially stale auth data on reload');
-
-      // Check if auth tokens are expired or corrupted
-      const authData = localStorage.getItem('mmu-lms-auth');
-      if (authData) {
-        try {
-          const parsed = JSON.parse(authData);
-          const now = Date.now() / 1000;
-
-          // If token is expired or expires soon (within 5 minutes), clear it
-          if (parsed.expires_at && parsed.expires_at < (now + 300)) {
-            console.log('AuthContext: Clearing expired auth data');
-            localStorage.removeItem('mmu-lms-auth');
-          }
-        } catch (error) {
-          console.log('AuthContext: Clearing corrupted auth data');
-          localStorage.removeItem('mmu-lms-auth');
-        }
+    // Comprehensive storage validation and cleanup
+    if (!wasStorageRecentlyCleaned()) {
+      const needsCleanup = performAuthStorageCheck();
+      if (needsCleanup) {
+        console.log('AuthContext: Storage cleanup performed, reloading...');
+        markStorageCleanup();
+        window.location.reload();
+        return;
       }
     }
 
     // Shorter fallback timeout for reloads, longer for initial loads
     const timeoutDuration = isPageReload.current ? 4000 : 8000;
-    const fallbackTimeout = setTimeout(() => {
+    fallbackTimeoutRef.current = setTimeout(() => {
       if (import.meta.env.DEV) {
         console.warn(`AuthContext: Fallback timeout triggered after ${timeoutDuration}ms - setting loading to false`);
       }
       setIsLoading(false);
     }, timeoutDuration);
+
+    // Emergency timeout for storage corruption
+    const emergencyTimeoutRef = setTimeout(() => {
+      console.error('AuthContext: Emergency timeout - possible storage corruption');
+      if (!wasStorageRecentlyCleaned()) {
+        console.log('AuthContext: Performing emergency storage reset');
+        emergencyAuthStorageReset();
+        markStorageCleanup();
+        window.location.reload();
+      } else {
+        setIsLoading(false);
+      }
+    }, 15000); // 15 second emergency timeout
 
     // Get initial session with additional debugging
     console.log('AuthContext: Starting initial session check...');
@@ -92,7 +106,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('AuthContext: Initial session check completed', session ? 'Session found' : 'No session');
 
       // Clear fallback timeout immediately since we got a response
-      clearTimeout(fallbackTimeout);
+      if (fallbackTimeoutRef.current) {
+        clearTimeout(fallbackTimeoutRef.current);
+        fallbackTimeoutRef.current = null;
+      }
+      clearTimeout(emergencyTimeoutRef);
 
       if (error) {
         console.error('AuthContext: Session error:', error);
@@ -133,7 +151,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (import.meta.env.DEV) {
         logAuthState('Session Error', { error: error.message });
       }
-      clearTimeout(fallbackTimeout);
+      if (fallbackTimeoutRef.current) {
+        clearTimeout(fallbackTimeoutRef.current);
+        fallbackTimeoutRef.current = null;
+      }
+      clearTimeout(emergencyTimeoutRef);
       setIsLoading(false);
     });
 
@@ -144,6 +166,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('AuthContext: Auth state changed', event, session ? 'Session exists' : 'No session');
         }
 
+        // Skip processing if this is the initial session (already handled above)
+        if (event === 'INITIAL_SESSION') {
+          if (import.meta.env.DEV) {
+            console.log('AuthContext: Skipping INITIAL_SESSION event to prevent duplicate processing');
+          }
+          return;
+        }
+
         setSession(session);
         setUser(session?.user ?? null);
 
@@ -152,13 +182,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log('AuthContext: User found in auth change, fetching DB user');
           }
 
-          // For all events with a user, fetch the database user immediately
-          // This ensures we have the correct user data regardless of the event type
-          try {
-            await fetchDbUser(session.user.id);
-          } catch (error) {
-            console.error('AuthContext: Error in fetchDbUser during auth state change:', error);
-            setIsLoading(false);
+          // Only fetch user data for specific events to prevent loops
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            try {
+              await fetchDbUser(session.user.id);
+            } catch (error) {
+              console.error('AuthContext: Error in fetchDbUser during auth state change:', error);
+              setIsLoading(false);
+            }
           }
         } else {
           if (import.meta.env.DEV) {
@@ -174,24 +205,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (import.meta.env.DEV) {
         console.log('AuthContext: Cleaning up auth subscription');
       }
-      clearTimeout(fallbackTimeout);
+
+      // Clear all timeouts
+      if (fallbackTimeoutRef.current) {
+        clearTimeout(fallbackTimeoutRef.current);
+      }
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+      clearTimeout(emergencyTimeoutRef);
+
+      // Reset fetch flag
+      isFetchingUser.current = false;
+
       subscription.unsubscribe();
     };
   }, []);
 
-  // Fetch the database user record
-  const fetchDbUser = async (authId: string) => {
-    if (import.meta.env.DEV) {
-      console.log('fetchDbUser: Starting fetch for authId:', authId);
-      console.log('fetchDbUser: Current loading state:', isLoading);
+  // Fetch the database user record with improved error handling
+  const fetchDbUser = async (authId: string): Promise<void> => {
+    // Prevent concurrent fetches
+    if (isFetchingUser.current) {
+      console.log('fetchDbUser: Already fetching user, skipping duplicate request');
+      return;
     }
 
-    // Set a shorter timeout to prevent infinite loading on reload
-    const timeoutId = setTimeout(() => {
-      console.warn('fetchDbUser: Database request timed out after 5 seconds - forcing loading to false');
+    isFetchingUser.current = true;
+
+    if (import.meta.env.DEV) {
+      console.log('fetchDbUser: Starting fetch for authId:', authId);
+    }
+
+    // Clear any existing timeout
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current);
+    }
+
+    // Set timeout with different durations for reload vs initial load
+    const timeoutDuration = isPageReload.current ? 3000 : 5000;
+    fetchTimeoutRef.current = setTimeout(() => {
+      console.warn(`fetchDbUser: Database request timed out after ${timeoutDuration}ms`);
+      isFetchingUser.current = false;
       setIsLoading(false);
       setDbUser(null);
-    }, 5000); // Reduced to 5 seconds for faster recovery
+    }, timeoutDuration);
 
     try {
       // Use regular client with proper authentication
@@ -201,31 +258,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('auth_id', authId)
         .single();
 
-      // Clear the timeout since we got a response
-      clearTimeout(timeoutId);
+      // Clear timeout since we got a response
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+        fetchTimeoutRef.current = null;
+      }
 
       if (error) {
         console.error('fetchDbUser: Error fetching user:', error);
 
-        // If the user doesn't exist in the database, this is an error
-        if (error.code === 'PGRST116') { // No rows returned
+        // Handle specific error cases
+        if (error.code === 'PGRST116') {
           console.error('fetchDbUser: User not found in database');
-          setDbUser(null);
+        } else if (error.message?.includes('JWT')) {
+          console.error('fetchDbUser: JWT/Auth error, user may need to re-login');
         } else {
-          console.error('fetchDbUser: Database error code:', error.code);
-          setDbUser(null);
+          console.error('fetchDbUser: Database error:', error.code || error.message);
         }
-      } else {
-        // Only log in development mode and without sensitive data
+
+        setDbUser(null);
+      } else if (data) {
         if (import.meta.env.DEV) {
-          console.log('fetchDbUser: User found in database');
-          console.log('fetchDbUser: User role verified');
+          console.log('fetchDbUser: User found in database with role:', data.role);
         }
         setDbUser(data as DbUser);
+      } else {
+        console.warn('fetchDbUser: No data returned but no error');
+        setDbUser(null);
       }
     } catch (error) {
-      // Clear the timeout in case of error
-      clearTimeout(timeoutId);
+      // Clear timeout on error
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+        fetchTimeoutRef.current = null;
+      }
+
       console.error('fetchDbUser: Unexpected error:', error);
 
       // Check if it's a network error
@@ -237,8 +304,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setDbUser(null);
     } finally {
-      // Always ensure loading is set to false
+      isFetchingUser.current = false;
       setIsLoading(false);
+      clearLoadingTracking();
       if (import.meta.env.DEV) {
         console.log('fetchDbUser: Loading state set to false');
       }

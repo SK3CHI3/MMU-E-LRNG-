@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { PWAInstallPrompt, PWAUpdateNotification, PWAOfflineIndicator } from './index';
+import { PWAInstallPrompt, PWAOfflineIndicator } from './index';
+import PWAAutoUpdateNotification from './PWAAutoUpdateNotification';
+import { pwaDebug } from '@/utils/pwaDebug';
 
 interface PWAContextType {
   isOfflineReady: boolean;
@@ -7,10 +9,13 @@ interface PWAContextType {
   isOnline: boolean;
   isInstallable: boolean;
   isInstalled: boolean;
+  isCheckingForUpdates: boolean;
+  isUpdating: boolean;
   dismissOfflineReady: () => void;
   dismissUpdate: () => void;
   updateApp: () => Promise<void>;
   installApp: () => Promise<void>;
+  checkForUpdates: () => Promise<void>;
 }
 
 const PWAContext = createContext<PWAContextType | undefined>(undefined);
@@ -25,6 +30,8 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isCheckingForUpdates, setIsCheckingForUpdates] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
@@ -85,15 +92,32 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
       localStorage.setItem('app-version', currentVersion);
     };
 
+    // Debug event listener for testing
+    const handleDebugEvent = (event: CustomEvent) => {
+      if (event.detail.type === 'simulate-update') {
+        console.log('PWA: Simulating update for testing');
+        setNeedsRefresh(true);
+      }
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    if (import.meta.env.DEV) {
+      window.addEventListener('pwa-debug-update', handleDebugEvent as EventListener);
+    }
 
     checkInstalled();
     clearStaleData();
 
     // Register service worker using VitePWA's generated files
     if ('serviceWorker' in navigator) {
+      // Log debug info in development
+      if (import.meta.env.DEV) {
+        pwaDebug.logFullStatus();
+      }
+
       // Clear any existing service workers first
       navigator.serviceWorker.getRegistrations().then(registrations => {
         registrations.forEach(registration => {
@@ -131,14 +155,39 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
 
           // Listen for updates
           reg.addEventListener('updatefound', () => {
+            console.log('PWA: Update found, new service worker installing...');
+            setIsUpdating(true);
+
             const newWorker = reg.installing;
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  setNeedsRefresh(true);
+                console.log('PWA: New service worker state:', newWorker.state);
+                if (newWorker.state === 'installed') {
+                  if (navigator.serviceWorker.controller) {
+                    // New update available - with autoUpdate, this will be applied automatically
+                    console.log('PWA: New update will be applied automatically');
+                    setIsUpdating(false);
+
+                    // Show a brief notification that update was applied
+                    setIsOfflineReady(true);
+                    setTimeout(() => {
+                      setIsOfflineReady(false);
+                    }, 3000);
+                  } else {
+                    // First time install
+                    console.log('PWA: App installed for first time');
+                    setIsUpdating(false);
+                    setIsOfflineReady(true);
+                  }
                 }
               });
             }
+          });
+
+          // Listen for controlling service worker changes (automatic updates)
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log('PWA: New service worker took control - reloading page');
+            window.location.reload();
           });
 
           // Force update check
@@ -161,6 +210,10 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+      if (import.meta.env.DEV) {
+        window.removeEventListener('pwa-debug-update', handleDebugEvent as EventListener);
+      }
     };
   }, []);
 
@@ -173,10 +226,10 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
   };
 
   const updateApp = async () => {
-    if (registration && registration.waiting) {
-      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-      window.location.reload();
-    }
+    // With autoUpdate enabled, updates happen automatically
+    // This function can be used to force an immediate reload if needed
+    console.log('PWA: Manual update requested - reloading page');
+    window.location.reload();
   };
 
   const installApp = async () => {
@@ -198,16 +251,41 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
     }
   };
 
+  const checkForUpdates = async () => {
+    if (!registration || isCheckingForUpdates) return;
+
+    setIsCheckingForUpdates(true);
+
+    try {
+      console.log('PWA: Checking for updates...');
+      await registration.update();
+
+      // Give some time for the update check to complete
+      setTimeout(() => {
+        setIsCheckingForUpdates(false);
+        if (!needsRefresh) {
+          console.log('PWA: No updates available');
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('PWA: Error checking for updates:', error);
+      setIsCheckingForUpdates(false);
+    }
+  };
+
   const value: PWAContextType = {
     isOfflineReady,
     needsRefresh,
     isOnline,
     isInstallable,
     isInstalled,
+    isCheckingForUpdates,
+    isUpdating,
     dismissOfflineReady,
     dismissUpdate,
     updateApp,
     installApp,
+    checkForUpdates,
   };
 
   return (
@@ -215,7 +293,7 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
       {children}
       {/* PWA Components */}
       <PWAInstallPrompt />
-      <PWAUpdateNotification />
+      <PWAAutoUpdateNotification />
       <PWAOfflineIndicator />
     </PWAContext.Provider>
   );
@@ -231,7 +309,15 @@ export const usePWA = () => {
 
 // Utility hook for PWA status
 export const usePWAStatus = () => {
-  const { isOfflineReady, needsRefresh, isOnline, isInstallable, isInstalled } = usePWA();
+  const {
+    isOfflineReady,
+    needsRefresh,
+    isOnline,
+    isInstallable,
+    isInstalled,
+    isCheckingForUpdates,
+    isUpdating
+  } = usePWA();
 
   return {
     isOfflineReady,
@@ -239,6 +325,8 @@ export const usePWAStatus = () => {
     isOnline,
     isInstallable,
     isInstalled,
+    isCheckingForUpdates,
+    isUpdating,
     isPWACapable: 'serviceWorker' in navigator,
     isStandalone: window.matchMedia('(display-mode: standalone)').matches ||
                   (window.navigator as any).standalone ||
