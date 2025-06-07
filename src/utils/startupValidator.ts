@@ -26,14 +26,13 @@ export const validateStartup = (): StartupValidationResult => {
   console.log('StartupValidator: Beginning startup validation');
 
   try {
-    // Check for repeated reload loops
+    // Check for repeated reload loops - but be less aggressive
     const reloadCount = parseInt(sessionStorage.getItem('startup-reload-count') || '0');
-    if (reloadCount > 3) {
-      console.error('StartupValidator: Too many reloads detected, performing emergency reset');
-      emergencyAuthStorageReset();
+    if (reloadCount > 5) { // Increased threshold from 3 to 5
+      console.error('StartupValidator: Too many reloads detected, but not performing automatic reset');
+      // Don't automatically reset - just log the issue
       sessionStorage.removeItem('startup-reload-count');
-      result.needsReload = true;
-      result.actions.push('Emergency storage reset performed');
+      result.errors.push('Multiple reload loops detected');
       return result;
     }
 
@@ -43,7 +42,7 @@ export const validateStartup = (): StartupValidationResult => {
     // Clear reload count after successful startup (delayed)
     setTimeout(() => {
       sessionStorage.removeItem('startup-reload-count');
-    }, 10000);
+    }, 15000); // Increased from 10s to 15s
 
     // Check auth storage
     const authCleanupPerformed = performAuthStorageCheck();
@@ -205,13 +204,13 @@ export const runStartupValidation = (): boolean => {
   return result.isValid && !result.needsReload;
 };
 
-// Auto-run validation when module is imported
-if (typeof window !== 'undefined') {
-  // Run validation on next tick to ensure DOM is ready
-  setTimeout(() => {
-    const isValid = runStartupValidation();
-    if (isValid) {
-      console.log('StartupValidator: ✅ Startup validation passed');
-    }
-  }, 0);
-}
+// DISABLED: Auto-run validation was causing infinite reload loops
+// The startup validator should only be called manually when needed
+// if (typeof window !== 'undefined') {
+//   setTimeout(() => {
+//     const isValid = runStartupValidation();
+//     if (isValid) {
+//       console.log('StartupValidator: ✅ Startup validation passed');
+//     }
+//   }, 0);
+// }

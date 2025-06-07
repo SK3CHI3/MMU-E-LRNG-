@@ -67,8 +67,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('AuthContext: Initializing auth state');
     }
 
-    // Comprehensive storage validation and cleanup
-    if (!wasStorageRecentlyCleaned()) {
+    // Only perform storage validation if there are signs of issues
+    // Don't run aggressive validation on every reload
+    if (!wasStorageRecentlyCleaned() && !isPageReload.current) {
       const needsCleanup = performAuthStorageCheck();
       if (needsCleanup) {
         console.log('AuthContext: Storage cleanup performed, reloading...');
@@ -87,18 +88,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }, timeoutDuration);
 
-    // Emergency timeout for storage corruption
+    // Emergency timeout - only for extreme cases
     const emergencyTimeoutRef = setTimeout(() => {
-      console.error('AuthContext: Emergency timeout - possible storage corruption');
-      if (!wasStorageRecentlyCleaned()) {
-        console.log('AuthContext: Performing emergency storage reset');
-        emergencyAuthStorageReset();
-        markStorageCleanup();
-        window.location.reload();
-      } else {
-        setIsLoading(false);
-      }
-    }, 15000); // 15 second emergency timeout
+      console.warn('AuthContext: Emergency timeout reached - setting loading to false');
+      // Don't perform aggressive cleanup on timeout - just stop loading
+      setIsLoading(false);
+    }, 20000); // 20 second emergency timeout (increased to be less aggressive)
 
     // Get initial session with additional debugging
     console.log('AuthContext: Starting initial session check...');
@@ -142,6 +137,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Fetch DB user with a shorter timeout for reload scenarios
         fetchDbUser(session.user.id).catch(error => {
           console.error('AuthContext: Failed to fetch DB user:', error);
+          // Don't sign out the user just because DB user fetch failed
+          // Keep the auth session intact and just set loading to false
+          console.log('AuthContext: Keeping auth session despite DB user fetch failure');
           setIsLoading(false);
         }).finally(() => {
           clearTimeout(safetyTimeout);
@@ -296,13 +294,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Handle specific error cases
         if (error.code === 'PGRST116') {
-          console.error('fetchDbUser: User not found in database');
-        } else if (error.message?.includes('JWT')) {
-          console.error('fetchDbUser: JWT/Auth error, user may need to re-login');
-          // Clear auth storage if JWT is invalid
+          console.error('fetchDbUser: User not found in database - this should not cause logout');
+          // Don't clear auth storage for missing DB user - this is a data issue, not auth issue
+        } else if (error.message?.includes('JWT') || error.message?.includes('invalid_token')) {
+          console.error('fetchDbUser: JWT/Auth error, clearing invalid session');
+          // Only clear auth storage if JWT is actually invalid
           localStorage.removeItem('mmu-lms-auth');
+          // Also sign out from Supabase
+          supabase.auth.signOut();
+        } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+          console.error('fetchDbUser: Network error, keeping session intact');
+          // Don't clear auth storage for network errors
         } else {
           console.error('fetchDbUser: Database error:', error.code || error.message);
+          // Don't clear auth storage for general database errors
         }
 
         setDbUser(null);

@@ -59,18 +59,20 @@ export const validateAuthStorage = (): StorageValidationResult => {
       result.errors.push('Invalid or missing access token');
     }
 
-    // Check token expiration
+    // Check token expiration - only flag for cleanup if severely expired
     if (parsedData.expires_at) {
       const now = Math.floor(Date.now() / 1000);
       const expiresAt = parsedData.expires_at;
-      
-      if (expiresAt < now) {
+
+      // Only cleanup tokens that expired more than 1 hour ago
+      // Let Supabase handle normal token refresh for recently expired tokens
+      if (expiresAt < (now - 3600)) { // Expired more than 1 hour ago
         result.isExpired = true;
         result.needsCleanup = true;
-        result.errors.push('Token has expired');
-      } else if (expiresAt < (now + 300)) { // Expires within 5 minutes
+        result.errors.push('Token severely expired (>1 hour)');
+      } else if (expiresAt < now) {
         result.isExpired = true;
-        result.errors.push('Token expires soon');
+        result.errors.push('Token expired but within refresh window');
       }
     }
 

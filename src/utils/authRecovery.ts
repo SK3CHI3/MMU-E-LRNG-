@@ -118,16 +118,24 @@ export const markRecoveryPerformed = (): void => {
 
 /**
  * Auto-recovery mechanism that can be called from components
+ * Made less aggressive to prevent infinite reload loops
  */
 export const autoRecovery = (): void => {
   if (detectStuckLoading() && !wasRecentlyRecovered()) {
-    console.warn('AuthRecovery: Auto-recovery triggered');
+    console.warn('AuthRecovery: Auto-recovery triggered - clearing auth storage only');
     markRecoveryPerformed();
+
+    // Only clear auth storage, don't force reload to prevent loops
     emergencyAuthRecovery({
       clearAuth: true,
       clearStorage: false,
-      forceReload: true
+      forceReload: false // Changed to false to prevent reload loops
     });
+
+    // Let the user manually reload if needed
+    console.log('AuthRecovery: Auth storage cleared. Please refresh the page manually if issues persist.');
+  } else if (wasRecentlyRecovered()) {
+    console.log('AuthRecovery: Recovery was recently performed, skipping to prevent loops');
   }
 };
 

@@ -13,7 +13,7 @@ import { PWAProvider } from "./components/pwa";
 import AuthDebugPanel from "./components/debug/AuthDebugPanel";
 import { detectCorruptedStorage, cleanupAndReload, wasRecentlyCleanedUp } from "./utils/storageCleanup";
 import { detectStuckLoading, autoRecovery } from "./utils/authRecovery";
-import "./utils/startupValidator"; // Auto-runs validation
+// Removed auto-running startup validator that was causing infinite reload loops
 
 // Development mode check (console logging removed for production)
 
@@ -129,11 +129,10 @@ const PageLoader = () => {
       return;
     }
 
-    // Check for stuck loading state
-    if (detectStuckLoading()) {
-      console.log('Stuck loading detected, initiating auto-recovery...');
-      autoRecovery();
-      return;
+    // Check for stuck loading state - but be less aggressive
+    if (detectStuckLoading() && !wasRecentlyCleanedUp()) {
+      console.log('Stuck loading detected, but not performing auto-recovery to prevent loops');
+      // Don't auto-trigger recovery - let user manually trigger it
     }
 
     const timeoutTimer = setTimeout(() => {
@@ -145,9 +144,10 @@ const PageLoader = () => {
     }, 12000); // Reduced to 12 seconds
 
     const emergencyTimer = setTimeout(() => {
-      console.warn('PageLoader: Emergency timeout reached, triggering auto-recovery');
-      autoRecovery();
-    }, 20000); // Emergency recovery after 20 seconds
+      console.warn('PageLoader: Emergency timeout reached - showing recovery options instead of auto-triggering');
+      setShowCleanupOption(true);
+      setShowTimeout(true);
+    }, 20000); // Show recovery options after 20 seconds instead of auto-triggering
 
     return () => {
       clearTimeout(timeoutTimer);
