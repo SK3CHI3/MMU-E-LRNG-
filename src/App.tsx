@@ -10,6 +10,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { PopupProvider } from "./components/popups/PopupManager";
 import { PWAInstallPrompt, PWAUpdateNotification, PWAOfflineIndicator } from "./components/pwa";
+import AuthDebugPanel from "./components/debug/AuthDebugPanel";
 
 // Development mode check (console logging removed for production)
 
@@ -123,6 +124,8 @@ const App = () => {
             <PWAInstallPrompt />
             <PWAUpdateNotification />
             <PWAOfflineIndicator />
+            {/* Debug Panel - only shows in development */}
+            <AuthDebugPanel />
             <BrowserRouter>
             <MaintenanceGuard>
               <Routes>

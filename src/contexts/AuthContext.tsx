@@ -41,14 +41,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }, 15000); // 15 second fallback
 
-    // Get initial session
+    // Get initial session with additional debugging
+    console.log('AuthContext: Starting initial session check...');
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('AuthContext: Initial session check completed', session ? 'Session found' : 'No session');
       if (import.meta.env.DEV) {
-        console.log('AuthContext: Initial session check', session ? 'Session found' : 'No session');
         logAuthState('Initial Session Check', {
           hasSession: !!session,
           hasUser: !!session?.user,
-          userId: session?.user?.id
+          userId: session?.user?.id,
+          timestamp: new Date().toISOString()
         });
       }
 
@@ -56,22 +58,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        if (import.meta.env.DEV) {
-          console.log('AuthContext: User found in session, fetching DB user');
-        }
+        console.log('AuthContext: User found in session, fetching DB user for ID:', session.user.id);
         // Fetch DB user immediately without timeout for faster loading
         fetchDbUser(session.user.id);
         // Clear fallback timeout since we're proceeding with fetchDbUser
         clearTimeout(fallbackTimeout);
       } else {
-        if (import.meta.env.DEV) {
-          console.log('AuthContext: No user in session');
-        }
+        console.log('AuthContext: No user in session, setting loading to false');
         clearTimeout(fallbackTimeout);
         setIsLoading(false);
       }
     }).catch(error => {
       console.error('AuthContext: Error getting session:', error);
+      console.error('AuthContext: Session error details:', {
+        message: error.message,
+        code: error.code,
+        status: error.status
+      });
       if (import.meta.env.DEV) {
         logAuthState('Session Error', { error: error.message });
       }
@@ -116,24 +119,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (import.meta.env.DEV) {
         console.log('AuthContext: Cleaning up auth subscription');
       }
+      clearTimeout(fallbackTimeout);
       subscription.unsubscribe();
     };
   }, []);
 
   // Fetch the database user record
   const fetchDbUser = async (authId: string) => {
-    setIsLoading(true);
     if (import.meta.env.DEV) {
-      console.log('fetchDbUser: Fetching user data for authId:', authId);
+      console.log('fetchDbUser: Starting fetch for authId:', authId);
+      console.log('fetchDbUser: Current loading state:', isLoading);
     }
 
     // Set a timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
-      if (import.meta.env.DEV) {
-        console.warn('fetchDbUser: Database request timed out after 10 seconds');
-      }
+      console.warn('fetchDbUser: Database request timed out after 8 seconds - forcing loading to false');
       setIsLoading(false);
-    }, 10000); // 10 second timeout
+      setDbUser(null);
+    }, 8000); // 8 second timeout (reduced from 10)
 
     try {
       // Use regular client with proper authentication
