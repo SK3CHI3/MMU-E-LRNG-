@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
@@ -10,6 +10,7 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
   const { user, dbUser, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
 
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -23,8 +24,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
     }
   }, [isLoading, user, dbUser, allowedRoles]);
 
+  // Add a safety timeout for loading state
+  useEffect(() => {
+    if (isLoading) {
+      const timeout = setTimeout(() => {
+        if (import.meta.env.DEV) {
+          console.warn('ProtectedRoute: Loading timeout reached, forcing navigation');
+        }
+        setLoadingTimeout(true);
+      }, 20000); // 20 second timeout
+
+      return () => clearTimeout(timeout);
+    } else {
+      setLoadingTimeout(false);
+    }
+  }, [isLoading]);
+
   // Show loading spinner while checking authentication
-  if (isLoading) {
+  if (isLoading && !loadingTimeout) {
     if (import.meta.env.DEV) {
       console.log('ProtectedRoute: Still loading authentication state');
     }
@@ -36,6 +53,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
         </div>
       </div>
     );
+  }
+
+  // If loading timed out, redirect to login as a safety measure
+  if (loadingTimeout) {
+    if (import.meta.env.DEV) {
+      console.warn('ProtectedRoute: Loading timeout reached, redirecting to login');
+    }
+    return <Navigate to="/login" replace />;
   }
 
   // If not authenticated, redirect to login

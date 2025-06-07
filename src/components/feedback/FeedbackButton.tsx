@@ -59,9 +59,32 @@ const FeedbackButton = () => {
     }
   }, [user]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  // Stable handlers that don't change on every render
+  const handleTypeChange = React.useCallback((value: string) => {
+    setFormData(prev => ({ ...prev, type: value as FeedbackFormData['type'] }));
+  }, []);
+
+  const handleSubjectChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({ ...prev, subject: e.target.value }));
+  }, []);
+
+  const handleMessageChange = React.useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setFormData(prev => ({ ...prev, message: e.target.value }));
+  }, []);
+
+  const handleRatingChange = React.useCallback((rating: number) => {
+    setFormData(prev => ({ ...prev, rating }));
+  }, []);
+
+  const handleEmailChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({ ...prev, email: e.target.value }));
+  }, []);
+
+  const handleSubmit = React.useCallback(async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
+
     if (!formData.subject.trim() || !formData.message.trim()) {
       toast({
         title: "Missing Information",
@@ -69,6 +92,10 @@ const FeedbackButton = () => {
         variant: "destructive"
       });
       return;
+    }
+
+    if (isSubmitting) {
+      return; // Prevent double submission
     }
 
     setIsSubmitting(true);
@@ -118,91 +145,100 @@ const FeedbackButton = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [formData.subject, formData.message, formData.type, formData.rating, formData.email, isSubmitting, toast, user, dbUser]);
 
-  const FeedbackForm = () => (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="type">Feedback Type</Label>
-        <Select value={formData.type} onValueChange={(value: any) => setFormData(prev => ({ ...prev, type: value }))}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select feedback type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="bug">🐛 Bug Report</SelectItem>
-            <SelectItem value="feature">✨ Feature Request</SelectItem>
-            <SelectItem value="improvement">🚀 Improvement Suggestion</SelectItem>
-            <SelectItem value="general">💬 General Feedback</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="subject">Subject</Label>
-        <Input
-          id="subject"
-          value={formData.subject}
-          onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
-          placeholder="Brief description of your feedback"
-          maxLength={100}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="message">Message</Label>
-        <Textarea
-          id="message"
-          value={formData.message}
-          onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
-          placeholder="Please provide detailed feedback..."
-          rows={4}
-          maxLength={1000}
-        />
-        <p className="text-xs text-muted-foreground">
-          {formData.message.length}/1000 characters
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Rating</Label>
-        <div className="flex items-center gap-1">
-          {[1, 2, 3, 4, 5].map((star) => (
-            <button
-              key={star}
-              type="button"
-              onClick={() => setFormData(prev => ({ ...prev, rating: star }))}
-              className={`p-1 rounded transition-colors ${
-                star <= formData.rating 
-                  ? 'text-yellow-500 hover:text-yellow-600' 
-                  : 'text-gray-300 hover:text-gray-400'
-              }`}
-            >
-              <Star className="h-5 w-5 fill-current" />
-            </button>
-          ))}
-          <span className="ml-2 text-sm text-muted-foreground">
-            {formData.rating}/5
-          </span>
-        </div>
-      </div>
-
-      {!user && (
+  // Simple form component without memo to avoid re-render issues
+  const renderFeedbackForm = () => {
+    return (
+      <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email">Email (Optional)</Label>
+          <Label htmlFor="feedback-type">Feedback Type</Label>
+          <Select
+            value={formData.type}
+            onValueChange={handleTypeChange}
+          >
+            <SelectTrigger id="feedback-type">
+              <SelectValue placeholder="Select feedback type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="bug">🐛 Bug Report</SelectItem>
+              <SelectItem value="feature">✨ Feature Request</SelectItem>
+              <SelectItem value="improvement">🚀 Improvement Suggestion</SelectItem>
+              <SelectItem value="general">💬 General Feedback</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="feedback-subject">Subject</Label>
           <Input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-            placeholder="your.email@example.com"
+            id="feedback-subject"
+            value={formData.subject}
+            onChange={handleSubjectChange}
+            placeholder="Brief description of your feedback"
+            maxLength={100}
+            autoComplete="off"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="feedback-message">Message</Label>
+          <Textarea
+            id="feedback-message"
+            value={formData.message}
+            onChange={handleMessageChange}
+            placeholder="Please provide detailed feedback..."
+            rows={4}
+            maxLength={1000}
+            autoComplete="off"
           />
           <p className="text-xs text-muted-foreground">
-            Provide your email if you'd like us to follow up with you.
+            {formData.message.length}/1000 characters
           </p>
         </div>
-      )}
-    </form>
-  );
+
+        <div className="space-y-2">
+          <Label>Rating</Label>
+          <div className="flex items-center gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => handleRatingChange(star)}
+                className={`p-1 rounded transition-colors ${
+                  star <= formData.rating
+                    ? 'text-yellow-500 hover:text-yellow-600'
+                    : 'text-gray-300 hover:text-gray-400'
+                }`}
+              >
+                <Star className="h-5 w-5 fill-current" />
+              </button>
+            ))}
+            <span className="ml-2 text-sm text-muted-foreground">
+              {formData.rating}/5
+            </span>
+          </div>
+        </div>
+
+        {!user && (
+          <div className="space-y-2">
+            <Label htmlFor="feedback-email">Email (Optional)</Label>
+            <Input
+              id="feedback-email"
+              type="email"
+              value={formData.email}
+              onChange={handleEmailChange}
+              placeholder="your.email@example.com"
+              autoComplete="email"
+            />
+            <p className="text-xs text-muted-foreground">
+              Provide your email if you'd like us to follow up with you.
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   if (isMobile) {
     return (
@@ -224,13 +260,13 @@ const FeedbackButton = () => {
             </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 overflow-y-auto flex-1">
-            <FeedbackForm />
+            {renderFeedbackForm()}
           </div>
           <DrawerFooter>
-            <Button 
-              type="submit" 
+            <Button
+              type="button"
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !formData.subject.trim() || !formData.message.trim()}
               className="w-full"
             >
               {isSubmitting ? (
@@ -273,13 +309,13 @@ const FeedbackButton = () => {
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[60vh] overflow-y-auto">
-          <FeedbackForm />
+          {renderFeedbackForm()}
         </div>
         <DialogFooter>
-          <Button 
-            type="submit" 
+          <Button
+            type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !formData.subject.trim() || !formData.message.trim()}
           >
             {isSubmitting ? (
               <>

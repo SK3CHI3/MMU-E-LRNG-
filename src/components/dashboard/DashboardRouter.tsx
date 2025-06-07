@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types/auth';
@@ -20,9 +20,24 @@ const dashboardRoutes: Record<UserRole, string> = {
 export const DashboardRouter: React.FC = () => {
   const { dbUser, isLoading } = useAuth();
   const location = useLocation();
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+  // Add a safety timeout for loading state
+  useEffect(() => {
+    if (isLoading) {
+      const timeout = setTimeout(() => {
+        console.warn('DashboardRouter: Loading timeout reached, forcing navigation');
+        setLoadingTimeout(true);
+      }, 20000); // 20 second timeout
+
+      return () => clearTimeout(timeout);
+    } else {
+      setLoadingTimeout(false);
+    }
+  }, [isLoading]);
 
   // Show loading state while checking authentication
-  if (isLoading) {
+  if (isLoading && !loadingTimeout) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center p-6 rounded-lg border border-border shadow-lg">
@@ -32,6 +47,12 @@ export const DashboardRouter: React.FC = () => {
         </div>
       </div>
     );
+  }
+
+  // If loading timed out, redirect to login as a safety measure
+  if (loadingTimeout) {
+    console.warn('DashboardRouter: Loading timeout reached, redirecting to login');
+    return <Navigate to="/login" replace />;
   }
 
   // Redirect to login if not authenticated

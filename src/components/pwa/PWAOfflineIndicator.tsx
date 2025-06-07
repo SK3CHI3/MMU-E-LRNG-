@@ -10,8 +10,8 @@ const PWAOfflineIndicator: React.FC = () => {
     const handleOnline = () => {
       setIsOnline(true);
       setShowIndicator(true);
-      // Hide the "back online" indicator after 3 seconds
-      setTimeout(() => setShowIndicator(false), 3000);
+      // Hide the "back online" indicator after 4 seconds
+      setTimeout(() => setShowIndicator(false), 4000);
     };
 
     const handleOffline = () => {
@@ -36,24 +36,24 @@ const PWAOfflineIndicator: React.FC = () => {
   if (!showIndicator) return null;
 
   return (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-top-2 duration-300">
       <Badge
         variant={isOnline ? "default" : "destructive"}
-        className={`px-3 py-1 shadow-lg transition-all duration-300 ${
-          isOnline 
-            ? 'bg-green-600 hover:bg-green-700' 
-            : 'bg-red-600 hover:bg-red-700 animate-pulse'
+        className={`px-4 py-2 shadow-lg transition-all duration-300 font-medium ${
+          isOnline
+            ? 'bg-green-600 hover:bg-green-700 text-white'
+            : 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
         }`}
       >
         {isOnline ? (
           <>
-            <Wifi className="h-3 w-3 mr-1" />
-            Back Online
+            <Wifi className="h-4 w-4 mr-2" />
+            Connection Restored
           </>
         ) : (
           <>
-            <WifiOff className="h-3 w-3 mr-1" />
-            You're Offline
+            <WifiOff className="h-4 w-4 mr-2" />
+            Working Offline
           </>
         )}
       </Badge>

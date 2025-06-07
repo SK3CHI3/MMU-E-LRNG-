@@ -287,6 +287,7 @@ const FeedbackManagement = () => {
                   onChange={(e) => setAdminResponse(e.target.value)}
                   placeholder="Provide a response to the user..."
                   rows={3}
+                  autoComplete="off"
                 />
               </div>
               
