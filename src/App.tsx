@@ -11,9 +11,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { PopupProvider } from "./components/popups/PopupManager";
 import { PWAProvider } from "./components/pwa";
 import AuthDebugPanel from "./components/debug/AuthDebugPanel";
-import { detectCorruptedStorage, cleanupAndReload, wasRecentlyCleanedUp } from "./utils/storageCleanup";
-import { detectStuckLoading, autoRecovery } from "./utils/authRecovery";
-// Removed auto-running startup validator that was causing infinite reload loops
+// Removed all complex recovery mechanisms - keeping it simple
 
 // Development mode check (console logging removed for production)
 
@@ -116,66 +114,20 @@ const queryClient = new QueryClient({
   },
 });
 
-// Loading component for Suspense
+// Simple loading component for Suspense
 const PageLoader = () => {
   const [showTimeout, setShowTimeout] = React.useState(false);
-  const [showCleanupOption, setShowCleanupOption] = React.useState(false);
 
   React.useEffect(() => {
-    // Check for corrupted storage on mount
-    if (detectCorruptedStorage() && !wasRecentlyCleanedUp()) {
-      console.log('Corrupted storage detected, initiating cleanup...');
-      cleanupAndReload({ clearPWA: true, clearCache: true });
-      return;
-    }
-
-    // Check for stuck loading state - but be less aggressive
-    if (detectStuckLoading() && !wasRecentlyCleanedUp()) {
-      console.log('Stuck loading detected, but not performing auto-recovery to prevent loops');
-      // Don't auto-trigger recovery - let user manually trigger it
-    }
-
+    // Simple timeout - show help after 10 seconds
     const timeoutTimer = setTimeout(() => {
       setShowTimeout(true);
-    }, 6000); // Reduced to 6 seconds
-
-    const cleanupTimer = setTimeout(() => {
-      setShowCleanupOption(true);
-    }, 12000); // Reduced to 12 seconds
-
-    const emergencyTimer = setTimeout(() => {
-      console.warn('PageLoader: Emergency timeout reached - showing recovery options instead of auto-triggering');
-      setShowCleanupOption(true);
-      setShowTimeout(true);
-    }, 20000); // Show recovery options after 20 seconds instead of auto-triggering
+    }, 10000);
 
     return () => {
       clearTimeout(timeoutTimer);
-      clearTimeout(cleanupTimer);
-      clearTimeout(emergencyTimer);
     };
   }, []);
-
-  const handleCleanupAndReload = () => {
-    cleanupAndReload({
-      clearPWA: true,
-      clearCache: true,
-      clearAuth: false // Don't clear auth unless user explicitly wants to
-    });
-  };
-
-  const handleForceCleanup = () => {
-    cleanupAndReload({
-      clearPWA: true,
-      clearCache: true,
-      clearAuth: true,
-      force: true
-    });
-  };
-
-  const handleEmergencyRecovery = () => {
-    autoRecovery();
-  };
 
   if (import.meta.env.DEV) {
     console.log('PageLoader: Rendering loading component');
@@ -193,35 +145,13 @@ const PageLoader = () => {
             <p className="text-sm text-yellow-800 dark:text-yellow-200">
               Taking longer than expected?
             </p>
-            <div className="mt-2 space-y-2">
+            <div className="mt-2">
               <button
                 onClick={() => window.location.reload()}
                 className="block w-full text-sm text-yellow-600 dark:text-yellow-400 underline hover:no-underline"
               >
                 Refresh Page
               </button>
-              {showCleanupOption && (
-                <>
-                  <button
-                    onClick={handleCleanupAndReload}
-                    className="block w-full text-sm text-blue-600 dark:text-blue-400 underline hover:no-underline"
-                  >
-                    Clear Cache & Reload
-                  </button>
-                  <button
-                    onClick={handleForceCleanup}
-                    className="block w-full text-sm text-red-600 dark:text-red-400 underline hover:no-underline"
-                  >
-                    Reset App Data (will sign you out)
-                  </button>
-                  <button
-                    onClick={handleEmergencyRecovery}
-                    className="block w-full text-sm text-orange-600 dark:text-orange-400 underline hover:no-underline"
-                  >
-                    Emergency Recovery
-                  </button>
-                </>
-              )}
             </div>
           </div>
         )}
@@ -231,15 +161,8 @@ const PageLoader = () => {
 };
 
 const App = () => {
-  // Perform startup checks
+  // Simple startup - just clear query cache on reload
   React.useEffect(() => {
-    // Check for critical storage corruption on app start
-    if (detectCorruptedStorage() && !wasRecentlyCleanedUp()) {
-      console.warn('Critical storage corruption detected on startup');
-      // Don't auto-cleanup here, let PageLoader handle it
-    }
-
-    // Clear React Query cache on page reload to prevent stale data
     const isPageReload =
       performance.navigation?.type === 1 ||
       performance.getEntriesByType('navigation')[0]?.type === 'reload';

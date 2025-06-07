@@ -1,16 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase, User as DbUser, getCurrentUser } from '@/lib/supabaseClient';
+import { supabase, User as DbUser } from '@/lib/supabaseClient';
 import { showErrorToast } from '@/utils/ui/toast';
 import { assignInitialSemester } from '@/services/academicService';
-import { logAuthState } from '@/utils/auth-debug';
-import { recordLoadingStart, clearLoadingTracking } from '@/utils/authRecovery';
-import {
-  performAuthStorageCheck,
-  wasStorageRecentlyCleaned,
-  markStorageCleanup,
-  emergencyAuthStorageReset
-} from '@/utils/authStorageManager';
 
 interface AuthContextType {
   session: Session | null;
@@ -32,193 +24,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [dbUser, setDbUser] = useState<DbUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Track if we're currently fetching user data to prevent race conditions
-  const isFetchingUser = React.useRef(false);
-  const fetchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  const fallbackTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-
-  // Detect if this is a page reload
-  const isPageReload = React.useRef(
-    performance.navigation?.type === 1 || // Navigation type reload
-    performance.getEntriesByType('navigation')[0]?.type === 'reload' ||
-    sessionStorage.getItem('page-reloaded') === 'true'
-  );
-
-  React.useEffect(() => {
-    if (isPageReload.current) {
-      sessionStorage.setItem('page-reloaded', 'true');
-      console.log('AuthContext: Page reload detected');
-    }
-
-    // Clear the flag after a short delay
-    const clearReloadFlag = setTimeout(() => {
-      sessionStorage.removeItem('page-reloaded');
-    }, 2000);
-
-    return () => clearTimeout(clearReloadFlag);
-  }, []);
+  // Simple loading timeout - no complex recovery mechanisms
+  const loadingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Set loading state and record start time
+    console.log('AuthContext: Initializing...');
     setIsLoading(true);
-    recordLoadingStart();
 
-    if (import.meta.env.DEV) {
-      console.log('AuthContext: Initializing auth state');
-    }
-
-    // Only perform storage validation if there are signs of issues
-    // Don't run aggressive validation on every reload
-    if (!wasStorageRecentlyCleaned() && !isPageReload.current) {
-      const needsCleanup = performAuthStorageCheck();
-      if (needsCleanup) {
-        console.log('AuthContext: Storage cleanup performed, reloading...');
-        markStorageCleanup();
-        window.location.reload();
-        return;
-      }
-    }
-
-    // Shorter fallback timeout for reloads, longer for initial loads
-    const timeoutDuration = isPageReload.current ? 4000 : 8000;
-    fallbackTimeoutRef.current = setTimeout(() => {
-      if (import.meta.env.DEV) {
-        console.warn(`AuthContext: Fallback timeout triggered after ${timeoutDuration}ms - setting loading to false`);
-      }
+    // Simple timeout - if loading takes more than 10 seconds, something is wrong
+    loadingTimeoutRef.current = setTimeout(() => {
+      console.warn('AuthContext: Loading timeout reached, setting loading to false');
       setIsLoading(false);
-    }, timeoutDuration);
+    }, 10000);
 
-    // Emergency timeout - only for extreme cases
-    const emergencyTimeoutRef = setTimeout(() => {
-      console.warn('AuthContext: Emergency timeout reached - setting loading to false');
-      // Don't perform aggressive cleanup on timeout - just stop loading
-      setIsLoading(false);
-    }, 20000); // 20 second emergency timeout (increased to be less aggressive)
-
-    // Get initial session with additional debugging
-    console.log('AuthContext: Starting initial session check...');
+    // Get initial session - simple and clean
     supabase.auth.getSession().then(({ data: { session }, error }) => {
-      console.log('AuthContext: Initial session check completed', session ? 'Session found' : 'No session');
-
-      // Clear fallback timeout immediately since we got a response
-      if (fallbackTimeoutRef.current) {
-        clearTimeout(fallbackTimeoutRef.current);
-        fallbackTimeoutRef.current = null;
+      // Clear timeout since we got a response
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
       }
-      clearTimeout(emergencyTimeoutRef);
 
       if (error) {
         console.error('AuthContext: Session error:', error);
+        setSession(null);
+        setUser(null);
+        setDbUser(null);
         setIsLoading(false);
         return;
       }
 
-      if (import.meta.env.DEV) {
-        logAuthState('Initial Session Check', {
-          hasSession: !!session,
-          hasUser: !!session?.user,
-          userId: session?.user?.id,
-          timestamp: new Date().toISOString()
-        });
-      }
+      console.log('AuthContext: Session check completed', session ? 'Session found' : 'No session');
 
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        console.log('AuthContext: User found in session, fetching DB user for ID:', session.user.id);
-
-        // Set a safety timeout to ensure loading doesn't stay true forever
-        const safetyTimeout = setTimeout(() => {
-          console.warn('AuthContext: Safety timeout - forcing loading to false after 10 seconds');
-          setIsLoading(false);
-        }, 10000);
-
-        // Fetch DB user with a shorter timeout for reload scenarios
-        fetchDbUser(session.user.id).catch(error => {
-          console.error('AuthContext: Failed to fetch DB user:', error);
-          // Don't sign out the user just because DB user fetch failed
-          // Keep the auth session intact and just set loading to false
-          console.log('AuthContext: Keeping auth session despite DB user fetch failure');
-          setIsLoading(false);
-        }).finally(() => {
-          clearTimeout(safetyTimeout);
-        });
+        // Fetch database user
+        fetchDbUser(session.user.id);
       } else {
-        console.log('AuthContext: No user in session, setting loading to false');
+        setDbUser(null);
         setIsLoading(false);
       }
     }).catch(error => {
-      console.error('AuthContext: Error getting session:', error);
-      console.error('AuthContext: Session error details:', {
-        message: error.message,
-        code: error.code,
-        status: error.status
-      });
-      if (import.meta.env.DEV) {
-        logAuthState('Session Error', { error: error.message });
+      console.error('AuthContext: Unexpected error:', error);
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
       }
-      if (fallbackTimeoutRef.current) {
-        clearTimeout(fallbackTimeoutRef.current);
-        fallbackTimeoutRef.current = null;
-      }
-      clearTimeout(emergencyTimeoutRef);
+      setSession(null);
+      setUser(null);
+      setDbUser(null);
       setIsLoading(false);
     });
 
-    // Listen for auth changes
+    // Listen for auth changes - simple and clean
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (import.meta.env.DEV) {
-          console.log('AuthContext: Auth state changed', event, session ? 'Session exists' : 'No session');
-        }
-
-        // Handle INITIAL_SESSION differently - only skip if we already processed it
-        if (event === 'INITIAL_SESSION') {
-          if (import.meta.env.DEV) {
-            console.log('AuthContext: INITIAL_SESSION event - checking if already processed');
-          }
-
-          // If we already have session and user data, skip to avoid duplicate processing
-          if (session && user && session.user.id === user.id) {
-            if (import.meta.env.DEV) {
-              console.log('AuthContext: INITIAL_SESSION already processed, skipping');
-            }
-            return;
-          }
-
-          if (import.meta.env.DEV) {
-            console.log('AuthContext: Processing INITIAL_SESSION event');
-          }
-        }
+        console.log('AuthContext: Auth state changed', event, session ? 'Session exists' : 'No session');
 
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          if (import.meta.env.DEV) {
-            console.log('AuthContext: User found in auth change, event:', event);
-          }
-
-          // Fetch user data for relevant events
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-            try {
-              await fetchDbUser(session.user.id);
-            } catch (error) {
-              console.error('AuthContext: Error in fetchDbUser during auth state change:', error);
-              setIsLoading(false);
-            }
-          } else {
-            // For other events, just ensure loading is false if we have a user
-            if (import.meta.env.DEV) {
-              console.log('AuthContext: Auth event does not require DB user fetch:', event);
-            }
-            setIsLoading(false);
+          // Only fetch DB user for actual sign-in events, not initial session
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            await fetchDbUser(session.user.id);
           }
         } else {
-          if (import.meta.env.DEV) {
-            console.log('AuthContext: No user in auth change');
-          }
           setDbUser(null);
           setIsLoading(false);
         }
@@ -226,125 +99,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => {
-      if (import.meta.env.DEV) {
-        console.log('AuthContext: Cleaning up auth subscription');
-      }
+      console.log('AuthContext: Cleaning up...');
 
-      // Clear all timeouts
-      if (fallbackTimeoutRef.current) {
-        clearTimeout(fallbackTimeoutRef.current);
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
       }
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-      }
-      clearTimeout(emergencyTimeoutRef);
-
-      // Reset fetch flag
-      isFetchingUser.current = false;
 
       subscription.unsubscribe();
     };
   }, []);
 
-  // Fetch the database user record with improved error handling
+  // Simple, clean database user fetch
   const fetchDbUser = async (authId: string): Promise<void> => {
-    // Prevent concurrent fetches
-    if (isFetchingUser.current) {
-      console.log('fetchDbUser: Already fetching user, skipping duplicate request');
-      return;
-    }
-
-    isFetchingUser.current = true;
-
-    console.log('fetchDbUser: Starting fetch for authId:', authId);
-    console.log('fetchDbUser: Current loading state:', isLoading);
-    console.log('fetchDbUser: Is page reload:', isPageReload.current);
-
-    // Clear any existing timeout
-    if (fetchTimeoutRef.current) {
-      clearTimeout(fetchTimeoutRef.current);
-    }
-
-    // Set timeout with different durations for reload vs initial load
-    const timeoutDuration = isPageReload.current ? 3000 : 5000;
-    fetchTimeoutRef.current = setTimeout(() => {
-      console.error(`fetchDbUser: Database request timed out after ${timeoutDuration}ms - forcing loading to false`);
-      isFetchingUser.current = false;
-      setIsLoading(false);
-      setDbUser(null);
-      clearLoadingTracking();
-    }, timeoutDuration);
+    console.log('fetchDbUser: Fetching user for authId:', authId);
 
     try {
-      // Use regular client with proper authentication
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('auth_id', authId)
         .single();
 
-      // Clear timeout since we got a response
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-        fetchTimeoutRef.current = null;
-      }
-
       if (error) {
-        console.error('fetchDbUser: Error fetching user:', error);
+        console.error('fetchDbUser: Error:', error);
 
-        // Handle specific error cases
-        if (error.code === 'PGRST116') {
-          console.error('fetchDbUser: User not found in database - this should not cause logout');
-          // Don't clear auth storage for missing DB user - this is a data issue, not auth issue
-        } else if (error.message?.includes('JWT') || error.message?.includes('invalid_token')) {
-          console.error('fetchDbUser: JWT/Auth error, clearing invalid session');
-          // Only clear auth storage if JWT is actually invalid
-          localStorage.removeItem('mmu-lms-auth');
-          // Also sign out from Supabase
-          supabase.auth.signOut();
-        } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
-          console.error('fetchDbUser: Network error, keeping session intact');
-          // Don't clear auth storage for network errors
-        } else {
-          console.error('fetchDbUser: Database error:', error.code || error.message);
-          // Don't clear auth storage for general database errors
+        // Only sign out for actual auth errors, not missing user records
+        if (error.message?.includes('JWT') || error.message?.includes('invalid_token')) {
+          console.log('fetchDbUser: Invalid token, signing out');
+          await supabase.auth.signOut();
+          return;
         }
 
+        // For other errors (like user not found), just set null but keep session
         setDbUser(null);
-        // CRITICAL: Always set loading to false on error
-        setIsLoading(false);
       } else if (data) {
-        console.log('fetchDbUser: User found in database with role:', data.role);
+        console.log('fetchDbUser: User found with role:', data.role);
         setDbUser(data as DbUser);
-        // CRITICAL: Set loading to false on success
-        setIsLoading(false);
       } else {
-        console.warn('fetchDbUser: No data returned but no error');
         setDbUser(null);
-        // CRITICAL: Set loading to false even if no data
-        setIsLoading(false);
       }
     } catch (error) {
-      // Clear timeout on error
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-        fetchTimeoutRef.current = null;
-      }
-
       console.error('fetchDbUser: Unexpected error:', error);
-
-      // Check if it's a network error
-      if (error instanceof Error) {
-        if (error.message.includes('fetch') || error.message.includes('network')) {
-          console.error('fetchDbUser: Network error detected');
-        }
-      }
-
       setDbUser(null);
     } finally {
-      isFetchingUser.current = false;
-      clearLoadingTracking();
-      console.log('fetchDbUser: Fetch completed, isFetchingUser reset to false');
+      setIsLoading(false);
     }
   };
 
