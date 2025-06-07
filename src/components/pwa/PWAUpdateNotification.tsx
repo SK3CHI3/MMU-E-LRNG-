@@ -1,87 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RefreshCw, X, Download, CheckCircle } from 'lucide-react';
+import { usePWA } from './PWAManager';
 
 const PWAUpdateNotification: React.FC = () => {
-  const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
-  const [offlineReady, setOfflineReady] = useState(false);
-  const [needRefresh, setNeedRefresh] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [hasShownOfflineReady, setHasShownOfflineReady] = useState(false);
-
-  useEffect(() => {
-    // Register service worker and listen for updates
-    if ('serviceWorker' in navigator && !isRegistering) {
-      setIsRegistering(true);
-
-      navigator.serviceWorker.register('/sw.js')
-        .then((registration) => {
-          if (import.meta.env.DEV) {
-            console.log('PWA: Service Worker registered successfully');
-          }
-
-          // Only show offline ready notification once per session and only if it's a fresh install
-          const isFirstTime = !localStorage.getItem('pwa-offline-ready-shown');
-          if (isFirstTime && !hasShownOfflineReady) {
-            setOfflineReady(true);
-            setHasShownOfflineReady(true);
-            localStorage.setItem('pwa-offline-ready-shown', 'true');
-
-            // Auto-hide the offline ready notification after 3 seconds
-            setTimeout(() => {
-              setOfflineReady(false);
-            }, 3000);
-          }
-
-          // Check for updates
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  setNeedRefresh(true);
-                }
-              });
-            }
-          });
-        })
-        .catch((error) => {
-          console.error('PWA: Service Worker registration failed:', error);
-        })
-        .finally(() => {
-          setIsRegistering(false);
-        });
-    }
-  }, [isRegistering]);
-
-  useEffect(() => {
-    if (needRefresh) {
-      setShowUpdatePrompt(true);
-    }
-  }, [needRefresh]);
+  const { isOfflineReady, needsRefresh, updateApp, dismissOfflineReady, dismissUpdate } = usePWA();
 
   const handleUpdate = async () => {
-    try {
-      // Skip waiting and claim clients
-      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
-      }
-      window.location.reload();
-      setShowUpdatePrompt(false);
-      setNeedRefresh(false);
-    } catch (error) {
-      console.error('Error updating service worker:', error);
-    }
+    await updateApp();
   };
 
   const handleDismiss = () => {
-    setShowUpdatePrompt(false);
-    setNeedRefresh(false);
+    dismissUpdate();
   };
 
   // Show offline ready notification (compact and professional)
-  if (offlineReady && !needRefresh) {
+  if (isOfflineReady && !needsRefresh) {
     return (
       <div className="fixed top-4 right-4 z-40 animate-in slide-in-from-top-2 duration-300">
         <Card className="border-green-200 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-lg max-w-xs">
@@ -101,7 +36,7 @@ const PWAUpdateNotification: React.FC = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setOfflineReady(false)}
+                onClick={dismissOfflineReady}
                 className="h-5 w-5 p-0 text-green-600 hover:text-green-800 hover:bg-green-100 dark:text-green-400 dark:hover:text-green-200 dark:hover:bg-green-950/30 shrink-0"
               >
                 <X className="h-3 w-3" />
@@ -114,7 +49,7 @@ const PWAUpdateNotification: React.FC = () => {
   }
 
   // Show update notification (professional and non-intrusive)
-  if (showUpdatePrompt && needRefresh) {
+  if (needsRefresh) {
     return (
       <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
         <Card className="border-blue-200 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-lg max-w-sm">

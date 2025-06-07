@@ -5,11 +5,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import MainLayout from "./components/layout/MainLayout";
-import { lazy, Suspense } from "react";
+import React, { lazy, Suspense } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { PopupProvider } from "./components/popups/PopupManager";
-import { PWAInstallPrompt, PWAUpdateNotification, PWAOfflineIndicator } from "./components/pwa";
+import { PWAProvider } from "./components/pwa";
 import AuthDebugPanel from "./components/debug/AuthDebugPanel";
 
 // Development mode check (console logging removed for production)
@@ -99,14 +99,39 @@ const queryClient = new QueryClient();
 
 // Loading component for Suspense
 const PageLoader = () => {
-  console.log('PageLoader: Rendering loading component');
+  const [showTimeout, setShowTimeout] = React.useState(false);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowTimeout(true);
+    }, 10000); // Show timeout message after 10 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (import.meta.env.DEV) {
+    console.log('PageLoader: Rendering loading component');
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
-      <div className="text-center p-6 rounded-lg border border-border shadow-lg">
+      <div className="text-center p-6 rounded-lg border border-border shadow-lg max-w-md">
         <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
         <p className="text-lg font-medium">Loading your dashboard...</p>
         <p className="text-muted-foreground mt-2">Please wait while we set things up</p>
+        {showTimeout && (
+          <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              Taking longer than expected? Try refreshing the page.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-2 text-sm text-yellow-600 dark:text-yellow-400 underline hover:no-underline"
+            >
+              Refresh Page
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -116,16 +141,13 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <PopupProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            {/* PWA Components */}
-            <PWAInstallPrompt />
-            <PWAUpdateNotification />
-            <PWAOfflineIndicator />
-            {/* Debug Panel - only shows in development */}
-            <AuthDebugPanel />
+        <PWAProvider>
+          <PopupProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              {/* Debug Panel - only shows in development */}
+              <AuthDebugPanel />
             <BrowserRouter>
             <MaintenanceGuard>
               <Routes>
@@ -329,8 +351,9 @@ const App = () => {
               </Routes>
             </MaintenanceGuard>
           </BrowserRouter>
-        </TooltipProvider>
-        </PopupProvider>
+            </TooltipProvider>
+          </PopupProvider>
+        </PWAProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

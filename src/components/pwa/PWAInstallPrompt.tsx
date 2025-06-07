@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { X, Download, Smartphone, Zap, Wifi, Bell } from 'lucide-react';
+import { usePWA } from './PWAManager';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -18,84 +18,31 @@ interface PWAInstallPromptProps {
 }
 
 const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ onClose }) => {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showPrompt, setShowPrompt] = useState(false);
-  const [isInstalling, setIsInstalling] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
-
-  useEffect(() => {
-    // Check if app is already installed (running in standalone mode)
-    const checkStandalone = () => {
-      const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches ||
-                              (window.navigator as any).standalone ||
-                              document.referrer.includes('android-app://');
-      setIsStandalone(isStandaloneMode);
-    };
-
-    checkStandalone();
-
-    // Listen for the beforeinstallprompt event
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      
-      // Show prompt after a delay if not already dismissed
-      const dismissed = localStorage.getItem('pwa-install-dismissed');
-      const lastShown = localStorage.getItem('pwa-install-last-shown');
-      const now = Date.now();
-      
-      // Show prompt if never dismissed or if 7 days have passed since last dismissal
-      if (!dismissed || (lastShown && now - parseInt(lastShown) > 7 * 24 * 60 * 60 * 1000)) {
-        setTimeout(() => setShowPrompt(true), 3000); // Show after 3 seconds
-      }
-    };
-
-    // Listen for app installed event
-    const handleAppInstalled = () => {
-      setShowPrompt(false);
-      setDeferredPrompt(null);
-      localStorage.setItem('pwa-installed', 'true');
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
-  }, []);
+  const { isInstallable, isInstalled, installApp } = usePWA();
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-
-    setIsInstalling(true);
-    
-    try {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      
-      if (outcome === 'accepted') {
-        localStorage.setItem('pwa-installed', 'true');
-        setShowPrompt(false);
-      }
-    } catch (error) {
-      console.error('Error during PWA installation:', error);
-    } finally {
-      setIsInstalling(false);
-      setDeferredPrompt(null);
-    }
+    await installApp();
+    onClose?.();
   };
 
   const handleDismiss = () => {
-    setShowPrompt(false);
     localStorage.setItem('pwa-install-dismissed', 'true');
     localStorage.setItem('pwa-install-last-shown', Date.now().toString());
     onClose?.();
   };
 
-  // Don't show if already installed or no prompt available
-  if (isStandalone || !showPrompt || !deferredPrompt) {
+  // Don't show if already installed or not installable
+  if (isInstalled || !isInstallable) {
+    return null;
+  }
+
+  // Check if user has dismissed recently
+  const dismissed = localStorage.getItem('pwa-install-dismissed');
+  const lastShown = localStorage.getItem('pwa-install-last-shown');
+  const now = Date.now();
+
+  // Don't show if dismissed and less than 7 days have passed
+  if (dismissed && lastShown && now - parseInt(lastShown) < 7 * 24 * 60 * 60 * 1000) {
     return null;
   }
 
@@ -154,11 +101,10 @@ const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ onClose }) => {
           <div className="flex gap-2">
             <Button
               onClick={handleInstallClick}
-              disabled={isInstalling}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-xs h-8"
             >
               <Download className="h-3 w-3 mr-1" />
-              {isInstalling ? 'Installing...' : 'Install'}
+              Install
             </Button>
             <Button
               variant="outline"

@@ -1,12 +1,16 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { PWAInstallPrompt, PWAUpdateNotification, PWAOfflineIndicator } from './index';
 
 interface PWAContextType {
   isOfflineReady: boolean;
   needsRefresh: boolean;
   isOnline: boolean;
+  isInstallable: boolean;
+  isInstalled: boolean;
   dismissOfflineReady: () => void;
   dismissUpdate: () => void;
   updateApp: () => Promise<void>;
+  installApp: () => Promise<void>;
 }
 
 const PWAContext = createContext<PWAContextType | undefined>(undefined);
@@ -19,33 +23,65 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
   const [isOfflineReady, setIsOfflineReady] = useState(false);
   const [needsRefresh, setNeedsRefresh] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isInstallable, setIsInstallable] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
     // Handle online/offline status
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
+    // Check if app is already installed
+    const checkInstalled = () => {
+      const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches ||
+                              (window.navigator as any).standalone ||
+                              document.referrer.includes('android-app://');
+      setIsInstalled(isStandaloneMode);
+    };
+
+    // Handle beforeinstallprompt event
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+
+      if (import.meta.env.DEV) {
+        console.log('PWA: Install prompt available');
+      }
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Register service worker
+    checkInstalled();
+
+    // Register service worker using VitePWA's generated files
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
+      // VitePWA generates these files automatically
+      const swUrl = import.meta.env.DEV ? '/dev-sw.js?dev-sw' : '/sw.js';
+
+      navigator.serviceWorker.register(swUrl, { scope: '/' })
         .then((reg) => {
           setRegistration(reg);
-          
+
           if (import.meta.env.DEV) {
-            console.log('PWA: Service Worker registered');
+            console.log('PWA: Service Worker registered successfully');
           }
 
-          // Show offline ready notification
-          setIsOfflineReady(true);
-          
-          // Auto-dismiss after 5 seconds
-          setTimeout(() => {
-            setIsOfflineReady(false);
-          }, 5000);
+          // Only show offline ready notification for first-time users
+          const hasShownBefore = localStorage.getItem('pwa-offline-ready-shown');
+          if (!hasShownBefore && !import.meta.env.DEV) {
+            setIsOfflineReady(true);
+            localStorage.setItem('pwa-offline-ready-shown', 'true');
+
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+              setIsOfflineReady(false);
+            }, 3000);
+          }
 
           // Listen for updates
           reg.addEventListener('updatefound', () => {
@@ -67,6 +103,7 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
 
@@ -85,16 +122,46 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
     }
   };
 
+  const installApp = async () => {
+    if (!deferredPrompt) return;
+
+    try {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+
+      if (outcome === 'accepted') {
+        setIsInstallable(false);
+        setIsInstalled(true);
+        localStorage.setItem('pwa-installed', 'true');
+      }
+    } catch (error) {
+      console.error('Error during PWA installation:', error);
+    } finally {
+      setDeferredPrompt(null);
+    }
+  };
+
   const value: PWAContextType = {
     isOfflineReady,
     needsRefresh,
     isOnline,
+    isInstallable,
+    isInstalled,
     dismissOfflineReady,
     dismissUpdate,
     updateApp,
+    installApp,
   };
 
-  return <PWAContext.Provider value={value}>{children}</PWAContext.Provider>;
+  return (
+    <PWAContext.Provider value={value}>
+      {children}
+      {/* PWA Components */}
+      <PWAInstallPrompt />
+      <PWAUpdateNotification />
+      <PWAOfflineIndicator />
+    </PWAContext.Provider>
+  );
 };
 
 export const usePWA = () => {
@@ -107,12 +174,14 @@ export const usePWA = () => {
 
 // Utility hook for PWA status
 export const usePWAStatus = () => {
-  const { isOfflineReady, needsRefresh, isOnline } = usePWA();
-  
+  const { isOfflineReady, needsRefresh, isOnline, isInstallable, isInstalled } = usePWA();
+
   return {
     isOfflineReady,
     needsRefresh,
     isOnline,
+    isInstallable,
+    isInstalled,
     isPWACapable: 'serviceWorker' in navigator,
     isStandalone: window.matchMedia('(display-mode: standalone)').matches ||
                   (window.navigator as any).standalone ||
