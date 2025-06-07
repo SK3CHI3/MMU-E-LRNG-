@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { PWAInstallPrompt, PWAUpdateNotification, PWAOfflineIndicator } from './index';
-import { pwaDebug } from '@/utils/pwaDebug';
+// Temporarily disabled PWA component imports to fix infinite reload loops
+// import { PWAInstallPrompt, PWAUpdateNotification, PWAOfflineIndicator } from './index';
+// import { pwaDebug } from '@/utils/pwaDebug';
 
 interface PWAContextType {
   isOfflineReady: boolean;
@@ -127,7 +128,8 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
     if ('serviceWorker' in navigator) {
       // Log debug info in development
       if (import.meta.env.DEV) {
-        pwaDebug.logFullStatus();
+        console.log('PWA: Debug logging temporarily disabled');
+        // pwaDebug.logFullStatus();
       }
 
       // Clear any existing service workers first
@@ -342,10 +344,10 @@ export const PWAProvider: React.FC<PWAProviderProps> = ({ children }) => {
   return (
     <PWAContext.Provider value={value}>
       {children}
-      {/* PWA Components */}
-      <PWAInstallPrompt />
-      <PWAUpdateNotification />
-      <PWAOfflineIndicator />
+      {/* PWA Components - temporarily disabled to fix infinite reload loops */}
+      {/* <PWAInstallPrompt /> */}
+      {/* <PWAUpdateNotification /> */}
+      {/* <PWAOfflineIndicator /> */}
     </PWAContext.Provider>
   );
 };
