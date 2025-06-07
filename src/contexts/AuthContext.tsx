@@ -132,10 +132,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (session?.user) {
         console.log('AuthContext: User found in session, fetching DB user for ID:', session.user.id);
+
+        // Set a safety timeout to ensure loading doesn't stay true forever
+        const safetyTimeout = setTimeout(() => {
+          console.warn('AuthContext: Safety timeout - forcing loading to false after 10 seconds');
+          setIsLoading(false);
+        }, 10000);
+
         // Fetch DB user with a shorter timeout for reload scenarios
         fetchDbUser(session.user.id).catch(error => {
           console.error('AuthContext: Failed to fetch DB user:', error);
           setIsLoading(false);
+        }).finally(() => {
+          clearTimeout(safetyTimeout);
         });
       } else {
         console.log('AuthContext: No user in session, setting loading to false');
@@ -166,12 +175,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('AuthContext: Auth state changed', event, session ? 'Session exists' : 'No session');
         }
 
-        // Skip processing if this is the initial session (already handled above)
+        // Handle INITIAL_SESSION differently - only skip if we already processed it
         if (event === 'INITIAL_SESSION') {
           if (import.meta.env.DEV) {
-            console.log('AuthContext: Skipping INITIAL_SESSION event to prevent duplicate processing');
+            console.log('AuthContext: INITIAL_SESSION event - checking if already processed');
           }
-          return;
+
+          // If we already have session and user data, skip to avoid duplicate processing
+          if (session && user && session.user.id === user.id) {
+            if (import.meta.env.DEV) {
+              console.log('AuthContext: INITIAL_SESSION already processed, skipping');
+            }
+            return;
+          }
+
+          if (import.meta.env.DEV) {
+            console.log('AuthContext: Processing INITIAL_SESSION event');
+          }
         }
 
         setSession(session);
@@ -179,17 +199,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (session?.user) {
           if (import.meta.env.DEV) {
-            console.log('AuthContext: User found in auth change, fetching DB user');
+            console.log('AuthContext: User found in auth change, event:', event);
           }
 
-          // Only fetch user data for specific events to prevent loops
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          // Fetch user data for relevant events
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
             try {
               await fetchDbUser(session.user.id);
             } catch (error) {
               console.error('AuthContext: Error in fetchDbUser during auth state change:', error);
               setIsLoading(false);
             }
+          } else {
+            // For other events, just ensure loading is false if we have a user
+            if (import.meta.env.DEV) {
+              console.log('AuthContext: Auth event does not require DB user fetch:', event);
+            }
+            setIsLoading(false);
           }
         } else {
           if (import.meta.env.DEV) {
@@ -232,9 +258,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     isFetchingUser.current = true;
 
-    if (import.meta.env.DEV) {
-      console.log('fetchDbUser: Starting fetch for authId:', authId);
-    }
+    console.log('fetchDbUser: Starting fetch for authId:', authId);
+    console.log('fetchDbUser: Current loading state:', isLoading);
+    console.log('fetchDbUser: Is page reload:', isPageReload.current);
 
     // Clear any existing timeout
     if (fetchTimeoutRef.current) {
@@ -244,10 +270,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Set timeout with different durations for reload vs initial load
     const timeoutDuration = isPageReload.current ? 3000 : 5000;
     fetchTimeoutRef.current = setTimeout(() => {
-      console.warn(`fetchDbUser: Database request timed out after ${timeoutDuration}ms`);
+      console.error(`fetchDbUser: Database request timed out after ${timeoutDuration}ms - forcing loading to false`);
       isFetchingUser.current = false;
       setIsLoading(false);
       setDbUser(null);
+      clearLoadingTracking();
     }, timeoutDuration);
 
     try {
@@ -272,19 +299,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('fetchDbUser: User not found in database');
         } else if (error.message?.includes('JWT')) {
           console.error('fetchDbUser: JWT/Auth error, user may need to re-login');
+          // Clear auth storage if JWT is invalid
+          localStorage.removeItem('mmu-lms-auth');
         } else {
           console.error('fetchDbUser: Database error:', error.code || error.message);
         }
 
         setDbUser(null);
+        // CRITICAL: Always set loading to false on error
+        setIsLoading(false);
       } else if (data) {
-        if (import.meta.env.DEV) {
-          console.log('fetchDbUser: User found in database with role:', data.role);
-        }
+        console.log('fetchDbUser: User found in database with role:', data.role);
         setDbUser(data as DbUser);
+        // CRITICAL: Set loading to false on success
+        setIsLoading(false);
       } else {
         console.warn('fetchDbUser: No data returned but no error');
         setDbUser(null);
+        // CRITICAL: Set loading to false even if no data
+        setIsLoading(false);
       }
     } catch (error) {
       // Clear timeout on error
@@ -305,11 +338,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setDbUser(null);
     } finally {
       isFetchingUser.current = false;
-      setIsLoading(false);
       clearLoadingTracking();
-      if (import.meta.env.DEV) {
-        console.log('fetchDbUser: Loading state set to false');
-      }
+      console.log('fetchDbUser: Fetch completed, isFetchingUser reset to false');
     }
   };
 
