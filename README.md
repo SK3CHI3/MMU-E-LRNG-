@@ -1,5 +1,5 @@
 <div align="center">
-  <h1 MMU Learning Management System LMS /h1> 
+  <h1 MMU Learning Management System LMS /h1>
 
 
   <h3 align="center">Multimedia University of Kenya's Digital Learning Platform</h3>
