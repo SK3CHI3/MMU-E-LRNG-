@@ -221,3 +221,5 @@ This project is proprietary software developed for Multimedia University of Keny
 <div align="center">
   <p>© 2024 Multimedia University of Kenya. All Rights Reserved.</p>
 </div>
+
+(Database isn't functional)
