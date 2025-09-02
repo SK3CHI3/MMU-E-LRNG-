@@ -9,8 +9,8 @@
   <p align="center">Elevating Learning, Empowering Futures</p>
 </div>
 
-## 📋 Overview
- 
+## 📋 Overview.
+
 The MMU Learning Management System (LMS) is a comprehensive digital platform designed to enhance the educational experience at Multimedia University of Kenya. This modern web application provides students, lecturers, and administrators with a centralized hub for managing academic activities, accessing learning resources, and facilitating communication within the university community.
 
 ### 🎉 **PRODUCTION READY STATUS**
